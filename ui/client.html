@@ -430,12 +430,20 @@ async function viewBoard() {
     }).join("")}</div></div></div>`;
 }
 let memq = "";
+function consolidationLine(st) {
+  const when = (iso) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+  const counts = Object.entries(st.last_counts ?? {}).map(([k, n]) => `${n} ${k}`).join(", ");
+  const last = st.running ? `Consolidating since ${time(st.started_at)}…`
+    : st.last_completed_at ? `Last consolidated ${when(st.last_completed_at)}${counts ? ` (${counts})` : ""}` : "Never consolidated";
+  return `${last} · ${st.pending} pending`;
+}
 async function viewMemory() {
-  const ns = await api(`/memory/notes${memq ? `?query=${encodeURIComponent(memq)}` : ""}`);
+  const [ns, st] = await Promise.all([api(`/memory/notes${memq ? `?query=${encodeURIComponent(memq)}` : ""}`), api("/memory/status")]);
   return `<div class="scroll"><div class="center page"><h1>Memory</h1>
-    <form id="memq" style="display:flex;gap:6px"><input aria-label="Search notes" value="${esc(memq)}" placeholder="Search notes" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--panel)"><button class="btn">Search</button><button class="btn" type="button" id="consolidate">Consolidate now</button></form>
-    ${ns.map((n) => `<div class="panel"><div><b>${esc(n.title)}</b> <span style="color:var(--muted);font-size:12px">${n.kind}</span></div>
-      ${n.claims.map((c) => `<div class="fact"><span>${esc(c.text)}${c.stale ? ` <i style="color:var(--muted)">(may be outdated)</i>` : ""}</span><span style="color:var(--muted);font-size:12px">${String(c.observed_at).slice(0, 10)} · ${c.volatility}</span><button class="btn" data-retract="${c.id}">Retract</button></div>`).join("")}</div>`).join("") || `<div class="empty">Memory is empty.</div>`}</div></div>`;
+    <form id="memq" style="display:flex;gap:6px"><input aria-label="Search notes" value="${esc(memq)}" placeholder="Search notes" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--panel)"><button class="btn">Search</button><button class="btn" type="button" id="consolidate"${st.running ? " disabled" : ""}>${st.running ? "Consolidating…" : "Consolidate now"}</button></form>
+    <div style="color:var(--muted);font-size:12px;margin:6px 0 10px">${esc(consolidationLine(st))}</div>
+    ${ns.map((n) => `<div class="panel"><div><b>${esc(n.title)}</b> <span style="color:var(--muted);font-size:12px">${n.status === "pending" ? "pending · not consolidated yet" : n.kind}</span></div>
+      ${n.claims.map((c) => `<div class="fact"><span${c.pending ? ` style="color:var(--muted)"` : ""}>${esc(c.text)}${c.stale ? ` <i style="color:var(--muted)">(may be outdated)</i>` : ""}</span><span style="color:var(--muted);font-size:12px">${String(c.observed_at).slice(0, 10)} · ${c.volatility}</span>${c.pending ? "" : `<button class="btn" data-retract="${c.id}">Retract</button>`}</div>`).join("")}</div>`).join("") || `<div class="empty">${memq ? "Nothing matches." : "Memory is empty."}</div>`}</div></div>`;
 }
 
 // ---------------------------------------------------------------- render
@@ -472,7 +480,7 @@ document.addEventListener("click", async (e) => {
   const t = e.target.closest("button, a"); if (!t) return;
   const d = t.dataset;
   try {
-    if (d.undo) { const r = await api(`/receipts/${d.undo}/undo`); toast(r.note ?? "Undone"); render(); }
+    if (d.undo) { const r = await api(`/receipts/${d.undo}/undo`, {}); toast(r.note ?? "Undone"); render(); }
     else if (d.opt !== undefined) { const q = t.closest("[data-q]").dataset.q; await api(`/questions/${q}/answer`, { option: Number(d.opt) }); render(); }
     else if (d.moveOpen !== undefined) {
       const box = t.closest("[data-mover]");
@@ -485,11 +493,11 @@ document.addEventListener("click", async (e) => {
       toast(`Moved to ${topic.title}`); location.hash = `topic/${topic.id}`; render();
     }
     else if (d.art) { const a = await api(`/artifacts/${d.art}`); const w = window.open("", "_blank"); if (w) w.document.body.innerHTML = `<pre style="white-space:pre-wrap;font:14px system-ui">${esc(a.content)}</pre>`; }
-    else if (d.cancel) { await api(`/cards/${d.cancel}/cancel`); render(); }
-    else if (d.retry) { await api(`/cards/${d.retry}/retry`); render(); }
+    else if (d.cancel) { await api(`/cards/${d.cancel}/cancel`, {}); render(); }
+    else if (d.retry) { await api(`/cards/${d.retry}/retry`, {}); render(); }
     else if (d.retract) { await api("/memory/retract", { claim_id: d.retract }); render(); }
     else if (d.act) { const id = t.closest("[data-rev]").dataset.rev; await api(`/review/${id}/${d.act}`, {}); render(); }
-    else if (t.id === "consolidate") { t.disabled = true; await api("/memory/consolidate"); render(); }
+    else if (t.id === "consolidate") { t.disabled = true; const s = await api("/memory/consolidate", {}); if (!s.started) toast("Already consolidating"); render(); }
     else if (t.id === "brief") briefStart();
   } catch (err) { toast(err.message); }
 });
@@ -503,7 +511,7 @@ document.addEventListener("submit", async (e) => {
   if (e.target.id === "memq") { e.preventDefault(); memq = e.target.querySelector("input").value; render(); }
 });
 async function briefStart() {
-  const b = await api("/briefings");
+  const b = await api("/briefings", {});
   $("#briefing").innerHTML = `<div class="panel" id="bl"><div>${esc(b.prompt.text)}</div></div><form id="bf" class="qform" style="margin-top:8px"><input aria-label="Reply" placeholder="one / two / skip / repeat / stop"><button class="btn">Reply</button></form>`;
   $("#bf").onsubmit = async (e) => {
     e.preventDefault();
