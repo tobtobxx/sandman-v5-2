@@ -132,8 +132,10 @@ export function lintSchema(s: Schema, path = "$"): string[] {
     const keys = Object.keys(s.properties);
     const sorted = [...keys].sort();
     if (keys.join() !== sorted.join()) problems.push(`${path}: keys not in alphabetical order (${keys.join(",")})`);
-    if (keys.includes("analysis") && sorted[0] !== "analysis") {
-      problems.push(`${path}: "${sorted[0]}" sorts before "analysis"`);
+    // discriminator keys (const values, e.g. action: "block") are chosen before anything else by design
+    const decisions = sorted.filter((k) => s.properties[k].const === undefined);
+    if (keys.includes("analysis") && decisions[0] !== "analysis") {
+      problems.push(`${path}: "${decisions[0]}" sorts before "analysis"`);
     }
     for (const [k, v] of Object.entries<Schema>(s.properties)) problems.push(...lintSchema(v, `${path}.${k}`));
   }
