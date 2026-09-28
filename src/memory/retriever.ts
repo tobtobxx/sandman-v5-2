@@ -52,11 +52,28 @@ export function renderNotes(notes: NoteView[]): string {
     .map((n) => {
       const cl = n.claims.map((c) => {
         const date = String(c.observed_at).slice(0, 10);
-        return `  - ${c.text}${c.stale ? ` [as of ${date}, may be outdated]` : ` (${date})`}`;
+        const src = claimSource(c);
+        const from = src ? `; source: ${src}` : "";
+        return `  - ${c.text}${c.stale ? ` [as of ${date}, may be outdated${from}]` : ` (${date}${from})`}`;
       });
       return `${n.id}: ${n.title}${n.kind === "negative" ? " (earlier search that found nothing)" : ""}\n${cl.join("\n")}`;
     })
     .join("\n");
+}
+
+/** Where a claim came from, as shown to the model: the URL, or the owner. */
+export function claimSource(c: Row): string {
+  const src = j<Row>(c.source, {});
+  if (src.type === "url" && /^https?:/.test(src.ref ?? "")) return src.ref;
+  if (src.type === "owner") return `told by ${config.owner.name}`;
+  return "";
+}
+
+/** The URLs behind a set of notes' current claims (for results answered from memory). */
+export function noteUrls(notes: NoteView[]): string[] {
+  const urls = notes.flatMap((n) => n.claims.filter((c) => !c.stale).map((c) => j<Row>(c.source, {})))
+    .filter((s) => s.type === "url" && /^https?:/.test(s.ref ?? "")).map((s) => s.ref as string);
+  return [...new Set(urls)];
 }
 
 export function profileText(): string {
