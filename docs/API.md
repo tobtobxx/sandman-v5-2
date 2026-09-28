@@ -86,6 +86,15 @@ Returns `{ message_id }`; the desk's receipts and reply arrive as events.
 `GET /cards/:id`, `GET /artifacts/:id`, `GET /memory/notes?query=`, `POST /memory/retract`,
 `POST /memory/consolidate`, `PATCH|DELETE /topics/:id/facts/:claim`.
 
+Memory details:
+- `GET /memory/notes?query=` matches word prefixes. It also returns candidate facts still waiting for
+  the consolidator, grouped by subject, as `{ kind: "fact", status: "pending", claims: [{ pending: true, … }] }`.
+- `POST /memory/consolidate` starts a run in the background and returns at once with
+  `{ started, running, started_at, last_completed_at, last_counts, pending }`. Only one run happens at a
+  time: while one is in flight, the button, the idle loop and the nightly run join it, and `started` is
+  `false`. The events `memory.consolidating` and `memory.consolidated` mark the start and end.
+- `GET /memory/status` returns the same status without starting anything.
+
 ## Events (`GET /events/stream?after=<id>`, SSE)
 
 A client re-fetches what an event touches:

@@ -97,7 +97,7 @@ async function list() {
     L.innerHTML = `<table><tr><th>desk turn</th><th>mode</th><th>intents</th></tr>${ds.map((d) => `<tr class="row" data-desk="${d.id}"><td>${esc(d.input_text).slice(0, 100)}<div class="small muted">${d.id}</div></td><td>${d.mode}</td><td class="small">${esc((J(d.intents) ?? []).join(" → "))}</td></tr>`).join("")}</table>`;
   }
   if (tab === "memory") {
-    const ns = await api("/memory/notes");
+    const ns = (await api("/memory/notes")).filter((n) => n.status !== "pending");
     const facts = await api("/inspect/table/facts?limit=100");
     L.innerHTML = `<h3>Notes</h3><table>${ns.map((n) => `<tr class="row" data-note="${n.id}"><td>${esc(n.title)}<div class="small muted">${n.kind} · ${n.claims.length} claims</div></td></tr>`).join("")}</table>
       <h3>Fact queue</h3><table><tr><th>fact</th><th>status</th><th>decision</th></tr>${facts.map((f) => `<tr><td class="small">${esc(f.subject)}: ${esc(f.text)}</td><td>${pill(f.status)}</td><td class="small">${esc(f.decision ?? "")}</td></tr>`).join("")}</table>`;

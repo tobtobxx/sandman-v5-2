@@ -156,7 +156,38 @@ export async function consolidateOne(f: Row): Promise<string> {
   return decision;
 }
 
-export async function consolidate(limit = 50): Promise<Record<string, number>> {
+// One run at a time per database: a second call (button, idle loop, night) joins the run in flight.
+const running = new WeakMap<object, { started_at: string; done: Promise<Record<string, number>> }>();
+
+export function consolidationRunning(): boolean {
+  return running.has(db());
+}
+
+/** Running state, the last completed run (from the event log, so it survives restarts) and the queue size. */
+export function consolidationStatus() {
+  const r = running.get(db());
+  const last = db().get(`SELECT payload, at FROM events WHERE type='memory.consolidated' ORDER BY id DESC LIMIT 1`);
+  return {
+    running: !!r,
+    started_at: r?.started_at ?? null,
+    last_completed_at: last?.at ?? null,
+    last_counts: last ? j<Record<string, number>>(last.payload, {}) : null,
+    pending: db().get(`SELECT count(*) n FROM facts WHERE status='pending'`)!.n as number,
+  };
+}
+
+export function consolidate(limit = 50): Promise<Record<string, number>> {
+  const key = db();
+  const cur = running.get(key);
+  if (cur) return cur.done;
+  const started_at = nowIso();
+  emit("memory.consolidating", { payload: { started_at } });
+  const done = consolidateRun(limit).finally(() => running.delete(key));
+  running.set(key, { started_at, done });
+  return done;
+}
+
+async function consolidateRun(limit: number): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
   for (const f of db().all(`SELECT * FROM facts WHERE status='pending' ORDER BY created_at LIMIT ?`, limit)) {
     try {

@@ -18,7 +18,7 @@ import { answerQuestion, needsYou } from "./conversation/questions.ts";
 import { replyBriefing, startBriefing } from "./conversation/briefing.ts";
 import { listReview } from "./conversation/review.ts";
 import { reviewAction, tidy } from "./conversation/tidy.ts";
-import { consolidate, rerender } from "./memory/consolidator.ts";
+import { consolidate, consolidationRunning, consolidationStatus, rerender } from "./memory/consolidator.ts";
 import { noteView } from "./memory/retriever.ts";
 import { recordedFacts } from "./work/worker.ts";
 
@@ -119,12 +119,26 @@ route("POST", "/cards/:id/retry", (_r, p) => {
 route("GET", "/artifacts/:id", (_r, p) => db().get(`SELECT * FROM artifacts WHERE id=?`, p.id));
 
 // ---------------------------------------------------------------- memory
+// Notes by FTS (prefix match on each word), plus candidate facts still waiting for the consolidator,
+// marked status "pending" (kind "fact", grouped by subject) so a search finds what the observer shows.
 route("GET", "/memory/notes", (_r, _p, _b, u) => {
-  const q = u.searchParams.get("query");
-  const rows = q
-    ? db().all(`SELECT n.* FROM notes_fts f JOIN notes n ON n.id=f.id WHERE notes_fts MATCH ? LIMIT 50`, q.split(/\s+/).map((w) => `"${w.replace(/"/g, "")}"`).join(" OR "))
+  const words = (u.searchParams.get("query") ?? "").match(/[\p{L}\p{N}]+/gu) ?? [];
+  const rows = words.length
+    ? db().all(`SELECT n.* FROM notes_fts f JOIN notes n ON n.id=f.id WHERE notes_fts MATCH ? ORDER BY rank LIMIT 50`, words.map((w) => `"${w}"*`).join(" OR "))
     : db().all(`SELECT * FROM notes ORDER BY created_at DESC LIMIT 100`);
-  return rows.map((n) => ({ ...noteView(n), status: n.status, aliases: j(n.aliases, []) }));
+  const notes = rows.map((n) => ({ ...noteView(n), status: n.status, aliases: j(n.aliases, []) }));
+  const like = words.map(() => `(subject LIKE ? OR text LIKE ?)`).join(" OR ");
+  const facts = db().all(
+    `SELECT * FROM facts WHERE status='pending' ${words.length ? `AND (${like})` : ""} ORDER BY created_at DESC LIMIT 100`,
+    ...words.flatMap((w) => [`%${w}%`, `%${w}%`]),
+  );
+  const bySubject = new Map<string, Row>();
+  for (const f of facts) {
+    const k = String(f.subject ?? "").toLowerCase();
+    if (!bySubject.has(k)) bySubject.set(k, { id: f.id, kind: "fact", status: "pending", title: f.subject, one_liner: "", aliases: [], answerable: false, claims: [] });
+    bySubject.get(k)!.claims.push({ id: f.id, text: f.text, observed_at: f.created_at, volatility: f.volatility, stale: false, pending: true });
+  }
+  return [...notes, ...bySubject.values()];
 });
 route("GET", "/memory/notes/:id", (_r, p) => {
   const n = db().get(`SELECT * FROM notes WHERE id=?`, p.id);
@@ -135,7 +149,14 @@ route("POST", "/memory/retract", (_r, _p, b) => {
   if (b.note_id) db().update("notes", b.note_id, { status: "retracted" });
   return { ok: true };
 });
-route("POST", "/memory/consolidate", async () => await consolidate());
+// Starts a run in the background (or joins the one in flight) and returns the status right away;
+// `memory.consolidated` announces the end.
+route("POST", "/memory/consolidate", () => {
+  const started = !consolidationRunning();
+  bg(consolidate());
+  return { started, ...consolidationStatus() };
+});
+route("GET", "/memory/status", () => consolidationStatus());
 
 // ---------------------------------------------------------------- inspection (observer UI)
 route("GET", "/inspect/overview", () => ({
@@ -272,6 +293,7 @@ export async function serve() {
     const pending = db().get(`SELECT count(*) n FROM facts WHERE status='pending'`)!.n;
     const d = new Date();
     const night = d.getHours() === 3 ? d.toDateString() : "";
+    if (consolidationRunning()) return;
     if (pending >= 20 || (night && night !== lastNight && pending)) {
       lastNight = night || lastNight;
       bg(consolidate().then(() => tidy()));
