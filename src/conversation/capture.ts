@@ -1,11 +1,12 @@
 // Quick capture (DESIGN §6.3, §6.4, §6.7): segment → verify quotes → route each item → desk (capture mode)
 // → one confirmation built from receipts, without a model call.
 
-import { db, ftsQuery, j, nowIso, Row } from "../db.ts";
+import { db, ftsQuery, j, now, nowIso, Row } from "../db.ts";
 import { newId } from "../ids.ts";
 import { config } from "../config.ts";
 import { emit } from "../events.ts";
 import { llmJson } from "../llm/gateway.ts";
+import { fmtDate } from "./when.ts";
 import * as C from "../prompts/conversation.ts";
 import { postMessage } from "./messages.ts";
 import { createConversationTopic, createTopic, getTopic, updateTopic } from "./topics.ts";
@@ -98,7 +99,7 @@ export async function routeItem(quote: string, opts: { allowChat?: boolean } = {
   const cands = routeCandidates(quote);
   let choice = "new", confidence: "high" | "low" = "high";
   if (cands.length || allowChat) {
-    const p = C.routeItem({ quote, candidates: cands.map((t) => ({ slug: t.slug, title: t.title, summary: t.summary ?? "" })), allowChat });
+    const p = C.routeItem({ quote, candidates: cands.map((t) => ({ slug: t.slug, title: t.title, summary: t.summary ?? "", last_active: fmtDate(new Date(t.last_activity_at ?? t.created_at)) })), today: fmtDate(now()), allowChat });
     const r = await llmJson<{ choice: string; confidence: "high" | "low" }>("route_item", p.prompt, p.schema, { maxTokens: p.maxTokens, version: p.version, priority: "interactive" });
     choice = r.choice;
     confidence = r.confidence;

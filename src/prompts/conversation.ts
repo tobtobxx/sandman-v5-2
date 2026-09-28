@@ -28,16 +28,16 @@ Reply with analysis (one sentence), then items.`,
   };
 }
 
-export function routeItem(c: { quote: string; candidates: { slug: string; title: string; summary: string }[]; allowChat?: boolean }): P {
+export function routeItem(c: { quote: string; candidates: { slug: string; title: string; summary: string; last_active: string }[]; today: string; allowChat?: boolean }): P {
   const opts = [...c.candidates.map((t) => t.slug), "new", ...(c.allowChat ? ["chat"] : [])];
   return {
-    version: "route_item/v2",
+    version: "route_item/v3",
     maxTokens: 120,
     schema: obj({ analysis: str(300), choice: oneOf(opts), confidence: oneOf(["high", "low"]) }),
     prompt: `Decide which topic this message belongs to.
 
-Topics:
-${lines(c.candidates.map((t) => `${t.slug}: ${t.title}.${t.summary ? " " + t.summary.split("\n")[0].slice(0, 160) : ""}`))}
+Today is ${c.today}. Topics (last active date in parentheses):
+${lines(c.candidates.map((t) => `${t.slug}: ${t.title} (${t.last_active}).${t.summary ? " " + t.summary.split("\n")[0].slice(0, 160) : ""}`))}
 - new: none of these topics fits; this starts a new subject${c.allowChat ? `
 - chat: not about one subject: a greeting, small talk, or a question about everything (how things stand, a briefing, an overview)` : ""}
 

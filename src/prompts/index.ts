@@ -21,7 +21,7 @@ export function samplePrompts(): Record<string, W.P> {
     librarian: W.librarian({ goal: "g", done_when: [], notes: "", answerable: ["not_1"] }),
     render_answer: W.renderAnswer({ goal: "g", notes: "" }),
     segment_capture: C.segmentCapture({ transcript: "t" }),
-    route_item: C.routeItem({ quote: "q", candidates: [{ slug: "a", title: "A", summary: "" }] }),
+    route_item: C.routeItem({ quote: "q", candidates: [{ slug: "a", title: "A", summary: "", last_active: "1 Sep 2026" }], today: "28 Sep 2026" }),
     topic_title: C.topicTitle({ quote: "q" }),
     match_answer: C.matchAnswer({ question: "q", options: ["a", "b"], answer: "a" }),
     topic_same: C.topicSame({ a: "a", b: "b" }),
