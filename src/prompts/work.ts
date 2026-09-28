@@ -27,7 +27,7 @@ export const ROLE_LINES: Record<string, string> = {
 // ---------------------------------------------------------------- triage
 export function triage(c: { title: string; goal: string; done_when: string[]; steps: number; tools: string[]; recipes: string[]; owner?: string }): P {
   return {
-    version: "triage/v3",
+    version: "triage/v5",
     maxTokens: 150,
     schema: obj({ analysis: str(300), compare_count: { type: "integer" }, fits: oneOf(["yes", "no"]), missing_info: nstr(200) }),
     prompt: `You decide whether a task can be done in ONE work session.
@@ -40,7 +40,7 @@ ${lines(c.recipes)}
 
 Examples:
 - "Find the opening hours of the Zurich botanical garden" → fits: yes, missing_info: null
-- "Compare 4 health insurers on price and coverage and recommend one" → fits: no, missing_info: null (the work can choose the insurers)
+- "Compare 4 health insurers on price and coverage and recommend one" → compare_count: 4, fits: no, missing_info: null (the work can choose the insurers)
 - "Book a table for my birthday" (no date or place given) → missing_info: "Which date and which restaurant or area?"
 ${c.owner ? `\nAbout the owner:\n${c.owner}\n` : ""}
 Task: ${c.title}
@@ -216,7 +216,9 @@ export function workerStep(c: {
   const alts: Schema[] = tools.map((t) => obj({ action: { type: "string", const: "tool" }, tool: { type: "string", const: t }, tool_args: toolArgSchema(t) }));
   alts.push(obj({ action: { type: "string", const: "finish" }, result: resultSchema(c.role, c.withItems) }));
   alts.push(obj({ action: { type: "string", const: "block" }, analysis: str(300), question: str(200), question_options: arr(str(50), 4, 2) }));
-  alts.push(obj({ action: { type: "string", const: "fail" }, analysis: str(300), category: oneOf(["impossible", "out_of_scope", "unclear", "tool_error"]) }));
+  // P4: research has no "unclear" (that is block or an assumption); tool_error is the harness's own verdict
+  const cats = c.role === "research" ? ["impossible", "out_of_scope"] : ["impossible", "out_of_scope", "unclear"];
+  alts.push(obj({ action: { type: "string", const: "fail" }, analysis: str(300), category: oneOf(cats) }));
   const actionLines = [
     ...(tools.length ? ["tool: use one of the tools."] : []),
     "finish: you are done. Give the result. Also finish when something can't be found: say so in the result.",
@@ -225,7 +227,7 @@ export function workerStep(c: {
   ];
   const sec = (title: string, body: string) => (body.trim() ? `\n${title}:\n${body.trim()}\n` : "");
   return {
-    version: "worker_step/v2",
+    version: "worker_step/v3",
     maxTokens: 1200,
     schema: { anyOf: alts },
     prompt: `${PREAMBLE[c.role]}

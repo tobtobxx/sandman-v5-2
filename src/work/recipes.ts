@@ -27,14 +27,14 @@ export const RECIPES: Recipe[] = [
     params: {
       subject: "what kind of thing to find, e.g. 'drip irrigation kits'",
       criteria: "only the qualities to compare, quoted from the request, e.g. 'price and coverage' (not the whole request)",
-      max_items: "how many to detail (at most 5; the number of named things if the owner named them)",
+      max_items: "how many to detail: the number of named things if the owner named them, else 3 unless the owner asked for another number (at most 5)",
     },
     steps: [
       {
         key: "gather",
         role: "research",
         title: "Find candidate {subject}",
-        goal: "Find candidate {subject} for this request: {request}. List at most {max_items}; fewer is fine. If the owner named them, list those.",
+        goal: "Find candidate {subject} for this request: {request}. List the best ones you find, at most {max_items}; fewer is fine. If the owner named them, list those.",
         done_when: ["Lists candidate {subject} (at most {max_items}), each with a name and one line why it fits"],
         result_items: true,
       },

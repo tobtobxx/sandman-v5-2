@@ -105,7 +105,7 @@ export const cases: Case[] = [
   }, "how is the drip kit comparison going?", (o) =>
     all([o.receipts.length === 0, `receipts: ${kinds(o)}`], [o.turn.intents[0] === "reply_only", `intent ${o.turn.intents}`], [!!o.turn.reply, "no reply"]),
   "conversation", {
-    criteria: ["The reply says the comparison is still in progress or waiting, and mentions the open question about AquaLine's water use", "The reply does not claim that Sandman did anything new (like starting, updating or asking something) in this turn"],
+    criteria: ["The reply says the comparison is still in progress or waiting, and mentions the open question about AquaLine's water use", "The reply does not claim that Sandman started, changed or cancelled any work in this turn"],
     material: (o) => `Owner: how is the drip kit comparison going?\nReply: ${o.turn.reply}`,
   }),
   desk("answer-from-finished-result", () => {

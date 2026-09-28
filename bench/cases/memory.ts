@@ -62,6 +62,9 @@ export const cases: Case[] = [
   rel("reusable-price", "Velostation Nord", "An e-bike service at Velostation Nord costs CHF 149.", true),
   decide("duplicate", gardena, () => fact("Gardena Micro-Drip starter set", "One Gardena Micro-Drip starter set waters about 15 square metres.", "slow"), "duplicate"),
   decide("update-price", gardena, () => fact("Gardena Micro-Drip starter set", "The Gardena Micro-Drip starter set costs CHF 89.90.", "volatile"), "update"),
+  decide("unrelated-detail-not-update", () => note("Velostation Nord", [
+    { text: "An e-bike service at Velostation Nord costs CHF 149, which includes a software update and a battery check.", days_ago: 0, volatility: "volatile" },
+  ]), () => fact("Velostation Nord", "Velostation Nord does not repair batteries themselves but sends them to the manufacturer.", "slow", { type: "url", ref: "https://www.velostation-nord.ch/about" }), "new"),
   decide("new-claim", gardena, () => fact("Gardena Micro-Drip starter set", "Each Gardena Micro-Drip dripper delivers 2 litres per hour.", "slow"), "new"),
   {
     id: "memory/owner-facts-only-statements",

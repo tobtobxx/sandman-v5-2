@@ -49,7 +49,7 @@ trivial: Is this common knowledge that any assistant already knows?`,
 
 export function consolidateFact(c: { note_title: string; claim: string; claims: { id: string; text: string; date: string }[] }): P {
   return {
-    version: "consolidate_fact/v1",
+    version: "consolidate_fact/v2",
     maxTokens: 150,
     schema: obj({
       analysis: str(200),
@@ -61,7 +61,7 @@ export function consolidateFact(c: { note_title: string; claim: string; claims: 
 Decisions:
 - new: the note doesn't say this yet
 - duplicate: a claim already says the same thing
-- update: a claim says an older value of the same thing (e.g. an old price); the new fact replaces it
+- update: a claim gives an older value of exactly the same detail (e.g. the old price of the same service); the new fact replaces it
 - contradicts: a claim says something different about the same thing, and it is not simply older
 - discard: the fact is empty, vague or not about ${c.note_title}
 

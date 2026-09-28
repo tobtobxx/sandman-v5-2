@@ -7,6 +7,7 @@ import { recordedFacts } from "./worker.ts";
 import { endSession, startSession } from "../trace.ts";
 import { config } from "../config.ts";
 import { escalate } from "./policy.ts";
+import { getRecipe } from "./recipes.ts";
 
 export function resultText(r: Record<string, any> | null): string {
   if (!r) return "(no result)";
@@ -26,10 +27,13 @@ export async function verifyCard(card_id: string): Promise<"pass" | "fail"> {
     return "pass";
   }
   const session_id = startSession("verifier", { card_id: card.id });
+  const r = card.recipe_id ? getRecipe(card.recipe_id) : null;
+  const needsItems = !!r?.steps.find((s) => s.key === card.recipe_step)?.result_items;
   const rec = recordedFacts(card.id);
   const excerpts = rec.files.map((f) => `--- ${f.name} ---\n${String(f.content).slice(0, 2500)}`).join("\n\n");
   const fails: string[] = [];
   let step = 0;
+  if (needsItems && !(card.result?.items ?? []).length) fails.push("The result lists no items. Put each candidate in items, with a name and one line why it fits.");
   for (const criterion of card.done_when) {
     const p = verifyCriterion({ criterion, result: resultText(card.result), recorded: rec.lines.join("\n"), excerpts });
     const r = await llmJson<{ analysis: string; verdict: string }>("verify_criterion", p.prompt, p.schema, {

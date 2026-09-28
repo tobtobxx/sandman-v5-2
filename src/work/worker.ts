@@ -200,7 +200,7 @@ export async function runWorker(card_id: string): Promise<Outcome> {
       transition(card.id, "blocked", "block", "worker", { blocked_reason: "worker_question", lease_owner: null }, { question_id: q.id, analysis: action.analysis });
       return "block";
     }
-    if (action.action === "fail" && role === "research" && action.category === "impossible") {
+    if (action.action === "fail" && role === "research" && action.category !== "out_of_scope" && !withItems) {
       // "not found" is a result, not a failure: the verifier decides whether it is acceptable
       endSession(session_id, "finish:not_found", k);
       addNegativeFact(card, action.analysis);

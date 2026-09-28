@@ -8,6 +8,7 @@ import * as M from "../prompts/memory.ts";
 import { indexNote } from "./retriever.ts";
 import { createQuestion } from "../conversation/questions.ts";
 import { emit } from "../events.ts";
+import { PRICE } from "./facts.ts";
 
 const toks = (s: string) => new Set(s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []);
 function sim(a: string, b: string) {
@@ -109,6 +110,9 @@ export async function consolidateOne(f: Row): Promise<string> {
   const target = claims.find((c) => c.id === r.target_claim_id);
   let decision = r.decision;
   if (["duplicate", "update", "contradicts"].includes(decision) && !target) decision = "new";
+  // code guard: an update or contradiction must be about the same detail — similar wording, or both are prices
+  const sameDetail = target && (sim(target.text, f.text) >= 0.35 || (PRICE.test(target.text) && PRICE.test(f.text)));
+  if ((decision === "update" || decision === "contradicts") && !sameDetail) decision = "new";
   switch (decision) {
     case "new":
       addClaim(note.id, base);
