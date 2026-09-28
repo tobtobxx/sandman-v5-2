@@ -96,7 +96,7 @@ export function topicView(id: string) {
       timeline.push({ type: "receipt", id: p.receipt_id, text: m.body, at, undone: !!r?.undone_at, card: r?.kind === "card_created" ? cardProgress(r.ref_id) : null });
     } else if (m.kind === "question") {
       const q = db().get(`SELECT * FROM questions WHERE id=?`, p.question_id);
-      timeline.push({ type: "question", id: p.question_id, text: m.body, at, options: j(q?.options, []), details: questionDetails(q), status: q?.status ?? "expired", answer: q?.answer_option ?? q?.answer_text ?? null });
+      timeline.push({ type: "question", id: p.question_id, card_id: q?.card_id ?? null, text: m.body, at, options: j(q?.options, []), details: questionDetails(q), status: q?.status ?? "expired", answer: q?.answer_option ?? q?.answer_text ?? null });
     } else if (m.kind === "card_result") {
       timeline.push({ type: "result", card_id: p.card_id, title: p.title, state: p.state, summary: p.summary ?? m.body, recommendation: p.recommendation ?? null, artifacts: (p.artifacts ?? []).map((a: Row) => ({ id: a.id, name: a.name })), at });
     } else if (m.kind === "reminder") timeline.push({ type: "reminder", text: m.body, at });
