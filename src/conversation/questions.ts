@@ -8,14 +8,33 @@ import { addComment, getCard, transition } from "../work/board.ts";
 import { llmJson } from "../llm/gateway.ts";
 import { matchAnswer } from "../prompts/conversation.ts";
 
-export function createQuestion(q: { card_id?: string | null; topic_id: string | null; text: string; options: string[]; reason: string }): Row {
+/** What the owner needs to answer well: why it is asked (`why`, one entry each) and the work so far (`result`). */
+export interface QuestionDetails {
+  why?: string[];
+  result?: string | null;
+}
+
+export function createQuestion(q: { card_id?: string | null; topic_id: string | null; text: string; options: string[]; reason: string; details?: QuestionDetails }): Row {
   const id = newId("qst");
   const topic_id = q.topic_id ?? systemTopicId();
   const msg = postMessage({ topic_id, role: "sandman", kind: "question", body: q.text, payload: { question_id: id, options: q.options, card_id: q.card_id } });
-  const row = { id, card_id: q.card_id ?? null, topic_id, message_id: msg.id, text: q.text, options: q.options, reason: q.reason, status: "open", created_at: nowIso() };
+  const row = { id, card_id: q.card_id ?? null, topic_id, message_id: msg.id, text: q.text, options: q.options, reason: q.reason, status: "open", details: q.details ?? null, created_at: nowIso() };
   db().insert("questions", row);
   emit("question.created", { topic_id, ref_id: id, payload: row, kind: q.reason === "memory_conflict" ? "review" : "question" });
   return row;
+}
+
+/** A question's details. Escalations from before details were stored fall back to the card's last
+ *  verifier or harness comment and its result. */
+export function questionDetails(q: Row | undefined): QuestionDetails | null {
+  if (!q) return null;
+  const d = j<QuestionDetails | null>(q.details, null);
+  if (d || q.reason !== "escalation" || !q.card_id) return d;
+  const card = db().get(`SELECT result FROM cards WHERE id=?`, q.card_id);
+  const c = db().get(`SELECT author, body FROM comments WHERE card_id=? AND author IN ('verifier','harness') AND created_at <= ? ORDER BY created_at DESC, rowid DESC LIMIT 1`, q.card_id, q.created_at);
+  const why = !c ? [] : c.author === "verifier" ? String(c.body).split("\n").slice(1).filter(Boolean) : [String(c.body)];
+  const result = j<Row | null>(card?.result, null)?.summary ?? null;
+  return why.length || result ? { why, result } : null;
 }
 
 export function systemTopicId(): string {
@@ -41,7 +60,7 @@ function waitingCount(card_id: string | null): number {
 export function needsYou(topic_id?: string): Row[] {
   const rows = db().all(`SELECT * FROM questions WHERE status='open' ${topic_id ? "AND topic_id=?" : ""} ORDER BY created_at`, ...(topic_id ? [topic_id] : []));
   return rows
-    .map((q) => ({ ...q, options: j(q.options, []), blocked_cards: waitingCount(q.card_id), topic_title: db().get(`SELECT title FROM topics WHERE id=?`, q.topic_id)?.title }))
+    .map((q) => ({ ...q, options: j(q.options, []), details: questionDetails(q), blocked_cards: waitingCount(q.card_id), topic_title: db().get(`SELECT title FROM topics WHERE id=?`, q.topic_id)?.title }))
     .sort((a, b) => b.blocked_cards - a.blocked_cards || a.created_at.localeCompare(b.created_at));
 }
 

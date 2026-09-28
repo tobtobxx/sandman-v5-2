@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, type TE
   payload TEXT, notify TEXT, at TEXT);
 CREATE TABLE IF NOT EXISTS questions (id TEXT PRIMARY KEY, card_id TEXT, topic_id TEXT, message_id TEXT, text TEXT,
   options TEXT DEFAULT '[]', reason TEXT, status TEXT DEFAULT 'open', answer_option TEXT, answer_text TEXT,
-  answered_via TEXT, answered_at TEXT, created_at TEXT);
+  answered_via TEXT, answered_at TEXT, details TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS review_items (id TEXT PRIMARY KEY, kind TEXT, topic_id TEXT, ref_ids TEXT, payload TEXT,
   status TEXT DEFAULT 'open', resolved_at TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS briefings (id TEXT PRIMARY KEY, script TEXT, position INTEGER DEFAULT 0, state TEXT,
@@ -87,7 +87,7 @@ export class DB {
     this.raw = new DatabaseSync(path);
     this.raw.exec(SCHEMA);
     // columns added after the first release: add them to existing databases
-    for (const [table, col, def] of [["topics", "kind", "TEXT DEFAULT 'subject'"], ["topics", "seen_at", "TEXT"]]) {
+    for (const [table, col, def] of [["topics", "kind", "TEXT DEFAULT 'subject'"], ["topics", "seen_at", "TEXT"], ["questions", "details", "TEXT"]]) {
       const cols = this.raw.prepare(`PRAGMA table_info(${table})`).all() as Row[];
       if (!cols.some((c) => c.name === col)) this.raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
     }
