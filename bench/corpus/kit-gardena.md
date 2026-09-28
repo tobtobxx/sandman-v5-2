@@ -1,4 +1,4 @@
-url: https://gardena.example/micro-drip-starter-set
+url: https://www.gardena-shop.ch/micro-drip-starter-set
 title: Gardena Micro-Drip starter set for raised beds
 
 The Micro-Drip starter set waters raised beds and planters precisely at the roots.

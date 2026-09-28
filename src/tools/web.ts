@@ -15,6 +15,7 @@ interface Page {
   url: string;
   title: string;
   text: string;
+  keywords: string; // stands in for a real engine's synonym/language matching; not shown to the model
 }
 let corpus: Page[] | null = null;
 export function loadCorpus(dir = new URL("../../bench/corpus/", import.meta.url).pathname): Page[] {
@@ -23,18 +24,18 @@ export function loadCorpus(dir = new URL("../../bench/corpus/", import.meta.url)
   for (const e of Deno.readDirSync(dir)) {
     if (!e.name.endsWith(".md")) continue;
     const raw = Deno.readTextFileSync(dir + e.name);
-    const m = raw.match(/^url:\s*(.+)\ntitle:\s*(.+)\n\n([\s\S]*)$/);
-    if (m) corpus.push({ url: m[1].trim(), title: m[2].trim(), text: m[3].trim() });
+    const m = raw.match(/^url:\s*(.+)\ntitle:\s*(.+)\n(?:keywords:\s*(.+)\n)?\n([\s\S]*)$/);
+    if (m) corpus.push({ url: m[1].trim(), title: m[2].trim(), keywords: (m[3] ?? "").trim(), text: m[4].trim() });
   }
   return corpus;
 }
 
-const words = (s: string) => s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").match(/[\p{L}\p{N}]+/gu) ?? [];
 
 function corpusSearch(query: string): SearchHit[] {
   const q = [...new Set(words(query).filter((w) => w.length > 2))];
   const scored = loadCorpus().map((p) => {
-    const tw = new Set(words(p.title));
+    const tw = new Set([...words(p.title), ...words(p.keywords)]);
     const bw = words(p.text);
     const bset = new Set(bw);
     let s = 0;

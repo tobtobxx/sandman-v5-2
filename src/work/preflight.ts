@@ -6,7 +6,7 @@ import { llmJson } from "../llm/gateway.ts";
 import * as W from "../prompts/work.ts";
 import { addComment, Card, createCard, getCard, maxSteps, transition } from "./board.ts";
 import { fill, getRecipe, RECIPES } from "./recipes.ts";
-import { findNotes, renderNotes } from "../memory/retriever.ts";
+import { findNotes, profileText, renderNotes } from "../memory/retriever.ts";
 import { createQuestion } from "../conversation/questions.ts";
 import { endSession, startSession } from "../trace.ts";
 
@@ -55,13 +55,23 @@ export async function runLibrarian(card: Card): Promise<"answered" | "narrow" | 
 }
 
 // ---------------------------------------------------------------- triage
-export async function runTriage(card: Card): Promise<string> {
-  const session_id = startSession("triage", { card_id: card.id });
+/** The triage decision alone (no side effects). */
+export const COMPARE_SPLIT_THRESHOLD = 3; // DESIGN §19 open question 1: comparing ≥3 things always splits
+
+export async function triageDecide(card: Card, session_id?: string): Promise<{ analysis: string; fits: string; missing_info: string | null; compare_count?: number }> {
   const r = await ask<Row>("triage", W.triage({
     title: card.title, goal: card.goal, done_when: card.done_when, steps: maxSteps(card.role), tools: config.roles[card.role].tools,
-    recipes: RECIPES.map((r) => r.title),
+    recipes: RECIPES.map((r) => r.title), owner: profileText(),
   }), card, session_id);
-  if (r.missing_info && String(r.missing_info).trim() && !/^(null|none|n\/a)$/i.test(String(r.missing_info).trim())) {
+  const m = r.missing_info && String(r.missing_info).trim();
+  const fits = (r.compare_count ?? 0) >= COMPARE_SPLIT_THRESHOLD ? "no" : r.fits; // code rule, not the model
+  return { analysis: r.analysis, fits, missing_info: m && !/^(null|none|n\/a)$/i.test(m) ? m : null, compare_count: r.compare_count };
+}
+
+export async function runTriage(card: Card): Promise<string> {
+  const session_id = startSession("triage", { card_id: card.id });
+  const r = await triageDecide(card, session_id);
+  if (r.missing_info) {
     endSession(session_id, "missing_info");
     const q = createQuestion({ card_id: card.id, topic_id: card.origin_topic_id, text: r.missing_info, options: [], reason: "missing_info" });
     transition(card.id, "blocked", "missing_info", "triage", { blocked_reason: "missing_info" }, { question_id: q.id });
@@ -96,7 +106,12 @@ export async function runPlanner(card: Card): Promise<string> {
   const recipe = pick.recipe_id !== "none" ? getRecipe(pick.recipe_id) : null;
   if (recipe) {
     const request = ownerRequest(card);
-    const params = await ask<Row>("plan_fill", W.planFill({ request, goal: card.goal, params: recipe.params }), card, session_id);
+    const fillP = W.planFill({ request, goal: card.goal, params: recipe.params });
+    let params = await ask<Row>("plan_fill", fillP, card, session_id);
+    // code guard: criteria must be a short list of qualities, not the request itself
+    const badCriteria = (p: Row) => typeof p.criteria === "string" && (p.criteria.length > 120 || /\b(compare|recommend)\b/i.test(p.criteria));
+    if (badCriteria(params)) params = await llmJson<Row>("plan_fill", fillP.prompt, fillP.schema, { maxTokens: fillP.maxTokens, version: fillP.version, card_id: card.id, session_id, temperature: 0 });
+    if (badCriteria(params)) params.criteria = "the qualities the owner asked about";
     if (params.max_items !== undefined) params.max_items = Math.max(1, Math.min(config.board.max_children, Number(params.max_items) || 3));
     params.request = request;
     db().update("cards", card.id, { recipe_id: recipe.id, recipe_params: params });
@@ -110,7 +125,7 @@ export async function runPlanner(card: Card): Promise<string> {
   } else {
     const plan = await ask<Row>("plan_generate", W.planGenerate({ title: card.title, goal: card.goal, done_when: card.done_when }), card, session_id);
     for (const s of plan.subtasks.slice(0, config.board.max_children)) {
-      createCard({ parent_id: card.id, role: s.role, title: s.title, goal: s.goal, done_when: s.done_when, constraints: card.constraints, created_by: "planner", inputs: card.inputs });
+      createCard({ parent_id: card.id, role: "research", title: s.title, goal: s.goal, done_when: s.done_when, constraints: card.constraints, created_by: "planner", inputs: card.inputs });
     }
     endSession(session_id, "free_plan");
   }

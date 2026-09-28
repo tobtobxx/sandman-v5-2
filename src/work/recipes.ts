@@ -23,10 +23,10 @@ export const RECIPES: Recipe[] = [
   {
     id: "rcp_research_detail",
     title: "Research candidates, detail each, then compare",
-    description: "For choosing among several options of one kind, or comparing several named things.",
+    description: "For choosing ONE thing among several options of the same kind (e.g. which kit to buy), or comparing several named things of the same kind.",
     params: {
       subject: "what kind of thing to find, e.g. 'drip irrigation kits'",
-      criteria: "the owner's comparison criteria, quoted from the request",
+      criteria: "only the qualities to compare, quoted from the request, e.g. 'price and coverage' (not the whole request)",
       max_items: "how many to detail (at most 5; the number of named things if the owner named them)",
     },
     steps: [
@@ -34,8 +34,8 @@ export const RECIPES: Recipe[] = [
         key: "gather",
         role: "research",
         title: "Find candidate {subject}",
-        goal: "Find up to {max_items} candidate {subject} for this request: {request}",
-        done_when: ["Lists up to {max_items} candidate {subject}, each with a name and one line why it fits"],
+        goal: "Find candidate {subject} for this request: {request}. List at most {max_items}; fewer is fine. If the owner named them, list those.",
+        done_when: ["Lists candidate {subject} (at most {max_items}), each with a name and one line why it fits"],
         result_items: true,
       },
       {
@@ -51,7 +51,7 @@ export const RECIPES: Recipe[] = [
   {
     id: "rcp_research_write",
     title: "Research the facts, then write the text",
-    description: "For writing a text (email, letter, guide) that needs facts looked up first.",
+    description: "For writing ONE text (an email or a letter) that needs a few facts looked up first.",
     params: {
       document: "the text to write, e.g. 'an email to the landlord'",
       topics: "the facts that must be looked up, quoted from the request",

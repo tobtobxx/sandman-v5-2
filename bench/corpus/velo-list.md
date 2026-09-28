@@ -1,4 +1,4 @@
-url: https://city-guide.example/bike-shops
+url: https://www.stadtfuehrer-bern.ch/bike-shops
 title: Bike shops in the city – an overview
 
 Looking for a bike shop? Here are the most popular ones. Velostation Nord at the main station offers

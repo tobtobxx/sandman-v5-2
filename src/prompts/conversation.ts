@@ -122,8 +122,9 @@ function deskContext(c: DeskCtx) {
   return s.join("\n\n");
 }
 
-function deskInput(c: DeskCtx) {
+function deskInput(c: DeskCtx, withMemo = true) {
   if (c.mode === "capture") {
+    if (!withMemo) return `${c.owner} said this in a voice memo or quick note (it may contain transcription errors):\n"${c.input}"`;
     return `${c.owner} said this in a voice memo or quick note (it may contain transcription errors):
 "${c.input}"${c.transcript && c.transcript.trim() !== c.input.trim() ? `\n\nFull memo, for context only; other parts are handled separately:\n"${c.transcript}"` : ""}`;
   }
@@ -133,16 +134,17 @@ function deskInput(c: DeskCtx) {
 export const INTENT_LINES: Record<string, string> = {
   new_work: "new_work: the owner wants something researched, written or compared",
   reminder: "reminder: the owner wants to be reminded of something at a time",
-  answer_question: "answer_question: the owner is answering one of the open questions",
+  answer_question: "answer_question: the owner answers one of the open questions (gives a choice or decision)",
   add_to_card: "add_to_card: the owner adds a requirement or detail to one of the cards",
-  reply_only: "reply_only: a question or remark you can answer directly from what you see here",
+  cancel_card: "cancel_card: the owner wants to stop one of the cards",
+  reply_only: "reply_only: a question you can answer from what you see here (including how work is going), or a request Sandman can't do (buying, sending, calling)",
   nothing: "nothing: no action and no reply needed (e.g. \"thanks\")",
   done: "done: everything the owner said has been handled",
 };
 
 export function deskIntent(c: DeskCtx & { intents: string[] }): P {
   return {
-    version: "desk_intent/v1",
+    version: "desk_intent/v4",
     maxTokens: 120,
     schema: obj({ analysis: str(300), intent: oneOf(c.intents) }),
     prompt: `You are Sandman's front desk. ${c.owner} is the owner. Decide the NEXT action for what ${c.owner} said.
@@ -152,7 +154,7 @@ ${lines(c.intents.map((i) => INTENT_LINES[i]))}
 
 ${deskContext(c)}
 
-${deskInput(c)}
+${deskInput(c, false)}
 ${c.receipts.length ? `\nDone so far for this:\n${lines(c.receipts)}\n` : ""}
 Reply with analysis (one sentence), then intent.`,
   };
@@ -160,10 +162,12 @@ Reply with analysis (one sentence), then intent.`,
 
 export function deskArgsNewWork(c: DeskCtx): P {
   return {
-    version: "desk_args_new_work/v1",
+    version: "desk_args_new_work/v2",
     maxTokens: 350,
-    schema: obj({ analysis: str(300), done_when: arr(str(200), 3, 1), goal: str(600), role: oneOf(["research", "write"]), title: str(80) }),
+    schema: obj({ analysis: str(300), done_when: arr(str(200), 3), goal: str(600), role: oneOf(["research", "write"]), title: str(80) }),
     prompt: `You are Sandman's front desk. Create a work card for what ${c.owner} asked.
+Only for the part that asks for research or writing. Other parts (reminders, additions to other cards)
+are handled separately; leave them out of this card.
 
 Roles:
 ${lines(Object.values(ROLE_LINES))}
@@ -184,10 +188,10 @@ Reply with analysis (one sentence), then done_when, goal, role, title.`,
 
 export function deskArgsReminder(c: DeskCtx): P {
   return {
-    version: "desk_args_reminder/v1",
+    version: "desk_args_reminder/v2",
     maxTokens: 100,
     schema: obj({ text: str(200), when_text: str(80) }),
-    prompt: `You are Sandman's front desk. ${c.owner} wants a reminder.
+    prompt: `You are Sandman's front desk. ${c.owner} wants a reminder. Only handle the reminder part.
 
 - text: what to remind ${c.owner} of, as a short instruction (e.g. "File the tax extension")
 - when_text: when, in ${c.owner}'s words (e.g. "Friday", "tomorrow at 3pm", "in 2 hours")
@@ -216,7 +220,7 @@ Reply with question_id, then response: ${c.owner}'s answer, in their words.`,
 
 export function deskArgsAdd(c: DeskCtx): P {
   return {
-    version: "desk_args_add/v1",
+    version: "desk_args_add/v2",
     maxTokens: 150,
     schema: obj({ card_id: oneOf(c.cards.map((x) => x.id)), note: str(400) }),
     prompt: `You are Sandman's front desk. ${c.owner} is adding something to an existing card.
@@ -226,7 +230,23 @@ ${lines(c.cards.map((x) => `${x.id}: ${x.line}`))}
 
 ${deskInput(c)}
 
-Reply with card_id, then note: what to add, as an instruction for whoever works on the card.`,
+Reply with card_id, then note: only the addition for this card, as an instruction for whoever works on it.`,
+  };
+}
+
+export function deskArgsCancel(c: DeskCtx): P {
+  return {
+    version: "desk_args_cancel/v1",
+    maxTokens: 60,
+    schema: obj({ card_id: oneOf(c.cards.map((x) => x.id)) }),
+    prompt: `You are Sandman's front desk. ${c.owner} wants to stop a card.
+
+Cards:
+${lines(c.cards.map((x) => `${x.id}: ${x.line}`))}
+
+${deskInput(c)}
+
+Reply with card_id: the card to stop.`,
   };
 }
 

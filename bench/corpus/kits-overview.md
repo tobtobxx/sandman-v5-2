@@ -1,5 +1,6 @@
-url: https://gartenwelt.example/ratgeber/drip-irrigation-kits
+url: https://www.gartenwelt-ratgeber.ch/ratgeber/drip-irrigation-kits
 title: The best drip irrigation kits for raised beds (2026)
+keywords: Tropfbewässerung Hochbeet Set drip irrigation kit raised bed
 
 Drip irrigation saves water and time. We looked at the kits most often sold in Switzerland for
 raised beds and small vegetable gardens.

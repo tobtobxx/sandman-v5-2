@@ -57,7 +57,7 @@ export const config = {
       provider: { require_parameters: true },
     } as Profile,
   } as Record<string, Profile>,
-  capture: { segment_min_words: 30, quote_match_min: 0.9, unfiled_min_words: 8 },
+  capture: { segment_min_words: 12, quote_match_min: 0.9, unfiled_min_words: 8 },
   router: { recent_candidates: 6, fts_candidates: 3 },
   desk: { max_actions: 3, history_messages: 8 },
   needs_you: { max_question_words: 25, max_options: 4, max_option_words: 6 },

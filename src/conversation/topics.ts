@@ -5,7 +5,7 @@ import { newId } from "../ids.ts";
 import { emit } from "../events.ts";
 
 export function slugify(title: string): string {
-  const base = title.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "topic";
+  const base = title.toLowerCase().replace(/['’]/g, "").normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) || "topic";
   let slug = base, i = 2;
   while (db().get(`SELECT id FROM topics WHERE slug=?`, slug)) slug = `${base}-${i++}`;
   return slug;

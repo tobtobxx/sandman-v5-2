@@ -1,5 +1,6 @@
-url: https://www.zoo-zuerich.example/en/visit/opening-hours
+url: https://www.zoo-zuerich.ch/en/visit/opening-hours
 title: Opening hours and prices – Zoo Zürich
+keywords: Zoo Zürich Öffnungszeiten Winter Sommer Eintritt Preise opening hours
 
 Plan your visit to Zoo Zürich. The zoo is open every day of the year, including public holidays.
 Our Masoala Rainforest hall and the Kaeng Krachan Elephant Park are included in every ticket.

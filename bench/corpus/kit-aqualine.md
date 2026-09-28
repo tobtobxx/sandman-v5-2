@@ -1,4 +1,4 @@
-url: https://diy-store.example/aqualine-basic-kit
+url: https://www.brico-markt.ch/aqualine-basic-kit
 title: AquaLine Basic drip kit – 20 drippers
 
 A simple drip kit for balconies and small beds. Contents: 10 m pipe, 20 drippers, tap connector.

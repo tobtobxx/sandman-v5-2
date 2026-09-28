@@ -5,10 +5,11 @@ import { lines, P } from "./work.ts";
 
 export function matchSubject(c: { subject: string; claim: string; notes: { id: string; title: string; one_liner: string }[] }): P {
   return {
-    version: "match_subject/v1",
+    version: "match_subject/v3",
     maxTokens: 120,
     schema: obj({ analysis: str(200), note_id: oneOf([...c.notes.map((n) => n.id), "none"]) }),
-    prompt: `A new fact needs a place in memory. Find the note about the same thing.
+    prompt: `A new fact needs a place in memory. Find the note about the same thing as the fact.
+The note does not need to contain the fact already; it only needs to be about the same thing.
 
 Fact about "${c.subject}": ${c.claim}
 
@@ -17,6 +18,11 @@ ${lines(c.notes.map((n) => `${n.id}: ${n.title}${n.one_liner ? ` — ${n.one_lin
 - none: no note is about this thing
 
 A different thing of the same kind is none (another product, another shop, another person).
+
+Examples:
+- "Gardena drip starter kit" and note "Gardena Micro-Drip starter set" → the note (another name for the same product)
+- "Hozelock Easy Drip kit" and note "Gardena Micro-Drip starter set" → none (a different product of the same kind)
+- "Gardena extension set" and note "Gardena Micro-Drip starter set" → none (a different product from the same brand)
 
 Reply with analysis (one sentence), then note_id.`,
   };

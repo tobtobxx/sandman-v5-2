@@ -1,4 +1,4 @@
-url: https://www.zoo-zuerich.example/en/news/new-penguin-path
+url: https://www.zoo-zuerich.ch/en/news/new-penguin-path
 title: New penguin path opens at Zoo Zürich
 
 The penguin parade returns this winter. When the temperature drops below 10 °C, the king penguins

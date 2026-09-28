@@ -1,5 +1,6 @@
-url: https://velostation-nord.example/about
+url: https://www.velostation-nord.ch/about
 title: Velostation Nord – your bike shop at the main station
+keywords: Velowerkstatt Veloreparatur E-Bike Service Preise Bahnhof bike repair
 
 Velostation Nord has been part of the station district since 1998. What started as a small bicycle
 parking garage with a single workbench has grown into one of the busiest bike workshops in town.

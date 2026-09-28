@@ -1,5 +1,6 @@
-url: https://stadtbibliothek.example/en/visit
+url: https://www.stadtbibliothek-zuerich.ch/en/visit
 title: City Library – visit us
+keywords: Zürich Stadtbibliothek Öffnungszeiten Sonntag library opening hours Sunday
 
 The City Library is open Tuesday to Friday 10:00–19:00 and Saturday 10:00–16:00. Closed Sunday and Monday.
 Borrowing is free for residents. Non-residents pay CHF 40 per year.

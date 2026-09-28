@@ -33,7 +33,8 @@ export function page(art: Row, from: number, source: string): string {
   const a = Math.max(0, Math.min(from, text.length));
   const b = Math.min(text.length, a + w);
   const more = b < text.length ? ` Continue with read_artifact("${art.id}", ${b}) if you need more.` : " This is the end.";
-  return `[characters ${a}–${b} of ${text.length} from ${source}.${more}]\n${text.slice(a, b)}`;
+  const footer = b < text.length ? `\n[The text continues. Read the rest with read_artifact("${art.id}", ${b}).]` : "";
+  return `[characters ${a}–${b} of ${text.length} from ${source}.${more}]\n${text.slice(a, b)}${footer}`;
 }
 
 export const wordCount = (s: string) => (s.match(/\S+/g) ?? []).length;

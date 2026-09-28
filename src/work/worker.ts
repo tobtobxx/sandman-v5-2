@@ -14,6 +14,8 @@ import { endSession, lastLlmCallId, startSession } from "../trace.ts";
 import { createQuestion } from "../conversation/questions.ts";
 import { failCard } from "./policy.ts";
 import { emit } from "../events.ts";
+import { addNegativeFact, PRICE } from "../memory/facts.ts";
+import { fmtNow } from "../conversation/when.ts";
 
 export type Outcome = "finish" | "block" | "fail";
 
@@ -106,7 +108,7 @@ async function runTool(card: Card, tool: string, args: Row): Promise<ToolResult>
     }
     case "write_artifact": {
       const name = String(args.name ?? "output.md");
-      const p = generateContent({ title: card.title, goal: card.goal, inputs: renderInputs(card), memory: memoryFor(card), name, what: String(args.what ?? "") });
+      const p = generateContent({ title: card.title, goal: card.goal, inputs: renderInputs(card), memory: memoryFor(card), name, what: String(args.what ?? ""), owner: `${config.owner.name}\n${profileText()}`.trim(), today: fmtNow() });
       const text = await llmText("generate_content", p.prompt, { maxTokens: p.maxTokens, version: p.version, card_id: card.id });
       const art = saveArtifact({ card_id: card.id, name, content: text, origin: "write", summary: String(args.what ?? "").slice(0, 200) });
       const preview = text.split("\n").filter((l) => l.trim()).slice(0, 3).join("\n");
@@ -188,6 +190,7 @@ export async function runWorker(card_id: string): Promise<Outcome> {
     }
     if (action.action === "finish") {
       endSession(session_id, "finish", k);
+      for (const f of action.result?.facts ?? []) if (PRICE.test(f.claim ?? "")) f.volatility = "volatile";
       transition(card.id, "verifying", "finish", "worker", { result: { ...action.result, source: "worker" }, result_source: "worker", lease_owner: null });
       return "finish";
     }
@@ -196,6 +199,14 @@ export async function runWorker(card_id: string): Promise<Outcome> {
       const q = createQuestion({ card_id: card.id, topic_id: card.origin_topic_id, text: action.question, options: action.question_options ?? [], reason: "worker_question" });
       transition(card.id, "blocked", "block", "worker", { blocked_reason: "worker_question", lease_owner: null }, { question_id: q.id, analysis: action.analysis });
       return "block";
+    }
+    if (action.action === "fail" && role === "research" && action.category === "impossible") {
+      // "not found" is a result, not a failure: the verifier decides whether it is acceptable
+      endSession(session_id, "finish:not_found", k);
+      addNegativeFact(card, action.analysis);
+      const result = { summary: `Not found. ${action.analysis}`, facts: [], open_questions: [], sources: [], source: "worker" };
+      transition(card.id, "verifying", "finish_not_found", "worker", { result, result_source: "worker", lease_owner: null });
+      return "finish";
     }
     if (action.action === "fail") {
       endSession(session_id, `fail:${action.category}`, k);

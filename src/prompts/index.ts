@@ -30,6 +30,7 @@ export function samplePrompts(): Record<string, W.P> {
     desk_args_reminder: C.deskArgsReminder(desk),
     desk_args_answer: C.deskArgsAnswer(desk),
     desk_args_add: C.deskArgsAdd(desk),
+    desk_args_cancel: C.deskArgsCancel(desk),
     resolve_when: C.resolveWhen({ when_text: "w", now: "n", days: ["2026-01-01 thursday"] }),
     extract_owner_facts: C.extractOwnerFacts({ owner: "Alex", messages: [] }),
     match_subject: M.matchSubject({ subject: "s", claim: "c", notes: [{ id: "not_1", title: "t", one_liner: "" }] }),

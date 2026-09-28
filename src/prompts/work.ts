@@ -25,11 +25,11 @@ export const ROLE_LINES: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------- triage
-export function triage(c: { title: string; goal: string; done_when: string[]; steps: number; tools: string[]; recipes: string[] }): P {
+export function triage(c: { title: string; goal: string; done_when: string[]; steps: number; tools: string[]; recipes: string[]; owner?: string }): P {
   return {
-    version: "triage/v1",
+    version: "triage/v3",
     maxTokens: 150,
-    schema: obj({ analysis: str(300), fits: oneOf(["yes", "no"]), missing_info: nstr(200) }),
+    schema: obj({ analysis: str(300), compare_count: { type: "integer" }, fits: oneOf(["yes", "no"]), missing_info: nstr(200) }),
     prompt: `You decide whether a task can be done in ONE work session.
 
 A session has at most ${c.steps} steps and these tools:
@@ -39,10 +39,10 @@ For context, these multi-step plans exist (you are NOT choosing one now):
 ${lines(c.recipes)}
 
 Examples:
-- "Find the opening hours of the Zurich botanical garden" → fits: yes
-- "Compare 4 health insurers on price and coverage and recommend one" → fits: no
+- "Find the opening hours of the Zurich botanical garden" → fits: yes, missing_info: null
+- "Compare 4 health insurers on price and coverage and recommend one" → fits: no, missing_info: null (the work can choose the insurers)
 - "Book a table for my birthday" (no date or place given) → missing_info: "Which date and which restaurant or area?"
-
+${c.owner ? `\nAbout the owner:\n${c.owner}\n` : ""}
 Task: ${c.title}
 Goal: ${c.goal}
 Done when:
@@ -50,8 +50,10 @@ ${lines(c.done_when)}
 
 Reply with:
 - analysis: one or two sentences
+- compare_count: how many different things the task asks to look up and compare (0 if it is not a comparison)
 - fits: yes or no
-- missing_info: a short question for the owner ONLY if the task cannot start without it, else null`,
+- missing_info: null in most cases. A short question ONLY if the work can't even start without a fact that
+  only the owner knows (a date, a person, their own details). If the work can choose or find it, use null.`,
   };
 }
 
@@ -79,7 +81,7 @@ export function planFill(c: { request: string; goal: string; params: Record<stri
   const props: Record<string, Schema> = { analysis: str(300) };
   for (const k of keys) props[k] = k === "max_items" ? { type: "integer" } : str(200);
   return {
-    version: "plan_fill/v1",
+    version: "plan_fill/v2",
     maxTokens: 250,
     schema: obj(props),
     prompt: `Fill in the parameters of a plan for the owner's request.
@@ -87,7 +89,8 @@ export function planFill(c: { request: string; goal: string; params: Record<stri
 Parameters:
 ${lines(keys.map((k) => `${k}: ${c.params[k]}`))}
 
-Criteria must be quoted or closely paraphrased from the owner's request. Never invent criteria.
+Criteria must be quoted or closely paraphrased from the owner's request, and include EVERY wish the owner
+states (e.g. quiet, under 400 francs, good with pets). Never invent criteria.
 
 Owner's request: "${c.request}"
 Goal: ${c.goal}
@@ -98,19 +101,22 @@ Reply with analysis (one sentence), then the parameters.`,
 
 export function planGenerate(c: { title: string; goal: string; done_when: string[] }): P {
   return {
-    version: "plan_generate/v1",
+    version: "plan_generate/v4",
     maxTokens: 600,
     schema: obj({
       analysis: str(300),
-      subtasks: arr(obj({ done_when: arr(str(200), 3, 1), goal: str(400), role: oneOf(["research", "write"]), title: str(80) }), 5, 2),
+      subtasks: arr(obj({ done_when: arr(str(200), 3, 1), goal: str(400), title: str(80) }), 5, 2),
     }),
-    prompt: `Split a task into 2 to 5 subtasks. They run at the same time, so none may need another's result.
-Afterwards, one final step combines their results; do not add a subtask for combining.
+    prompt: `Split a task into 2 to 5 subtasks. They run at the same time, so none may use another's result.
+Afterwards, one final step combines their results into the answer. Do not add a subtask that plans,
+combines, summarizes or builds on the others; that is the final step's job.
 
-Roles:
-${lines(Object.values(ROLE_LINES))}
+Each subtask is research: finding facts on the web. The final step does any writing.
 
-For each subtask give title, goal, role and done_when. done_when is 1-3 checks of what the result contains,
+Example: "Plan a week in Rome" → "Top sights in Rome", "Central hotels in Rome under 200 euros", "Getting around
+Rome by public transport". Not: "Make a day plan from the sights found".
+
+For each subtask give title, goal and done_when. done_when is 1-3 checks of what the result contains,
 e.g. "Names the price, or states that it is not available".
 
 Task: ${c.title}
@@ -130,7 +136,8 @@ You investigate a task to find reliable and factual information.
 Use web_search to find pages and web_fetch to read them. Snippets are short; read a page before you rely on it.
 
 Because others will only see your result, name your sources.
-If something can't be found, say so in the result instead of guessing.`,
+If something can't be found, finish and say so in the result instead of guessing.
+If a detail is unclear, make a sensible assumption, say so in the result, and go on.`,
   write: `Your role is the writer.
 
 You write the text the task asks for. Create it with write_artifact: give a file name and describe
@@ -144,7 +151,7 @@ If the task asks for a document, create it with write_artifact.`,
 
 const FACT_HELP = `facts: things you learned that a later task could reuse.
 - subject: the thing the fact is about (a product, place, organization). Not a property like "Price".
-- volatility: evergreen (never changes), slow (changes over months), volatile (prices, availability, news).`;
+- volatility: evergreen (never changes), slow (changes over months), volatile (changes within weeks: every price, availability, news).`;
 
 function factSchema() {
   return obj({ claim: str(300), source: str(300), subject: str(80), volatility: oneOf(["evergreen", "slow", "volatile"]) });
@@ -212,13 +219,13 @@ export function workerStep(c: {
   alts.push(obj({ action: { type: "string", const: "fail" }, analysis: str(300), category: oneOf(["impossible", "out_of_scope", "unclear", "tool_error"]) }));
   const actionLines = [
     ...(tools.length ? ["tool: use one of the tools."] : []),
-    "finish: you are done. Give the result.",
-    "block: you can't go on without the owner. Ask one short question (at most 25 words) with 2-4 short options.",
-    "fail: the task can't be done.",
+    "finish: you are done. Give the result. Also finish when something can't be found: say so in the result.",
+    "block: ONLY when the owner must make a decision you can't make. Ask one short question (at most 25 words) with 2-4 short options. Never block to ask for permission for your next step.",
+    "fail: the task can't be worked on at all (e.g. it asks for something no tool can do).",
   ];
   const sec = (title: string, body: string) => (body.trim() ? `\n${title}:\n${body.trim()}\n` : "");
   return {
-    version: "worker_step/v1",
+    version: "worker_step/v2",
     maxTokens: 1200,
     schema: { anyOf: alts },
     prompt: `${PREAMBLE[c.role]}
@@ -240,9 +247,9 @@ Step ${c.step} of ${c.maxSteps}. Choose exactly one action.${last ? " This is yo
   };
 }
 
-export function generateContent(c: { title: string; goal: string; inputs: string; memory: string; name: string; what: string }): P {
+export function generateContent(c: { title: string; goal: string; inputs: string; memory: string; name: string; what: string; owner?: string; today?: string }): P {
   return {
-    version: "generate_content/v1",
+    version: "generate_content/v2",
     maxTokens: 2500,
     schema: {},
     prompt: `Write the file "${c.name}".
@@ -251,6 +258,8 @@ What to write: ${c.what}
 
 It is part of this task: ${c.title}. ${c.goal}
 ${c.memory.trim() ? `\nKnown from memory:\n${c.memory.trim()}\n` : ""}${c.inputs.trim() ? `\nMaterial:\n${c.inputs.trim()}\n` : ""}
+${c.owner ? `\nAbout the owner:\n${c.owner}\n` : ""}${c.today ? `Today: ${c.today}\n` : ""}
+Don't use placeholders like [Date] or [Your Name]: use what you know, or leave it out.
 Reply with the file content only, nothing before or after it.`,
   };
 }
@@ -258,10 +267,11 @@ Reply with the file content only, nothing before or after it.`,
 // ---------------------------------------------------------------- verifier
 export function verifyCriterion(c: { criterion: string; result: string; recorded: string; excerpts: string }): P {
   return {
-    version: "verify_criterion/v1",
+    version: "verify_criterion/v2",
     maxTokens: 200,
     schema: obj({ analysis: str(300), verdict: oneOf(["pass", "fail"]) }),
     prompt: `Check ONE criterion against a work result. Judge only what is shown below.
+If the criterion says "each", every item must have every part.
 
 Criterion: "${c.criterion}"
 

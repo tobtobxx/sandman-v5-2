@@ -1,4 +1,4 @@
-url: https://hozelock.example/easy-drip-kit
+url: https://www.hozelock-garden.ch/easy-drip-kit
 title: Hozelock Easy Drip kit – universal micro irrigation
 
 Water up to 20 plants in beds, borders or raised beds.

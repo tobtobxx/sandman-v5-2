@@ -6,7 +6,7 @@ import { config } from "../config.ts";
 import { llmJson, llmText } from "../llm/gateway.ts";
 import * as C from "../prompts/conversation.ts";
 import { P } from "../prompts/work.ts";
-import { addComment, createCard, getCard } from "../work/board.ts";
+import { addComment, cancelCard, createCard, getCard } from "../work/board.ts";
 import { answerQuestion } from "./questions.ts";
 import { addReceipt } from "./receipts.ts";
 import { postMessage } from "./messages.ts";
@@ -84,9 +84,12 @@ export async function deskTurn(d: DeskInput): Promise<DeskResult> {
   let last = "";
   try {
     for (let i = 0; i < config.desk.max_actions; i++) {
-      const allowed = ["new_work", "reminder"];
+      // an action already taken this turn is not offered again (P4: offer a tool only when it can apply)
+      const allowed = ["new_work", "reminder"].filter((x) => !intents.includes(x));
       if (ctx.questions.length && !answered) allowed.push("answer_question");
-      if (ctx.cards.length) allowed.push("add_to_card");
+      const open = ctx.cards.filter((c) => !/ — (done|failed) —?/.test(c.line + " —"));
+      if (ctx.cards.length && !intents.includes("add_to_card")) allowed.push("add_to_card");
+      if (open.length && !intents.includes("cancel_card")) allowed.push("cancel_card");
       allowed.push(...(i === 0 ? ["reply_only", "nothing"] : ["done"]));
       const r = await ask<{ intent: string }>("desk_intent", C.deskIntent({ ...ctx, intents: allowed }), ++step);
       last = r.intent;
@@ -119,16 +122,16 @@ async function execute(
   ask: <T>(name: string, p: P, step: number) => Promise<T>, nextStep: () => number,
 ): Promise<{ row: Row; toolResult: string } | null> {
   const base = { desk_turn_id: turn_id, topic_id: d.topic_id, capture_item_id: d.capture_item_id ?? null };
-  const more = "Is there anything else here that still needs an action?";
+  const more = "That part is handled; don't do it again. If nothing else is left, choose done.";
   switch (intent) {
     case "new_work": {
       const a = await ask<Row>("desk_args_new_work", C.deskArgsNewWork(ctx), nextStep());
       const card = createCard({
-        title: a.title, goal: a.goal, done_when: a.done_when, role: a.role, origin_topic_id: d.topic_id, created_by: "frontdesk",
+        title: a.title, goal: a.goal, done_when: a.done_when.length ? a.done_when : ["The result answers the goal"], role: a.role, origin_topic_id: d.topic_id, created_by: "frontdesk",
         inputs: d.url ? [`url:${d.url}`] : [],
       });
       const row = addReceipt({ ...base, kind: "card_created", ref_id: card.id, text: `New card · ${card.title}` });
-      return { row, toolResult: `Created card "${card.title}". ${more}` };
+      return { row, toolResult: `Created card "${card.title}" for the ${card.role} part. ${more}` };
     }
     case "reminder": {
       const a = await ask<Row>("desk_args_reminder", C.deskArgsReminder(ctx), nextStep());
@@ -160,7 +163,16 @@ async function execute(
       }
       const comment_id = addComment(card.id, "owner", a.note);
       const row = addReceipt({ ...base, kind: "added_to_card", ref_id: card.id, text: `Added to ${card.title}: ${a.note}`, undo: { comment_id, note: a.note } });
-      return { row, toolResult: `Added to card "${card.title}". ${more}` };
+      return { row, toolResult: `Added "${a.note}" to card "${card.title}". ${more}` };
+    }
+    case "cancel_card": {
+      const open = ctx.cards.filter((c) => !/ — (done|failed) —?/.test(c.line + " —"));
+      const a = await ask<Row>("desk_args_cancel", C.deskArgsCancel({ ...ctx, cards: open }), nextStep());
+      const card = getCard(a.card_id);
+      cancelCard(card.id);
+      ctx.cards = ctx.cards.filter((c) => c.id !== card.id);
+      const row = addReceipt({ ...base, kind: "card_cancelled", ref_id: card.id, text: `Cancelled · ${card.title}` });
+      return { row, toolResult: `Cancelled card "${card.title}". ${more}` };
     }
   }
   return null;

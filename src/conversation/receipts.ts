@@ -4,7 +4,7 @@ import { db, j, nowIso, Row } from "../db.ts";
 import { newId } from "../ids.ts";
 import { emit } from "../events.ts";
 import { postMessage } from "./messages.ts";
-import { addComment, cancelCard, getCard } from "../work/board.ts";
+import { addComment, cancelCard, createCard, getCard } from "../work/board.ts";
 import { reopenQuestion } from "./questions.ts";
 
 export function addReceipt(r: { desk_turn_id?: string; topic_id: string; capture_item_id?: string | null; kind: string; ref_id: string; text: string; undo?: Row }): Row {
@@ -40,6 +40,13 @@ export function undoReceipt(id: string): { ok: boolean; note: string } {
         addComment(c.id, "owner", `Owner withdrew: ${undo.note ?? ""}`);
         note = "Work had already seen it; added a withdrawal note.";
       }
+      break;
+    }
+    case "card_cancelled": {
+      // cancelled is terminal: undo re-creates the card from its contract
+      const c = getCard(r.ref_id);
+      const nc = createCard({ title: c.title, goal: c.original_goal ?? c.goal, done_when: c.done_when, role: c.role === "synthesize" ? "research" : c.role, constraints: c.constraints, inputs: c.inputs, origin_topic_id: c.origin_topic_id, created_by: "owner" });
+      note = `Restarted the card as ${nc.id}.`;
       break;
     }
     case "answered": {

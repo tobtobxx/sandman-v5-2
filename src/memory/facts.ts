@@ -11,10 +11,13 @@ export function enqueueFacts(card: Card) {
     db().insert("facts", {
       id: newId("fct"), card_id: card.id, topic_id: card.origin_topic_id, subject: f.subject, text: f.claim,
       source: { type: /^https?:/.test(f.source ?? "") ? "url" : "card", ref: f.source ?? card.id, card_id: card.id },
-      volatility: f.volatility ?? "slow", status: "pending", created_at: nowIso(),
+      volatility: PRICE.test(f.claim) ? "volatile" : f.volatility ?? "slow", status: "pending", created_at: nowIso(),
     });
   }
 }
+
+// P12: what code can see, code records. A claim with a money amount is a price, and prices are volatile.
+export const PRICE = /(\b(CHF|EUR|USD|GBP|Fr\.)\s?\d|[€$£]\s?\d|\d\s?(CHF|EUR|francs|euros?)\b)/i;
 
 export function addNegativeFact(card: Card, reason: string) {
   db().insert("facts", {
