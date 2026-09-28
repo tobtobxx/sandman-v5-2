@@ -1,0 +1,15 @@
+{
+  "tasks": {
+    "serve": "deno run -A src/main.ts serve",
+    "bench": "deno run -A src/main.ts bench",
+    "probe": "deno run -A src/main.ts probe",
+    "check": "deno check src/main.ts",
+    "test": "deno test -A tests/"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": false
+  },
+  "fmt": { "lineWidth": 110 },
+  "lock": false
+}

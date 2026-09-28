@@ -1,0 +1,6 @@
+*.db
+*.db-wal
+*.db-shm
+data/
+.env
+bench/runs/*.db
