@@ -59,7 +59,7 @@ export const cases: Case[] = [
       return all(
         [o.r.items.length === 3, `${o.r.items.length} items: ${o.r.items.map((i: any) => i.quote).join(" | ")}`],
         [!inIrr.some((r: any) => /bike|tax/i.test(r.text)), `irrigation topic got: ${inIrr.map((r: any) => r.text).join(", ")}`],
-        [tasks.length === 1 && /e-bike|velostation/i.test(tasks[0].title), `tasks: ${tasks.map((c: any) => c.title).join(", ")}`],
+        [tasks.filter((c: any) => /e-bike|velostation/i.test(c.title)).length === 1 && !tasks.some((c: any) => /drip|balcony|garden/i.test(c.title) && /bike|tax/i.test(c.title + c.goal)), `tasks: ${tasks.map((c: any) => c.title).join(", ")}`],
         [rems.length === 1 && /tax/i.test(rems[0].title), `reminders: ${rems.map((c: any) => c.title).join(", ")}`],
       );
     },

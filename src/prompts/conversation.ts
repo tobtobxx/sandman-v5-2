@@ -160,6 +160,25 @@ Reply with analysis (one sentence), then intent.`,
   };
 }
 
+/** Gate for later passes (P2): only after "something is left" are actions offered again. */
+export function deskMore(c: DeskCtx): P {
+  return {
+    version: "desk_more/v1",
+    maxTokens: 100,
+    schema: obj({ analysis: str(300), left: oneOf(["yes", "no"]) }),
+    prompt: `You are Sandman's front desk. Check whether everything ${c.owner} said has been handled.
+
+${deskInput(c)}
+
+Done so far:
+${lines(c.receipts)}
+
+Is a clearly separate request in it still NOT handled? Details of a request that was handled don't count.
+
+Reply with analysis (one sentence), then left: yes or no.`,
+  };
+}
+
 export function deskArgsNewWork(c: DeskCtx): P {
   return {
     version: "desk_args_new_work/v3",

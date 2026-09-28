@@ -30,7 +30,7 @@ Reply with analysis (one sentence), then note_id.`,
 
 export function relevanceRubric(c: { subject: string; claim: string; source: string; card_title: string }): P {
   return {
-    version: "relevance_rubric/v1",
+    version: "relevance_rubric/v2",
     maxTokens: 150,
     schema: obj({ analysis: str(200), costly: bool(), reusable: bool(), task_mechanics: bool(), trivial: bool() }),
     prompt: `A work session produced this candidate fact:
@@ -40,8 +40,8 @@ Source: ${c.source}
 From the task: "${c.card_title}"
 
 Reply with analysis (one sentence), then true or false for each:
-costly: Would finding this again take real effort (research or asking the owner)?
-reusable: Could a DIFFERENT future task plausibly need this fact?
+costly: Would finding this again need a web search or asking the owner?
+reusable: Could a DIFFERENT future task plausibly need this fact (e.g. another question about the same product, place or organization)?
 task_mechanics: Is this only about how this task was carried out (tools used, steps taken)?
 trivial: Is this common knowledge that any assistant already knows?`,
   };

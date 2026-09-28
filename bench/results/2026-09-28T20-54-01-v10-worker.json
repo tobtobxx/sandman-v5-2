@@ -1,0 +1,403 @@
+{
+ "label": "v10-worker",
+ "model": "qwen/qwen3.6-35b-a3b",
+ "repeat": 2,
+ "spend": {
+  "usd": 0.01719100152,
+  "calls": 118,
+  "byType": {
+   "worker_step": {
+    "calls": 88,
+    "usd": 0.0137349729,
+    "tin": 68375,
+    "tout": 9037
+   },
+   "judge": {
+    "calls": 14,
+    "usd": 0.0018510901199999999,
+    "tin": 2999,
+    "tout": 695
+   },
+   "triage": {
+    "calls": 4,
+    "usd": 0.0004299075,
+    "tin": 1749,
+    "tout": 302
+   },
+   "generate_content": {
+    "calls": 6,
+    "usd": 0.0008470935,
+    "tin": 1487,
+    "tout": 855
+   },
+   "verify_criterion": {
+    "calls": 6,
+    "usd": 0.0003279375,
+    "tin": 2201,
+    "tout": 316
+   }
+  }
+ },
+ "results": [
+  {
+   "id": "worker/research-facts-subject-rule",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000429561,
+   "tokens_in": 1956,
+   "tokens_out": 343,
+   "ms": 2783,
+   "judged": false
+  },
+  {
+   "id": "worker/research-zoo-hours",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.00038016000000000005,
+   "tokens_in": 1944,
+   "tokens_out": 264,
+   "ms": 2859,
+   "judged": false
+  },
+  {
+   "id": "worker/research-paging",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.0009624285,
+   "tokens_in": 4050,
+   "tokens_out": 364,
+   "ms": 4290,
+   "judged": false
+  },
+  {
+   "id": "worker/research-closed-sunday",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 2,
+   "cost": 0.00030175199999999997,
+   "tokens_in": 1111,
+   "tokens_out": 233,
+   "ms": 2420,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-items",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.0009620325,
+   "tokens_in": 3028,
+   "tokens_out": 716,
+   "ms": 5234,
+   "judged": false
+  },
+  {
+   "id": "worker/research-deadline",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.00036729,
+   "tokens_in": 1866,
+   "tokens_out": 244,
+   "ms": 3184,
+   "judged": false
+  },
+  {
+   "id": "worker/research-heat-pump",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000368379,
+   "tokens_in": 1643,
+   "tokens_out": 270,
+   "ms": 2828,
+   "judged": false
+  },
+  {
+   "id": "worker/research-price-coverage",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.0005006429999999999,
+   "tokens_in": 1935,
+   "tokens_out": 325,
+   "ms": 8221,
+   "judged": false
+  },
+  {
+   "id": "worker/research-not-available-honest",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.000766656,
+   "tokens_in": 4992,
+   "tokens_out": 442,
+   "ms": 8863,
+   "judged": true
+  },
+  {
+   "id": "worker/synthesize-recommend",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 1,
+   "cost": 0.000211365,
+   "tokens_in": 587,
+   "tokens_out": 172,
+   "ms": 5197,
+   "judged": true
+  },
+  {
+   "id": "worker/synthesize-with-failed-child",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 1,
+   "cost": 0.000256806,
+   "tokens_in": 479,
+   "tokens_out": 235,
+   "ms": 4688,
+   "judged": true
+  },
+  {
+   "id": "worker/write-uses-inputs",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.00039283199999999997,
+   "tokens_in": 1792,
+   "tokens_out": 366,
+   "ms": 7264,
+   "judged": true
+  },
+  {
+   "id": "worker/research-zoo-hours",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.00036432,
+   "tokens_in": 1944,
+   "tokens_out": 264,
+   "ms": 2497,
+   "judged": false
+  },
+  {
+   "id": "episode/write-card",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000605484,
+   "tokens_in": 2046,
+   "tokens_out": 459,
+   "ms": 5013,
+   "judged": false
+  },
+  {
+   "id": "worker/research-price-coverage",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000415503,
+   "tokens_in": 1935,
+   "tokens_out": 326,
+   "ms": 2144,
+   "judged": false
+  },
+  {
+   "id": "worker/research-paging",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.000660033,
+   "tokens_in": 4057,
+   "tokens_out": 386,
+   "ms": 3887,
+   "judged": false
+  },
+  {
+   "id": "episode/research-card",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 7,
+   "cost": 0.0008308575,
+   "tokens_in": 5579,
+   "tokens_out": 558,
+   "ms": 7683,
+   "judged": false
+  },
+  {
+   "id": "worker/write-email",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000356895,
+   "tokens_in": 1579,
+   "tokens_out": 363,
+   "ms": 11185,
+   "judged": true
+  },
+  {
+   "id": "worker/research-facts-subject-rule",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000433818,
+   "tokens_in": 1956,
+   "tokens_out": 330,
+   "ms": 2788,
+   "judged": false
+  },
+  {
+   "id": "worker/research-closed-sunday",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 2,
+   "cost": 0.00027918,
+   "tokens_in": 1111,
+   "tokens_out": 229,
+   "ms": 1377,
+   "judged": false
+  },
+  {
+   "id": "worker/research-deadline",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 2,
+   "cost": 0.000243045,
+   "tokens_in": 1016,
+   "tokens_out": 199,
+   "ms": 1605,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-items",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000900999,
+   "tokens_in": 4437,
+   "tokens_out": 568,
+   "ms": 4055,
+   "judged": false
+  },
+  {
+   "id": "worker/research-heat-pump",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000353727,
+   "tokens_in": 1647,
+   "tokens_out": 278,
+   "ms": 3010,
+   "judged": false
+  },
+  {
+   "id": "worker/research-not-available-honest",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 8,
+   "cost": 0.001116918,
+   "tokens_in": 9482,
+   "tokens_out": 488,
+   "ms": 7047,
+   "judged": true
+  },
+  {
+   "id": "worker/write-uses-inputs",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.0005037219,
+   "tokens_in": 1342,
+   "tokens_out": 264,
+   "ms": 6663,
+   "judged": true
+  },
+  {
+   "id": "worker/synthesize-with-failed-child",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 1,
+   "cost": 0.000263934,
+   "tokens_in": 479,
+   "tokens_out": 243,
+   "ms": 5481,
+   "judged": true
+  },
+  {
+   "id": "worker/synthesize-recommend",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 1,
+   "cost": 0.000208692,
+   "tokens_in": 587,
+   "tokens_out": 169,
+   "ms": 6983,
+   "judged": true
+  },
+  {
+   "id": "worker/write-email",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000462429,
+   "tokens_in": 1590,
+   "tokens_out": 391,
+   "ms": 10658,
+   "judged": true
+  },
+  {
+   "id": "episode/write-card",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0005143545,
+   "tokens_in": 2504,
+   "tokens_out": 450,
+   "ms": 7049,
+   "judged": false
+  },
+  {
+   "id": "episode/research-card",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 7,
+   "cost": 0.0009260955,
+   "tokens_in": 5138,
+   "tokens_out": 571,
+   "ms": 11817,
+   "judged": false
+  }
+ ]
+}

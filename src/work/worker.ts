@@ -149,7 +149,11 @@ export async function runWorker(card_id: string): Promise<Outcome> {
     });
     let action: Row;
     try {
-      action = await llmJson("worker_step", p.prompt, p.schema, { maxTokens: p.maxTokens, version: p.version, session_id, card_id: card.id, step: k });
+      action = await llmJson("worker_step", p.prompt, p.schema, {
+        maxTokens: p.maxTokens, version: p.version, session_id, card_id: card.id, step: k,
+        // quirk: some engines don't enforce anyOf/const, and the model writes the tool name as the action
+        repair: (v) => tools.includes(v?.action) ? { value: { action: "tool", tool: v.action, tool_args: v.tool_args ?? {} }, note: "$.action: tool name → tool action" } : { value: v },
+      });
     } catch (e) {
       if (!(e instanceof LLMFailure) || e.kind === "budget") throw e;
       steps.push(`Step ${k}: (your output was invalid and was ignored)`);

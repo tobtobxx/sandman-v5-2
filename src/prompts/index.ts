@@ -26,6 +26,7 @@ export function samplePrompts(): Record<string, W.P> {
     match_answer: C.matchAnswer({ question: "q", options: ["a", "b"], answer: "a" }),
     topic_same: C.topicSame({ a: "a", b: "b" }),
     desk_intent: C.deskIntent({ ...desk, intents: ["new_work", "done"] }),
+    desk_more: C.deskMore(desk),
     desk_args_new_work: C.deskArgsNewWork(desk),
     desk_args_reminder: C.deskArgsReminder(desk),
     desk_args_answer: C.deskArgsAnswer(desk),

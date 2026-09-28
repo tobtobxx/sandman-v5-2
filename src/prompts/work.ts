@@ -27,7 +27,7 @@ export const ROLE_LINES: Record<string, string> = {
 // ---------------------------------------------------------------- triage
 export function triage(c: { title: string; goal: string; done_when: string[]; steps: number; tools: string[]; recipes: string[]; owner?: string }): P {
   return {
-    version: "triage/v5",
+    version: "triage/v6",
     maxTokens: 150,
     schema: obj({ analysis: str(300), compare_count: { type: "integer" }, fits: oneOf(["yes", "no"]), missing_info: nstr(200) }),
     prompt: `You decide whether a task can be done in ONE work session.
@@ -53,7 +53,8 @@ Reply with:
 - compare_count: how many different things the task asks to look up and compare (0 if it is not a comparison)
 - fits: yes or no
 - missing_info: null in most cases. A short question ONLY if the work can't even start without a fact that
-  only the owner knows (a date, a person, their own details). If the work can choose or find it, use null.`,
+  only the owner knows (a date, a person, their own details). If the work can choose it, find it or make a
+  sensible assumption, use null.`,
   };
 }
 
@@ -269,18 +270,19 @@ Reply with the file content only, nothing before or after it.`,
 // ---------------------------------------------------------------- verifier
 export function verifyCriterion(c: { criterion: string; result: string; recorded: string; excerpts: string }): P {
   return {
-    version: "verify_criterion/v2",
+    version: "verify_criterion/v4",
     maxTokens: 200,
     schema: obj({ analysis: str(300), verdict: oneOf(["pass", "fail"]) }),
     prompt: `Check ONE criterion against a work result. Judge only what is shown below.
 If the criterion says "each", every item must have every part.
+"Not published", "not found" and "not listed" count as stating that something is not available.
 
 Criterion: "${c.criterion}"
 
 Result:
 ${c.result}
 
-Recorded by the system (reliable):
+Recorded by the system (reliable; if the result claims something the system did not record, it did not happen):
 ${c.recorded || "(nothing)"}
 ${c.excerpts ? `\nFiles:\n${c.excerpts}\n` : ""}
 Reply with analysis (at most 40 words), then verdict: pass or fail.`,

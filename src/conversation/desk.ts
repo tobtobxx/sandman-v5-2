@@ -84,13 +84,21 @@ export async function deskTurn(d: DeskInput): Promise<DeskResult> {
   let last = "";
   try {
     for (let i = 0; i < config.desk.max_actions; i++) {
+      if (i > 0) {
+        const more = await ask<{ left: string }>("desk_more", C.deskMore(ctx), ++step);
+        if (more.left !== "yes") {
+          intents.push("done");
+          break;
+        }
+      }
       // an action already taken this turn is not offered again (P4: offer a tool only when it can apply)
       const allowed = ["new_work", "reminder"].filter((x) => !intents.includes(x));
       if (ctx.questions.length && !answered) allowed.push("answer_question");
       const open = ctx.cards.filter((c) => !/ — (done|failed) —?/.test(c.line + " —"));
       if (ctx.cards.length && !intents.includes("add_to_card")) allowed.push("add_to_card");
       if (open.length && !intents.includes("cancel_card")) allowed.push("cancel_card");
-      allowed.push(...(i === 0 ? ["reply_only", "nothing"] : ["done"]));
+      if (i === 0) allowed.push("reply_only", "nothing");
+      else allowed.push("done");
       const r = await ask<{ intent: string }>("desk_intent", C.deskIntent({ ...ctx, intents: allowed }), ++step);
       last = r.intent;
       intents.push(r.intent);

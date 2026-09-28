@@ -21,6 +21,8 @@ export interface CallOpts {
   step?: number;
   version?: string;
   temperature?: number;
+  /** call-specific repair applied before validation (engine quirks, §10.2); must log what it changed */
+  repair?: (v: any) => { value: any; note?: string };
 }
 
 export class LLMFailure extends Error {
@@ -125,7 +127,14 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
     } catch {
       throw new LLMFailure("parse", "invalid JSON");
     }
+    const pre: string[] = [];
+    if (opts.repair) {
+      const r = opts.repair(parsed);
+      parsed = r.value;
+      if (r.note) pre.push(r.note);
+    }
     const v = validate(schema, parsed);
+    v.repairs.unshift(...pre);
     if (v.error) throw new LLMFailure("parse", v.error);
     row.parsed = JSON.stringify(v.value);
     if (v.repairs.length) row.repaired = JSON.stringify(v.repairs);

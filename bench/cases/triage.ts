@@ -5,14 +5,14 @@ import { createCard } from "../../src/work/board.ts";
 import { triageDecide } from "../../src/work/preflight.ts";
 
 // Only the triage decision (no planner afterwards), so each case costs one call.
-function tri(name: string, title: string, goal: string, done_when: string[], want: "yes" | "no" | "missing", role = "research"): Case {
+function tri(name: string, title: string, goal: string, done_when: string[], want: string, role = "research"): Case {
   return {
     id: `triage/${name}`,
     run: () => triageDecide(createCard({ title, goal, done_when, role })),
     check: (o) => {
       const missing = !!o.missing_info;
       const got = missing ? "missing" : o.fits;
-      return { pass: got === want, detail: `got ${got}${missing ? ` ("${o.missing_info}")` : ""}, want ${want}. ${o.analysis}` };
+      return { pass: want.split("|").includes(got), detail: `got ${got}${missing ? ` ("${o.missing_info}")` : ""}, want ${want}. ${o.analysis}` };
     },
   };
 }
@@ -23,7 +23,7 @@ export const cases: Case[] = [
   tri("deadline-lookup", "Tax extension deadline", "Find until when a private person in the canton of Zurich can request a free tax return extension.", ["Names the deadline"], "yes"),
   tri("compare-four", "Compare health insurers", "Compare the 4 biggest Swiss health insurers on customer satisfaction ratings and recommend one.", ["Names a satisfaction rating for each insurer", "Recommends one"], "no"),
   tri("compare-three-named", "Compare drip kits", "Compare the Gardena Micro-Drip, Hozelock Easy Drip and AquaLine Basic drip kits on price and coverage for 3 raised beds of 4 m² each, and recommend one.", ["Names price and coverage of each kit", "Recommends one kit and says why"], "no"),
-  tri("big-trip-plan", "Plan Portugal trip", "Plan a 10-day trip through Portugal in October with hotels, trains and a day-by-day itinerary.", ["Includes a day-by-day plan", "Names a hotel for each night"], "no"),
+  tri("big-trip-plan", "Plan Portugal trip", "Plan a 10-day trip through Portugal in October with hotels, trains and a day-by-day itinerary.", ["Includes a day-by-day plan", "Names a hotel for each night"], "no|missing"), // v7: asking for dates before choosing hotels is defensible
   tri("missing-date-place", "Book birthday dinner", "Book a table for my birthday dinner.", ["Names the restaurant and time"], "missing"),
   tri("write-enough-info", "Email to landlord", "Write an email to my landlord, Mr. Keller, asking him to repair the heating in the living room before winter.", ["The result includes the email text"], "yes", "write"),
   tri("write-missing-info", "Letter to insurance", "Write a letter to my insurance about my claim.", ["The result includes the letter text"], "missing", "write"),
