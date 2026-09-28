@@ -142,6 +142,7 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
     row.ms = Date.now() - started;
     try {
       db().insert("llm_calls", row);
+      if (opts.card_id) db().run(`UPDATE cards SET llm_calls_used = llm_calls_used + 1 WHERE id = (SELECT root_id FROM cards WHERE id=?)`, opts.card_id);
     } catch { /* tracing must never break a call */ }
   }
 }
@@ -198,7 +199,7 @@ async function stream(p: Profile, prompt: string, schema: Schema | null, opts: C
     body.response_format = { type: "json_schema", json_schema: { name: "output", strict: true, schema: wireSchema(schema) } };
   }
   const ac = new AbortController();
-  let idle: number | undefined;
+  let idle: ReturnType<typeof setTimeout> | undefined;
   const arm = () => {
     clearTimeout(idle);
     idle = setTimeout(() => ac.abort(new LLMFailure("timeout", "idle timeout")), p.idle_timeout_s * 1000);

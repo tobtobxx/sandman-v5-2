@@ -73,7 +73,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS topics_fts USING fts5(id UNINDEXED, title, su
 CREATE VIRTUAL TABLE IF NOT EXISTS recipes_fts USING fts5(id UNINDEXED, title, description);
 `;
 
-export type Row = Record<string, any>;
+// Rows are loosely typed on purpose (prototype).
+export type Row = any;
 
 export class DB {
   raw: DatabaseSync;
