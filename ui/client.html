@@ -49,6 +49,8 @@ aside { width: 260px; flex-shrink: 0; background: var(--side); border-right: 1px
 .navlist a.conv span:first-child { color: var(--muted); }
 .badge { background: var(--badge); color: #fff; border-radius: 9px; font-size: 11px; padding: 1px 7px; font-weight: 600; flex-shrink: 0; }
 .newtag { font-size: 11px; font-weight: 600; color: var(--ok); flex-shrink: 0; }
+.navlist .marks { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.cardcount { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .side-bottom { margin-top: auto; border-top: 1px solid var(--line); padding-top: 10px; }
 .side-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 12px; color: var(--muted); }
 .side-foot select { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
@@ -240,7 +242,7 @@ async function sidebar() {
   const r = route();
   $("#homeBtn").classList.toggle("on", r.view === "home");
   $("#topics").innerHTML = ts.map((t) => `<a href="#topic/${t.id}" class="${t.kind === "conversation" ? "conv" : ""} ${r.view === "topic" && r.id === t.id ? "on" : ""}">
-      <span>${esc(t.title)}</span>${t.open_questions ? `<span class="badge">${t.open_questions}</span>` : t.is_new ? `<span class="newtag">NEW</span>` : ""}</a>`).join("")
+      <span>${esc(t.title)}</span><span class="marks">${t.open_cards ? `<span class="cardcount" title="${t.open_cards} card${t.open_cards > 1 ? "s" : ""} not done">${t.open_cards}</span>` : ""}${t.open_questions ? `<span class="badge">${t.open_questions}</span>` : t.is_new ? `<span class="newtag">NEW</span>` : ""}</span></a>`).join("")
     || `<div class="empty" style="border:0;padding:4px 10px">No topics yet.</div>`;
   const sec = [["needs", "Needs you", home.needs_you_count, true], ["review", "Review", home.review_count, false], ["board", "Board"], ["memory", "Memory"]];
   $("#secondary").innerHTML = sec.map(([k, l, n, hot]) => `<a href="#${k}" class="${r.view === k ? "on" : ""}"><span>${l}</span>${n ? (hot ? `<span class="badge">${n}</span>` : `<span style="color:var(--muted);font-size:12px">${n}</span>`) : ""}</a>`).join("");
@@ -539,7 +541,7 @@ const es = new EventSource(`/events/stream?after=-1`);
 es.onmessage = (m) => {
   const ev = JSON.parse(m.data);
   const r = route();
-  if (r.view === "topic" && ev.topic_id && ev.topic_id !== r.id && !/^topic\./.test(ev.type)) { if (/question\.|message\.created/.test(ev.type)) later(800); return; }
+  if (r.view === "topic" && ev.topic_id && ev.topic_id !== r.id && !/^topic\./.test(ev.type)) { if (/question\.|message\.created|card\.(created|state)/.test(ev.type)) later(800); return; }
   later(r.view === "home" ? 800 : 250);
   if (ev.notify === "push" && document.hidden && "Notification" in window && Notification.permission === "granted") new Notification("Sandman", { body: ev.payload?.body ?? ev.payload?.text ?? ev.type });
 };
