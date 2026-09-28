@@ -19,7 +19,7 @@ import { replyBriefing, startBriefing } from "./conversation/briefing.ts";
 import { listReview } from "./conversation/review.ts";
 import { reviewAction, tidy } from "./conversation/tidy.ts";
 import { consolidate, consolidationRunning, consolidationStatus, rerender } from "./memory/consolidator.ts";
-import { noteView } from "./memory/retriever.ts";
+import { findPendingFacts, noteView } from "./memory/retriever.ts";
 import { recordedFacts } from "./work/worker.ts";
 
 type H = (req: Request, p: Record<string, string>, body: Row, url: URL) => Promise<unknown> | unknown;
@@ -127,18 +127,8 @@ route("GET", "/memory/notes", (_r, _p, _b, u) => {
     ? db().all(`SELECT n.* FROM notes_fts f JOIN notes n ON n.id=f.id WHERE notes_fts MATCH ? ORDER BY rank LIMIT 50`, words.map((w) => `"${w}"*`).join(" OR "))
     : db().all(`SELECT * FROM notes ORDER BY created_at DESC LIMIT 100`);
   const notes = rows.map((n) => ({ ...noteView(n), status: n.status, aliases: j(n.aliases, []) }));
-  const like = words.map(() => `(subject LIKE ? OR text LIKE ?)`).join(" OR ");
-  const facts = db().all(
-    `SELECT * FROM facts WHERE status='pending' ${words.length ? `AND (${like})` : ""} ORDER BY created_at DESC LIMIT 100`,
-    ...words.flatMap((w) => [`%${w}%`, `%${w}%`]),
-  );
-  const bySubject = new Map<string, Row>();
-  for (const f of facts) {
-    const k = String(f.subject ?? "").toLowerCase();
-    if (!bySubject.has(k)) bySubject.set(k, { id: f.id, kind: "fact", status: "pending", title: f.subject, one_liner: "", aliases: [], answerable: false, claims: [] });
-    bySubject.get(k)!.claims.push({ id: f.id, text: f.text, observed_at: f.created_at, volatility: f.volatility, stale: false, pending: true });
-  }
-  return [...notes, ...bySubject.values()];
+  const pending = findPendingFacts(u.searchParams.get("query") ?? "", { mode: "browse", limit: 100 });
+  return [...notes, ...pending.map((p) => ({ ...p, kind: "fact", status: "pending", aliases: [] }))];
 });
 route("GET", "/memory/notes/:id", (_r, p) => {
   const n = db().get(`SELECT * FROM notes WHERE id=?`, p.id);

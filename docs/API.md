@@ -88,7 +88,9 @@ Returns `{ message_id }`; the desk's receipts and reply arrive as events.
 
 Memory details:
 - `GET /memory/notes?query=` matches word prefixes. It also returns candidate facts still waiting for
-  the consolidator, grouped by subject, as `{ kind: "fact", status: "pending", claims: [{ pending: true, … }] }`.
+  the consolidator, grouped by subject, as `{ kind: "fact", status: "pending", claims: [{ pending: true, … }] }`,
+  matched the same way (any word; best matches first) by `findPendingFacts` in `src/memory/retriever.ts`, the
+  function that also puts them into the librarian's, workers' and desk's memory context (stricter there).
 - `POST /memory/consolidate` starts a run in the background and returns at once with
   `{ started, running, started_at, last_completed_at, last_counts, pending }`. Only one run happens at a
   time: while one is in flight, the button, the idle loop and the nightly run join it, and `started` is
