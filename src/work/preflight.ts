@@ -27,7 +27,8 @@ export async function preflight(card_id: string): Promise<string> {
 
 // ---------------------------------------------------------------- librarian
 export async function runLibrarian(card: Card): Promise<"answered" | "narrow" | "proceed"> {
-  const hasNotes = db().get(`SELECT count(*) n FROM notes WHERE status='active' AND kind != 'profile'`)!.n > 0;
+  const hasNotes = db().get(`SELECT count(*) n FROM notes WHERE status='active' AND kind != 'profile'`)!.n > 0 ||
+    db().get(`SELECT count(*) n FROM facts WHERE status='pending' AND json_extract(source, '$.negative') IS NULL`)!.n > 0;
   if (!hasNotes) return "proceed";
   const session_id = startSession("librarian", { card_id: card.id });
   const ent = await ask<{ entities: string[] }>("extract_entities", W.extractEntities(card), card, session_id);
