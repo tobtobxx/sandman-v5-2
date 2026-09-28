@@ -205,7 +205,11 @@ async function handle(req: Request): Promise<Response> {
   if (token && req.headers.get("authorization") !== `Bearer ${token}` && url.searchParams.get("token") !== token) {
     return new Response("unauthorized", { status: 401 });
   }
-  if (url.pathname === "/events/stream") return sse(Number(url.searchParams.get("after") ?? 0));
+  if (url.pathname === "/events/stream") {
+    let after = Number(url.searchParams.get("after") ?? 0);
+    if (after < 0) after = db().get(`SELECT coalesce(max(id),0) m FROM events`)!.m; // -1: from now on
+    return sse(after);
+  }
   for (const r of routes) {
     if (r.method !== req.method) continue;
     const m = url.pathname.match(r.re);

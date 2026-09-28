@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sandman</title>
+<style>
+:root {
+  --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e4e2dc; --accent: #3b5bdb;
+  --accent-soft: #e7ecff; --warn: #c2410c; --warn-soft: #fff1e6; --ok: #2f7d4f; --ok-soft: #e6f4ea; --chip: #efeee9;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #151517; --panel: #1e1e21; --ink: #ececef; --muted: #9a9aa2; --line: #2e2e33; --accent: #8ea2ff;
+    --accent-soft: #252b45; --warn: #fb923c; --warn-soft: #3a2616; --ok: #6ccf93; --ok-soft: #1c3326; --chip: #2a2a2f; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+header h1 { font-size: 17px; margin: 0; }
+header nav { display: flex; gap: 4px; flex-wrap: wrap; }
+header nav button { background: none; border: 0; padding: 6px 10px; border-radius: 8px; color: var(--muted); cursor: pointer; font: inherit; }
+header nav button.on { background: var(--accent-soft); color: var(--accent); }
+header .sp { flex: 1; }
+select, input, textarea, button { font: inherit; color: inherit; }
+.badge { background: var(--warn); color: #fff; border-radius: 10px; padding: 0 7px; font-size: 12px; margin-left: 4px; }
+main { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto; }
+@media (max-width: 800px) { main { grid-template-columns: 1fr; } aside { order: 2; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+.panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 10px; }
+.capture { display: flex; gap: 8px; }
+.capture textarea { flex: 1; min-height: 44px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.small { padding: 2px 8px; font-size: 13px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.topics a { display: flex; justify-content: space-between; padding: 6px 8px; border-radius: 8px; color: inherit; text-decoration: none; }
+.topics a.on, .topics a:hover { background: var(--chip); }
+.q { border-left: 3px solid var(--warn); padding: 8px 10px; background: var(--warn-soft); border-radius: 0 8px 8px 0; margin-bottom: 8px; }
+.q .opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.q form { display: flex; gap: 6px; margin-top: 6px; }
+.q input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; background: var(--panel); }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
+.state { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--chip); color: var(--muted); }
+.state.done { background: var(--ok-soft); color: var(--ok); }
+.state.blocked, .state.failed { background: var(--warn-soft); color: var(--warn); }
+.state.running, .state.verifying { background: var(--accent-soft); color: var(--accent); }
+.kids { margin: 6px 0 0 12px; font-size: 13px; }
+.msg { padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.msg .who { font-size: 12px; color: var(--muted); }
+.msg.receipt { color: var(--muted); font-size: 13px; }
+.msg.card_result { background: var(--ok-soft); border-radius: 8px; padding: 8px 10px; border: 0; margin: 6px 0; }
+.msg.reminder { background: var(--accent-soft); border-radius: 8px; padding: 8px 10px; border: 0; margin: 6px 0; }
+.compose { display: flex; gap: 8px; margin-top: 10px; }
+.compose input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--bg); }
+.confirm { background: var(--ok-soft); border-radius: 10px; padding: 10px; margin-top: 10px; }
+.fact { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+.fact span:first-child { flex: 1; }
+.cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.working { color: var(--accent); font-size: 13px; }
+pre { white-space: pre-wrap; font-size: 13px; background: var(--bg); padding: 8px; border-radius: 8px; max-height: 360px; overflow: auto; }
+a { color: var(--accent); }
+.empty { color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sandman</h1>
+  <nav id="nav"></nav>
+  <span class="sp"></span>
+  <label class="small muted">mode
+    <select id="mode"><option>active</option><option>driving</option><option>dnd</option></select>
+  </label>
+  <a class="small" href="/observer">observer</a>
+</header>
+<main>
+  <aside>
+    <div class="panel">
+      <h2>Quick capture</h2>
+      <div class="capture">
+        <textarea id="cap" placeholder="Say or type anything. Several things at once is fine."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+        <button class="btn primary" id="capBtn">Capture</button>
+        <button class="btn" disabled title="Voice capture is not implemented in the prototype">🎙 Voice</button>
+        <span id="capState" class="small muted"></span>
+      </div>
+      <div id="confirm"></div>
+    </div>
+    <div class="panel">
+      <h2>Topics</h2>
+      <div class="topics" id="topics"></div>
+      <form id="newTopic" style="display:flex;gap:6px;margin-top:8px"><input placeholder="New topic" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--bg)"><button class="btn small">Add</button></form>
+    </div>
+  </aside>
+  <section id="view"></section>
+</main>
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const api = async (path, body, method) => {
+  const r = await fetch(path, body !== undefined || method ? { method: method ?? "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) } : undefined);
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error ?? r.statusText);
+  return d;
+};
+const cmid = () => crypto.randomUUID();
+const S = { view: "needs", topic: null, captures: {}, working: {} };
+try { Object.assign(S, JSON.parse(localStorage.getItem("sandman.view") ?? "{}")); } catch {}
+const save = () => { try { localStorage.setItem("sandman.view", JSON.stringify({ view: S.view, topic: S.topic })); } catch {} };
+
+const VIEWS = { needs: "Needs you", topic: "Topic", review: "Review", board: "Board", memory: "Memory" };
+async function nav() {
+  const needs = await api("/needs-you");
+  const rev = await api("/review");
+  $("#nav").innerHTML = Object.entries(VIEWS).filter(([k]) => k !== "topic" || S.topic).map(([k, v]) =>
+    `<button data-v="${k}" class="${S.view === k ? "on" : ""}">${v}${k === "needs" && needs.length ? `<span class="badge">${needs.length}</span>` : ""}${k === "review" && rev.length ? `<span class="badge" style="background:var(--muted)">${rev.length}</span>` : ""}</button>`).join("");
+}
+$("#nav").onclick = (e) => { const b = e.target.closest("button"); if (b) { S.view = b.dataset.v; save(); render(); } };
+$("#mode").onchange = (e) => api("/presence", { mode: e.target.value, topic_id: S.topic });
+
+async function topics() {
+  const ts = await api("/topics");
+  $("#topics").innerHTML = ts.map((t) => `<a href="#" data-t="${t.id}" class="${S.topic === t.id && S.view === "topic" ? "on" : ""}"><span>${esc(t.title)}</span><span class="small muted">${t.open_questions ? `<span class="badge">${t.open_questions}</span>` : ""}${t.open_cards ? ` ${t.open_cards}▸` : ""}</span></a>`).join("") || `<div class="empty">No topics yet. Capture something.</div>`;
+}
+$("#topics").onclick = (e) => { const a = e.target.closest("a"); if (a) { e.preventDefault(); S.topic = a.dataset.t; S.view = "topic"; save(); render(); api("/presence", { mode: $("#mode").value, topic_id: S.topic }); } };
+$("#newTopic").onsubmit = async (e) => { e.preventDefault(); const i = e.target.querySelector("input"); if (!i.value.trim()) return; const t = await api("/topics", { title: i.value.trim() }); i.value = ""; S.topic = t.id; S.view = "topic"; render(); };
+
+// ---- capture
+$("#capBtn").onclick = async () => {
+  const text = $("#cap").value.trim();
+  if (!text) return;
+  const c = await api("/captures", { text, source: "text", client_msg_id: cmid() });
+  S.captures[c.id] = true;
+  $("#cap").value = "";
+  $("#capState").textContent = "Working…";
+};
+$("#cap").onkeydown = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("#capBtn").click(); };
+async function showConfirmation(capture_id) {
+  const c = await api(`/captures/${capture_id}`);
+  $("#capState").textContent = "";
+  const rs = c.items.flatMap((i) => i.receipts.map((r) => ({ ...r, topic: i.topic })));
+  $("#confirm").innerHTML = `<div class="confirm"><div>${esc(c.confirmation?.text)}</div>
+    ${c.items.map((i) => `<div class="small muted" style="margin-top:6px">“${esc(i.quote)}” → <a href="#" data-topic="${i.topic.id}">${esc(i.topic.title)}</a>${i.provisional ? " (unsure)" : ""}</div>`).join("")}
+    ${rs.length ? `<div style="margin-top:6px">${rs.map((r) => `<div class="small">${esc(r.text)} ${r.undone_at ? "<i>(undone)</i>" : `<button class="btn small" data-undo="${r.id}">Undo</button>`}</div>`).join("")}</div>` : ""}</div>`;
+}
+$("#confirm").onclick = async (e) => {
+  const u = e.target.dataset.undo, t = e.target.dataset.topic;
+  if (u) { const r = await api(`/receipts/${u}/undo`); e.target.replaceWith(Object.assign(document.createElement("i"), { textContent: `(${r.note})` })); }
+  if (t) { e.preventDefault(); S.topic = t; S.view = "topic"; render(); }
+};
+
+// ---- question widget
+function question(q, showTopic = false) {
+  return `<div class="q" data-q="${q.id}"><div>${esc(q.text)}</div>
+    ${showTopic ? `<div class="small muted">${esc(q.topic_title ?? "")}${q.blocked_cards ? ` · ${q.blocked_cards} card${q.blocked_cards > 1 ? "s" : ""} waiting` : ""}</div>` : ""}
+    ${q.options?.length ? `<div class="opts">${q.options.map((o, i) => `<button class="btn small" data-opt="${i}">${i + 1}. ${esc(o)}</button>`).join("")}</div>` : ""}
+    <form><input placeholder="…or answer in your own words"><button class="btn small">Answer</button></form></div>`;
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-opt]");
+  if (b) { const q = b.closest("[data-q]").dataset.q; await api(`/questions/${q}/answer`, { option: Number(b.dataset.opt) }); render(); }
+});
+document.addEventListener("submit", async (e) => {
+  const q = e.target.closest("[data-q]");
+  if (!q) return;
+  e.preventDefault();
+  const text = e.target.querySelector("input").value.trim();
+  if (text) { await api(`/questions/${q.dataset.q}/answer`, { text }); render(); }
+});
+
+// ---- views
+async function viewNeeds() {
+  const qs = await api("/needs-you");
+  return `<div class="panel"><h2>Needs you</h2>${qs.map((q) => question(q, true)).join("") || `<div class="empty">Nothing needs you right now.</div>`}
+    <div style="margin-top:10px"><button class="btn" id="brief">Brief me</button></div><div id="briefing"></div></div>`;
+}
+async function viewTopic() {
+  if (!S.topic) return `<div class="empty">Pick a topic.</div>`;
+  const p = await api(`/topics/${S.topic}/page`);
+  const card = (c) => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.title)}</b><span class="state ${c.state}">${c.state}</span></div>
+    ${c.kind === "reminder" ? `<div class="small muted">Reminder · ${new Date(c.due_at).toLocaleString()}</div>` : ""}
+    ${c.result?.summary ? `<div class="small" style="margin-top:4px">${esc(c.result.summary)}</div>` : ""}
+    ${c.result?.recommendation ? `<div class="small"><b>Recommendation:</b> ${esc(c.result.recommendation)}</div>` : ""}
+    ${c.children?.length ? `<div class="kids">${c.children.map((k) => `<div><span class="state ${k.state}">${k.state}</span> ${esc(k.title)}</div>`).join("")}</div>` : ""}
+    ${!["done", "failed", "cancelled"].includes(c.state) ? `<div style="margin-top:6px"><button class="btn small" data-cancel="${c.id}">Cancel</button></div>` : ""}</div>`;
+  const msg = (m) => {
+    if (m.kind === "receipt") return `<div class="msg receipt">✓ ${esc(m.body)} ${m.payload?.receipt_id ? `<button class="btn small" data-undo="${m.payload.receipt_id}">Undo</button>` : ""}</div>`;
+    if (m.kind === "card_result") return `<div class="msg card_result"><div class="who">Result · ${esc(m.payload.title)} · ${m.payload.state}</div>${esc(m.body)}${m.payload.recommendation ? `<div><b>Recommendation:</b> ${esc(m.payload.recommendation)}</div>` : ""}${(m.payload.artifacts ?? []).map((a) => `<div class="small"><a href="#" data-art="${a.id}">${esc(a.name)}</a></div>`).join("")}</div>`;
+    if (m.kind === "reminder") return `<div class="msg reminder"><div class="who">Reminder</div>${esc(m.body)}</div>`;
+    if (m.kind === "question") return `<div class="msg"><div class="who">Sandman asks</div>${esc(m.body)}</div>`;
+    return `<div class="msg"><div class="who">${m.role === "owner" ? (m.kind === "capture_item" ? "You (capture)" : "You") : "Sandman"}</div>${esc(m.body)}</div>`;
+  };
+  return `<div class="panel"><h2>${esc(p.topic.title)}</h2>
+      <div>${esc(p.summary) || `<span class="empty">No summary yet.</span>`}</div></div>
+    ${p.needs_you.length ? `<div class="panel"><h2>Needs you</h2>${p.needs_you.map((q) => question(q)).join("")}</div>` : ""}
+    ${p.review.length ? `<div class="panel"><h2>To check</h2>${p.review.map(review).join("")}</div>` : ""}
+    <div class="panel"><h2>Work</h2>${p.work.map(card).join("") || `<div class="empty">No work in this topic.</div>`}</div>
+    <div class="panel"><h2>Decisions and facts</h2>${p.facts.map((f) => `<div class="fact"><span>${esc(f.text)}</span><span class="small muted">${f.source?.type === "owner" ? "you said" : "from memory"}, ${String(f.observed_at).slice(0, 10)}</span><button class="btn small" data-edit="${f.id}">Edit</button><button class="btn small" data-del="${f.id}">✕</button></div>`).join("") || `<div class="empty">Nothing yet.</div>`}</div>
+    <div class="panel"><h2>Conversation</h2>${p.messages.map(msg).join("")}<div class="working" id="working">${S.working[S.topic] ? "Sandman is working…" : ""}</div>
+      <form class="compose" id="compose"><input placeholder="Write on this topic…"><button class="btn primary">Send</button></form></div>`;
+}
+function review(r) {
+  const acts = { filing_check: [["ok", "Looks right"], ["move", "Move…"]], unfiled_text: [["file", "File"], ["ignore", "Ignore"]], topic_merge: [["merge", "Merge"], ["keep", "Keep separate"]], topic_archived: [["undo", "Undo"], ["ok", "OK"]] }[r.kind] ?? [["ok", "OK"]];
+  const text = { filing_check: `Filed “${r.payload.quote}” under ${r.payload.topic_title}. Right?`, unfiled_text: `Part of your capture wasn't filed: “${r.payload.text}”`, topic_merge: `“${r.payload.a}” and “${r.payload.b}” look like the same topic.`, topic_archived: `Archived “${r.payload.title}” (quiet for a while).` }[r.kind] ?? r.kind;
+  return `<div class="card" data-rev="${r.id}"><div class="small">${esc(text)}</div><div style="margin-top:6px;display:flex;gap:6px">${acts.map(([a, l]) => `<button class="btn small" data-act="${a}">${l}</button>`).join("")}</div></div>`;
+}
+async function viewReview() {
+  const rs = await api("/review");
+  return `<div class="panel"><h2>Review</h2>${rs.map(review).join("") || `<div class="empty">Nothing to review.</div>`}</div>`;
+}
+async function viewBoard() {
+  const cs = await api("/cards");
+  const states = ["new", "ready", "running", "waiting", "blocked", "verifying", "done", "failed", "cancelled"];
+  return `<div class="panel"><h2>Board</h2><div class="cols">${states.map((s) => {
+    const xs = cs.filter((c) => c.state === s && c.kind === "task");
+    return `<div><div class="small muted" style="margin-bottom:6px">${s} (${xs.length})</div>${xs.map((c) => `<div class="card small"><div>${esc(c.title)}</div><div class="muted">${c.role}${c.depth ? " · child" : ""}</div></div>`).join("")}</div>`;
+  }).join("")}</div></div>`;
+}
+async function viewMemory() {
+  const q = S.memq ?? "";
+  const ns = await api(`/memory/notes${q ? `?query=${encodeURIComponent(q)}` : ""}`);
+  return `<div class="panel"><h2>Memory</h2><form id="memq" style="display:flex;gap:6px;margin-bottom:10px"><input value="${esc(q)}" placeholder="Search notes" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--bg)"><button class="btn small">Search</button><button class="btn small" type="button" id="consolidate">Consolidate now</button></form>
+    ${ns.map((n) => `<div class="card"><b>${esc(n.title)}</b> <span class="small muted">${n.kind}${n.status !== "active" ? " · " + n.status : ""}</span>
+      ${n.claims.map((c) => `<div class="fact small"><span>${esc(c.text)}${c.stale ? " <i class='muted'>(may be outdated)</i>" : ""}</span><span class="muted">${String(c.observed_at).slice(0, 10)} · ${c.volatility}${c.corroborations ? ` · ×${c.corroborations + 1}` : ""}</span><button class="btn small" data-retract="${c.id}">Retract</button></div>`).join("")}</div>`).join("") || `<div class="empty">Memory is empty.</div>`}</div>`;
+}
+
+async function render() {
+  await Promise.all([nav(), topics()]);
+  const v = { needs: viewNeeds, topic: viewTopic, review: viewReview, board: viewBoard, memory: viewMemory }[S.view] ?? viewNeeds;
+  $("#view").innerHTML = await v();
+}
+
+$("#view").addEventListener("click", async (e) => {
+  const d = e.target.dataset;
+  if (d.undo) { await api(`/receipts/${d.undo}/undo`); render(); }
+  if (d.cancel) { await api(`/cards/${d.cancel}/cancel`); render(); }
+  if (d.del) { await api(`/topics/${S.topic}/facts/${d.del}`, {}, "DELETE"); render(); }
+  if (d.edit) { const t = prompt("Edit fact", e.target.parentElement.firstElementChild.textContent); if (t) { await api(`/topics/${S.topic}/facts/${d.edit}`, { text: t }, "PATCH"); render(); } }
+  if (d.retract) { await api("/memory/retract", { claim_id: d.retract }); render(); }
+  if (d.art) { e.preventDefault(); const a = await api(`/artifacts/${d.art}`); const w = window.open("", "_blank"); w.document.write(`<pre style="white-space:pre-wrap;font:14px system-ui">${esc(a.content)}</pre>`); }
+  if (d.act) {
+    const id = e.target.closest("[data-rev]").dataset.rev;
+    let body = {};
+    if (d.act === "move") { const ts = await api("/topics"); const pick = prompt("Move to which topic?\n" + ts.map((t, i) => `${i + 1}. ${t.title}`).join("\n") + "\n(or type 'new')"); if (!pick) return; body.topic_id = pick === "new" ? "new" : ts[Number(pick) - 1]?.id; }
+    await api(`/review/${id}/${d.act}`, body); render();
+  }
+  if (e.target.id === "consolidate") { e.target.disabled = true; await api("/memory/consolidate"); render(); }
+  if (e.target.id === "brief") briefStart();
+});
+$("#view").addEventListener("submit", async (e) => {
+  if (e.target.id === "compose") {
+    e.preventDefault();
+    const i = e.target.querySelector("input"); const text = i.value.trim(); if (!text) return;
+    i.value = ""; await api("/messages", { topic_id: S.topic, text, client_msg_id: cmid() });
+  }
+  if (e.target.id === "memq") { e.preventDefault(); S.memq = e.target.querySelector("input").value; render(); }
+});
+
+// ---- briefing (text version of the voice dialogue)
+async function briefStart() {
+  const b = await api("/briefings");
+  S.brief = b.id;
+  $("#briefing").innerHTML = `<div class="confirm" id="bl"><div>${esc(b.prompt.text)}</div></div><form id="bf" class="compose"><input placeholder="one / two / skip / repeat / stop"><button class="btn">Reply</button></form>`;
+  $("#bf").onsubmit = async (e) => {
+    e.preventDefault();
+    const i = e.target.querySelector("input"); const t = i.value; i.value = "";
+    const r = await api(`/briefings/${S.brief}/reply`, { text: t });
+    $("#bl").insertAdjacentHTML("beforeend", `<div class="small muted">› ${esc(t)}</div><div>${esc(r.text)}</div>`);
+    if (r.ended) e.target.remove();
+  };
+}
+
+// ---- live updates
+let pending = null;
+const later = () => { clearTimeout(pending); pending = setTimeout(render, 300); };
+let cursor = -1;
+try { cursor = Number(localStorage.getItem("sandman.cursor") ?? -1); } catch {}
+const es = new EventSource(`/events/stream?after=${Number.isFinite(cursor) ? cursor : -1}`);
+es.onmessage = (m) => {
+  const ev = JSON.parse(m.data);
+  try { localStorage.setItem("sandman.cursor", ev.id); } catch {}
+  if (ev.type === "capture.confirmed" && S.captures[ev.ref_id]) showConfirmation(ev.ref_id);
+  if (ev.type === "desk.working") S.working[ev.topic_id] = true;
+  if (ev.type === "desk.idle") S.working[ev.topic_id] = false;
+  if (ev.notify === "push" && document.hidden && "Notification" in window && Notification.permission === "granted") new Notification("Sandman", { body: ev.payload?.body ?? ev.type });
+  later();
+};
+if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sandman Observer</title>
+<style>
+:root { --bg: #f4f4f6; --panel: #fff; --ink: #1b1b1f; --muted: #6c6c75; --line: #e1e1e7; --accent: #3b5bdb; --soft: #eef1ff;
+  --bad: #c92a2a; --bad-soft: #fff0f0; --ok: #2b8a3e; --ok-soft: #ebfbee; --warn: #b35c00; --warn-soft: #fff4e6; --code: #f7f7f9; }
+@media (prefers-color-scheme: dark) { :root { --bg: #131316; --panel: #1c1c20; --ink: #e9e9ee; --muted: #9696a0; --line: #2d2d34;
+  --accent: #91a7ff; --soft: #232842; --bad: #ff8787; --bad-soft: #3a1d1d; --ok: #8ce99a; --ok-soft: #1b3322; --warn: #ffc078; --warn-soft: #3a2a14; --code: #16161a; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; gap: 10px; align-items: center; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 3; flex-wrap: wrap; }
+header h1 { font-size: 16px; margin: 0 8px 0 0; }
+header button { background: none; border: 0; padding: 5px 9px; border-radius: 7px; color: var(--muted); cursor: pointer; font: inherit; }
+header button.on { background: var(--soft); color: var(--accent); }
+main { display: grid; grid-template-columns: minmax(280px, 420px) 1fr; gap: 12px; padding: 12px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+.col { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; overflow: auto; max-height: calc(100vh - 70px); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--panel); }
+tr.row { cursor: pointer; } tr.row:hover { background: var(--soft); }
+.pill { display: inline-block; padding: 0 7px; border-radius: 9px; font-size: 12px; background: var(--code); color: var(--muted); }
+.pill.done, .pill.ok, .pill.pass { background: var(--ok-soft); color: var(--ok); }
+.pill.failed, .pill.bad, .pill.fail, .pill.blocked { background: var(--bad-soft); color: var(--bad); }
+.pill.running, .pill.verifying, .pill.waiting { background: var(--soft); color: var(--accent); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+pre { white-space: pre-wrap; word-break: break-word; background: var(--code); padding: 8px; border-radius: 8px; font-size: 12.5px; margin: 4px 0; max-height: 480px; overflow: auto; }
+details > summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+h2 { font-size: 15px; margin: 4px 0 8px; } h3 { font-size: 13px; margin: 12px 0 4px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.step { border-left: 3px solid var(--line); padding: 4px 0 4px 10px; margin: 8px 0; }
+.step.tool { border-color: var(--accent); } .step.err { border-color: var(--bad); }
+.muted { color: var(--muted); } .small { font-size: 12.5px; }
+.kv { display: grid; grid-template-columns: 140px 1fr; gap: 2px 10px; font-size: 13px; }
+.kv div:nth-child(odd) { color: var(--muted); }
+a { color: var(--accent); cursor: pointer; }
+input, select { font: inherit; color: inherit; background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 2px 8px; cursor: pointer; font: inherit; font-size: 12.5px; }
+.bar { height: 8px; background: var(--accent); border-radius: 4px; }
+</style>
+</head>
+<body>
+<header><h1>Sandman · Observer</h1><span id="tabs"></span><span style="flex:1"></span><span id="spend" class="small muted"></span><a class="small" href="/">client</a></header>
+<main><div class="col" id="list"></div><div class="col" id="detail"><div class="muted">Select something on the left.</div></div></main>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const api = async (p, body) => { const r = await fetch(p, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : undefined); return r.json(); };
+const J = (v) => { if (v === null || v === undefined || v === "") return v; if (typeof v !== "string") return v; try { return JSON.parse(v); } catch { return v; } };
+const pretty = (v) => { const x = J(v); return typeof x === "string" ? x : JSON.stringify(x, null, 2); };
+const pill = (s, cls = s) => `<span class="pill ${esc(cls)}">${esc(s)}</span>`;
+const t = (s) => (s ? String(s).slice(11, 19) : "");
+const TABS = ["overview", "cards", "sessions", "calls", "captures", "desk", "memory", "events", "tables"];
+let tab = "overview", sel = null;
+try { tab = localStorage.getItem("obs.tab") || tab; } catch {}
+$("#tabs").innerHTML = TABS.map((x) => `<button data-t="${x}">${x}</button>`).join("");
+$("#tabs").onclick = (e) => { const b = e.target.closest("button"); if (b) { tab = b.dataset.t; try { localStorage.setItem("obs.tab", tab); } catch {} list(); } };
+
+async function list() {
+  document.querySelectorAll("#tabs button").forEach((b) => b.classList.toggle("on", b.dataset.t === tab));
+  const L = $("#list");
+  if (tab === "overview") {
+    const o = await api("/inspect/overview");
+    $("#spend").textContent = `$${o.spend.usd.toFixed(4)} · ${o.spend.calls} calls this process`;
+    const max = Math.max(1, ...o.calls_by_type.map((c) => c.n));
+    L.innerHTML = `<h2>State</h2><div class="kv">${Object.entries(o.counts).map(([k, v]) => `<div>${k}</div><div>${v}</div>`).join("")}</div>
+      <h3>Cards by state</h3>${o.cards_by_state.map((c) => `${pill(c.state)} ${c.n}`).join(" ") || "<span class='muted'>none</span>"}
+      <h3>Presence</h3><div class="small">${esc(JSON.stringify(o.presence))}</div>`;
+    $("#detail").innerHTML = `<h2>LLM calls by type</h2><table><tr><th>type</th><th>n</th><th></th><th>ok</th><th>avg ms</th><th>tok in</th><th>tok out</th><th>$</th></tr>
+      ${o.calls_by_type.map((c) => `<tr class="row" data-type="${c.call_type}"><td>${c.call_type}</td><td>${c.n}</td><td style="width:120px"><div class="bar" style="width:${(100 * c.n) / max}%"></div></td><td>${c.ok === c.n ? pill("all", "ok") : pill(`${c.n - c.ok} failed`, "bad")}</td><td>${c.ms}</td><td>${c.tin ?? ""}</td><td>${c.tout ?? ""}</td><td>${c.cost ?? ""}</td></tr>`).join("")}</table>`;
+    $("#detail").onclick = (e) => { const r = e.target.closest("[data-type]"); if (r) { tab = "calls"; filterType = r.dataset.type; list(); } };
+    return;
+  }
+  if (tab === "cards") {
+    const cs = await api("/cards");
+    L.innerHTML = `<table><tr><th>card</th><th>state</th><th>role</th><th>calls</th></tr>${cs.map((c) => `<tr class="row" data-card="${c.id}"><td>${c.depth ? "↳ " : ""}${esc(c.title)}<div class="small muted">${c.id} · ${c.kind}</div></td><td>${pill(c.state)}</td><td>${c.role}</td><td>${c.depth ? "" : c.llm_calls_used}</td></tr>`).join("")}</table>`;
+  }
+  if (tab === "sessions") {
+    const ss = await api("/inspect/sessions");
+    L.innerHTML = `<table><tr><th>session</th><th>type</th><th>steps</th><th>outcome</th></tr>${ss.map((s) => `<tr class="row" data-session="${s.id}"><td>${s.id}<div class="small muted">${t(s.started_at)} ${s.card_id ?? s.topic_id ?? ""}</div></td><td>${s.type}</td><td>${s.steps ?? ""}</td><td>${pill(s.outcome ?? "…", /fail|block/.test(s.outcome) ? "warn" : "ok")}</td></tr>`).join("")}</table>`;
+  }
+  if (tab === "calls") {
+    const cs = await api(`/inspect/calls?${filterType ? `type=${filterType}&` : ""}${failedOnly ? "failed=1" : ""}`);
+    L.innerHTML = `<div style="margin-bottom:6px"><input id="ft" placeholder="call type" value="${esc(filterType)}"> <label class="small"><input type="checkbox" id="fo" ${failedOnly ? "checked" : ""}> failed only</label></div>
+      <table><tr><th>call</th><th>ok</th><th>tok</th><th>ms</th></tr>${cs.map((c) => `<tr class="row" data-call="${c.id}"><td>${c.call_type}${c.step ? ` #${c.step}` : ""}<div class="small muted">${t(c.at)} ${esc(J(c.eval_label)?.tags?.case ?? "")}${c.repaired ? " · repaired" : ""}${J(c.eval_label)?.label ? ` · labelled ${J(c.eval_label).label}` : ""}</div></td><td>${c.ok ? pill("ok") : pill("err", "bad")}${c.attempt > 1 ? pill("retry", "warn") : ""}</td><td>${c.tokens_in ?? ""}/${c.tokens_out ?? ""}</td><td>${c.ms}</td></tr>`).join("")}</table>`;
+    $("#ft").onchange = (e) => { filterType = e.target.value.trim(); list(); };
+    $("#fo").onchange = (e) => { failedOnly = e.target.checked; list(); };
+  }
+  if (tab === "captures") {
+    const cs = await api("/captures");
+    L.innerHTML = `<table><tr><th>capture</th><th>state</th></tr>${cs.map((c) => `<tr class="row" data-capture="${c.id}"><td>${esc(c.transcript).slice(0, 140)}<div class="small muted">${c.id} · ${t(c.created_at)}</div></td><td>${pill(c.state)}</td></tr>`).join("")}</table>`;
+  }
+  if (tab === "desk") {
+    const ds = await api("/inspect/desk_turns");
+    L.innerHTML = `<table><tr><th>desk turn</th><th>mode</th><th>intents</th></tr>${ds.map((d) => `<tr class="row" data-desk="${d.id}"><td>${esc(d.input_text).slice(0, 100)}<div class="small muted">${d.id}</div></td><td>${d.mode}</td><td class="small">${esc((J(d.intents) ?? []).join(" → "))}</td></tr>`).join("")}</table>`;
+  }
+  if (tab === "memory") {
+    const ns = await api("/memory/notes");
+    const facts = await api("/inspect/table/facts?limit=100");
+    L.innerHTML = `<h3>Notes</h3><table>${ns.map((n) => `<tr class="row" data-note="${n.id}"><td>${esc(n.title)}<div class="small muted">${n.kind} · ${n.claims.length} claims</div></td></tr>`).join("")}</table>
+      <h3>Fact queue</h3><table><tr><th>fact</th><th>status</th><th>decision</th></tr>${facts.map((f) => `<tr><td class="small">${esc(f.subject)}: ${esc(f.text)}</td><td>${pill(f.status)}</td><td class="small">${esc(f.decision ?? "")}</td></tr>`).join("")}</table>`;
+  }
+  if (tab === "events") {
+    L.innerHTML = `<div class="small muted">Live event stream (newest first)</div><table id="evs"></table>`;
+    const evs = await api(`/events?after=${Math.max(0, lastEvent - 200)}`);
+    for (const e of evs) addEvent(e);
+  }
+  if (tab === "tables") {
+    const ts = await api("/inspect/tables");
+    L.innerHTML = ts.map((x) => `<div><a data-table="${x}">${x}</a></div>`).join("");
+  }
+}
+let filterType = "", failedOnly = false, lastEvent = 0;
+
+function addEvent(e) {
+  const tb = document.getElementById("evs");
+  if (!tb) return;
+  tb.insertAdjacentHTML("afterbegin", `<tr><td class="small">${e.id} ${t(e.at)}</td><td>${esc(e.type)} ${e.notify !== "silent" ? pill(e.notify, "warn") : ""}<div class="small muted">${esc(JSON.stringify(e.payload)).slice(0, 220)}</div></td></tr>`);
+}
+
+$("#list").onclick = async (e) => {
+  const r = e.target.closest("[data-card],[data-session],[data-call],[data-capture],[data-desk],[data-note],[data-table]");
+  if (!r) return;
+  const d = r.dataset;
+  if (d.card) showCard(d.card);
+  if (d.session) showSession(d.session);
+  if (d.call) showCall(d.call);
+  if (d.capture) showCapture(d.capture);
+  if (d.desk) showDesk(d.desk);
+  if (d.note) showNote(d.note);
+  if (d.table) showTable(d.table);
+};
+$("#detail").addEventListener("click", (e) => {
+  const d = e.target.dataset;
+  if (d.gocard) showCard(d.gocard);
+  if (d.gosession) showSession(d.gosession);
+  if (d.gocall) showCall(d.gocall);
+  if (d.label) api(`/inspect/calls/${d.id}/label`, { label: d.label }).then(() => showCall(d.id));
+});
+
+function callBlock(c, open = false) {
+  const parsed = J(c.parsed);
+  return `<div class="step ${c.ok ? "" : "err"}"><div><b>${c.call_type}</b>${c.step ? ` step ${c.step}` : ""} ${c.ok ? "" : pill(c.error ?? "error", "bad")} ${c.attempt > 1 ? pill("retry " + c.attempt, "warn") : ""} ${c.repaired ? pill("repaired", "warn") : ""} <span class="small muted">${c.tokens_in ?? "?"}→${c.tokens_out ?? "?"} tok · ${c.ms} ms · ${esc(c.provider ?? "")}</span> <a class="small" data-gocall="${c.id}">open</a></div>
+    <details ${open ? "open" : ""}><summary>prompt (${(c.input ?? "").length} chars)</summary><pre>${esc(c.input)}</pre></details>
+    <pre>${esc(parsed ? JSON.stringify(parsed, null, 2) : c.raw_output)}</pre></div>`;
+}
+
+async function showSession(id) {
+  const s = await api(`/inspect/sessions/${id}`);
+  const steps = [...s.calls.map((c) => ({ at: c.at, k: "c", c })), ...s.tools.map((x) => ({ at: x.at, k: "t", x }))].sort((a, b) => a.at.localeCompare(b.at) || (a.k === "c" ? -1 : 1));
+  $("#detail").innerHTML = `<h2>Session ${id}</h2><div class="kv"><div>type</div><div>${s.session.type}</div><div>card</div><div>${s.session.card_id ? `<a data-gocard="${s.session.card_id}">${s.session.card_id}</a>` : ""}</div><div>outcome</div><div>${esc(s.session.outcome)}</div><div>steps</div><div>${s.session.steps}</div></div>
+    ${steps.map((st) => st.k === "c" ? callBlock(st.c) : `<div class="step tool"><b>tool ${esc(st.x.tool)}</b> ${st.x.deduplicated ? pill("deduplicated", "warn") : ""} ${st.x.ok ? "" : pill("not ok", "bad")} <span class="small muted">${st.x.ms} ms</span><pre>${esc(pretty(st.x.args))}</pre><details><summary>result (${(st.x.result_text ?? "").length} chars)</summary><pre>${esc(st.x.result_text)}</pre></details></div>`).join("")}`;
+}
+
+async function showCall(id) {
+  const c = await api(`/inspect/calls/${id}`);
+  const lab = J(c.eval_label) ?? {};
+  $("#detail").innerHTML = `<h2>${c.call_type} <span class="small muted">${c.id}</span></h2>
+    <div class="kv"><div>model</div><div>${esc(c.model)} (${esc(c.provider)})</div><div>version</div><div>${esc(c.prompt_version)}</div><div>session</div><div>${c.session_id ? `<a data-gosession="${c.session_id}">${c.session_id}</a>` : ""}</div><div>card</div><div>${c.card_id ? `<a data-gocard="${c.card_id}">${c.card_id}</a>` : ""}</div><div>tokens</div><div>${c.tokens_in} in / ${c.tokens_out} out · $${c.cost ?? 0} · ${c.ms} ms</div><div>error</div><div>${esc(c.error ?? "")}</div><div>repairs</div><div>${esc(c.repaired ?? "")}</div><div>bench</div><div>${esc(JSON.stringify(lab.tags ?? {}))}</div>
+    <div>label</div><div>${esc(lab.label ?? "")} <button class="btn" data-label="correct" data-id="${c.id}">correct</button> <button class="btn" data-label="incorrect" data-id="${c.id}">incorrect</button></div></div>
+    <h3>Prompt</h3><pre>${esc(c.input)}</pre><h3>Raw output</h3><pre>${esc(c.raw_output)}</pre>${c.parsed ? `<h3>Parsed</h3><pre>${esc(pretty(c.parsed))}</pre>` : ""}${c.schema ? `<details><summary>schema</summary><pre>${esc(pretty(c.schema))}</pre></details>` : ""}`;
+}
+
+async function showCard(id) {
+  const d = await api(`/cards/${id}`);
+  const c = d.card;
+  $("#detail").innerHTML = `<h2>${esc(c.title)} ${pill(c.state)}</h2>
+    <div class="kv"><div>id</div><div>${c.id}</div><div>kind / role</div><div>${c.kind} / ${c.role} · phase ${c.phase} · attempt ${c.attempt}</div>
+    <div>goal</div><div>${esc(c.goal)}${c.original_goal ? `<div class="small muted">original: ${esc(c.original_goal)}</div>` : ""}</div>
+    <div>done when</div><div>${c.done_when.map((x) => `• ${esc(x)}`).join("<br>")}</div><div>constraints</div><div>${esc(c.constraints.join("; "))}</div>
+    <div>inputs</div><div>${esc(c.inputs.join(", "))}</div><div>parent</div><div>${c.parent_id ? `<a data-gocard="${c.parent_id}">${c.parent_id}</a>` : "—"}</div>
+    <div>recipe</div><div>${esc(c.recipe_id ?? "")} ${esc(c.recipe_step ?? "")}</div><div>calls (tree)</div><div>${c.llm_calls_used}</div>${c.due_at ? `<div>due</div><div>${c.due_at}</div>` : ""}</div>
+    ${d.children.length ? `<h3>Children</h3>${d.children.map((k) => `<div><a data-gocard="${k.id}">${esc(k.title)}</a> ${pill(k.state)}</div>`).join("")}` : ""}
+    <h3>Result ${c.result_source ? `(${c.result_source})` : ""}</h3><pre>${esc(c.result ? JSON.stringify(c.result, null, 2) : "—")}</pre>
+    <h3>Recorded by the harness</h3><pre>${esc(d.recorded.join("\n") || "—")}</pre>
+    <h3>Timeline</h3><table>${d.events.map((e) => `<tr><td class="small">${t(e.at)}</td><td>${esc(e.from_state ?? "")} → ${pill(e.to_state)}</td><td class="small">${esc(e.event)} · ${esc(e.actor)}</td></tr>`).join("")}</table>
+    <h3>Comments</h3>${d.comments.map((m) => `<div class="small"><b>${esc(m.author)}</b>: ${esc(m.body)}</div>`).join("") || "<span class='muted'>—</span>"}
+    <h3>Questions</h3>${d.questions.map((q) => `<div class="small">${esc(q.text)} ${pill(q.status)} ${esc(q.answer_option ?? q.answer_text ?? "")}</div>`).join("") || "<span class='muted'>—</span>"}
+    <h3>Sessions</h3>${d.sessions.map((s) => `<div><a data-gosession="${s.id}">${s.id}</a> ${s.type} · ${s.steps} steps · ${esc(s.outcome ?? "")}</div>`).join("") || "<span class='muted'>—</span>"}
+    <h3>Artifacts</h3>${d.artifacts.map((a) => `<details><summary>${esc(a.name)} · ${a.bytes} bytes · ${a.origin}</summary><pre>${esc(a.content)}</pre></details>`).join("") || "<span class='muted'>—</span>"}`;
+}
+
+async function showCapture(id) {
+  const c = await api(`/captures/${id}`);
+  const seg = c.segmentation ?? {};
+  $("#detail").innerHTML = `<h2>Capture ${id}</h2><h3>Transcript</h3><pre>${esc(c.transcript)}</pre>
+    <h3>Segmentation</h3>${(seg.matches ?? []).length ? `<table><tr><th>quote</th><th>match</th></tr>${seg.matches.map((m) => `<tr><td>${esc(m.quote)}</td><td>${pill(m.score.toFixed(2), m.score >= 0.9 ? "ok" : "bad")}</td></tr>`).join("")}</table>` : `<div class="small muted">No model call (short capture) → one item.</div>`}
+    ${(seg.uncovered ?? []).length ? `<div class="small">Uncovered: ${seg.uncovered.map(esc).join(" | ")}</div>` : ""}
+    ${c.segment_calls.map((x) => callBlock(x)).join("")}
+    <h3>Items</h3>${c.items.map((i) => `<div class="step"><b>“${esc(i.quote)}”</b><div class="small">→ ${esc(i.topic?.title)} ${pill(i.route_confidence ?? "", i.route_confidence === "low" ? "warn" : "ok")} ${i.route_info?.created ? pill("new topic", "warn") : ""} · candidates: ${esc((i.route_info?.candidates ?? []).join(", ") || "none")}</div>
+      <div class="small">receipts: ${i.receipts.map((r) => esc(r.text)).join(" · ") || "none"}</div>
+      <details><summary>desk calls (${i.desk_calls.length})</summary>${i.desk_calls.map((x) => callBlock(x)).join("")}</details></div>`).join("")}
+    <h3>Confirmation</h3><pre>${esc(c.confirmation?.text ?? "…")}</pre><div class="small muted">speech: ${esc(c.confirmation?.speech ?? "")}</div>`;
+}
+
+async function showDesk(id) {
+  const d = await api(`/inspect/desk_turns/${id}`);
+  $("#detail").innerHTML = `<h2>Desk turn ${id}</h2><div class="kv"><div>mode</div><div>${d.turn.mode}</div><div>input</div><div>${esc(d.turn.input_text)}</div><div>intents</div><div>${esc((J(d.turn.intents) ?? []).join(" → "))}</div><div>receipts</div><div>${d.receipts.map((r) => esc(r.text)).join("<br>") || "—"}</div></div>${d.calls.map((c) => callBlock(c)).join("")}`;
+}
+
+async function showNote(id) {
+  const n = await api(`/memory/notes/${id}`);
+  $("#detail").innerHTML = `<h2>${esc(n.title)} ${pill(n.kind)}</h2><div class="small muted">${n.id} · aliases ${esc(n.aliases)}</div><table><tr><th>claim</th><th>status</th><th>observed</th><th>vol.</th><th>source</th></tr>${n.claims.map((c) => `<tr><td>${esc(c.text)}</td><td>${pill(c.status, c.status === "active" ? "ok" : "warn")}</td><td class="small">${String(c.observed_at).slice(0, 10)}</td><td class="small">${c.volatility}${c.corroborations ? ` ×${c.corroborations + 1}` : ""}</td><td class="small">${esc(c.source?.type)} ${esc(c.source?.ref ?? "")}</td></tr>`).join("")}</table>`;
+}
+
+async function showTable(name) {
+  const rows = await api(`/inspect/table/${name}?limit=200`);
+  const cols = rows.length ? Object.keys(rows[0]) : [];
+  $("#detail").innerHTML = `<h2>${name} <span class="small muted">latest ${rows.length}</span></h2><div style="overflow:auto"><table><tr>${cols.map((c) => `<th>${c}</th>`).join("")}</tr>${rows.map((r) => `<tr>${cols.map((c) => `<td class="small">${esc(String(r[c] ?? "")).slice(0, 300)}</td>`).join("")}</tr>`).join("")}</table></div>`;
+}
+
+const es = new EventSource("/events/stream?after=-1");
+let refresh = null;
+es.onmessage = (m) => {
+  const e = JSON.parse(m.data);
+  lastEvent = Math.max(lastEvent, e.id);
+  if (tab === "events") addEvent(e);
+  else { clearTimeout(refresh); refresh = setTimeout(list, 800); }
+};
+list();
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ import { lines, P, ROLE_LINES } from "./work.ts";
 
 export function segmentCapture(c: { transcript: string }): P {
   return {
-    version: "segment_capture/v1",
+    version: "segment_capture/v2",
     maxTokens: 500,
     schema: obj({ analysis: str(300), items: arr(obj({ quote: str(1000) }), 8, 1) }),
     prompt: `The owner recorded a voice memo or wrote a quick note. It may contain several unrelated requests or
@@ -15,9 +15,11 @@ Split it into separate items. An item is one thing the owner wants done, wants r
 For each item, copy its words EXACTLY from the text (quote). Don't rephrase and don't combine two
 subjects into one item. Leave out filler ("uh", "oh and").
 
-Example:
+Examples:
 "Remind me to call the plumber tomorrow and also what was the name of that tile shop"
 → items: [{quote: "Remind me to call the plumber tomorrow"}, {quote: "what was the name of that tile shop"}]
+"find out if the bike shop repairs e-bikes and what a service costs"
+→ items: [{quote: "find out if the bike shop repairs e-bikes and what a service costs"}] (one subject, one item)
 
 Text:
 "${c.transcript}"
@@ -122,12 +124,10 @@ function deskContext(c: DeskCtx) {
   return s.join("\n\n");
 }
 
-function deskInput(c: DeskCtx, withMemo = true) {
-  if (c.mode === "capture") {
-    if (!withMemo) return `${c.owner} said this in a voice memo or quick note (it may contain transcription errors):\n"${c.input}"`;
-    return `${c.owner} said this in a voice memo or quick note (it may contain transcription errors):
-"${c.input}"${c.transcript && c.transcript.trim() !== c.input.trim() ? `\n\nFull memo, for context only; other parts are handled separately:\n"${c.transcript}"` : ""}`;
-  }
+function deskInput(c: DeskCtx) {
+  // The full memo is deliberately NOT shown (deviation from DESIGN §6.3): with it, the desk acted on
+  // other items' parts (see docs/BENCH.md). Each item is handled on its own.
+  if (c.mode === "capture") return `${c.owner} said this in a voice memo or quick note (it may contain transcription errors):\n"${c.input}"`;
   return `${c.owner}'s message:\n"${c.input}"`;
 }
 
@@ -138,13 +138,13 @@ export const INTENT_LINES: Record<string, string> = {
   add_to_card: "add_to_card: the owner adds a requirement or detail to one of the cards",
   cancel_card: "cancel_card: the owner wants to stop one of the cards",
   reply_only: "reply_only: a question you can answer from what you see here (including how work is going), or a request Sandman can't do (buying, sending, calling)",
-  nothing: "nothing: no action and no reply needed (e.g. \"thanks\")",
+  nothing: "nothing: no action and no reply needed (e.g. \"thanks\", or a remark to keep in mind)",
   done: "done: everything the owner said has been handled",
 };
 
 export function deskIntent(c: DeskCtx & { intents: string[] }): P {
   return {
-    version: "desk_intent/v4",
+    version: "desk_intent/v5",
     maxTokens: 120,
     schema: obj({ analysis: str(300), intent: oneOf(c.intents) }),
     prompt: `You are Sandman's front desk. ${c.owner} is the owner. Decide the NEXT action for what ${c.owner} said.
@@ -154,7 +154,7 @@ ${lines(c.intents.map((i) => INTENT_LINES[i]))}
 
 ${deskContext(c)}
 
-${deskInput(c, false)}
+${deskInput(c)}
 ${c.receipts.length ? `\nDone so far for this:\n${lines(c.receipts)}\n` : ""}
 Reply with analysis (one sentence), then intent.`,
   };
@@ -162,7 +162,7 @@ Reply with analysis (one sentence), then intent.`,
 
 export function deskArgsNewWork(c: DeskCtx): P {
   return {
-    version: "desk_args_new_work/v2",
+    version: "desk_args_new_work/v3",
     maxTokens: 350,
     schema: obj({ analysis: str(300), done_when: arr(str(200), 3), goal: str(600), role: oneOf(["research", "write"]), title: str(80) }),
     prompt: `You are Sandman's front desk. Create a work card for what ${c.owner} asked.
@@ -188,7 +188,7 @@ Reply with analysis (one sentence), then done_when, goal, role, title.`,
 
 export function deskArgsReminder(c: DeskCtx): P {
   return {
-    version: "desk_args_reminder/v2",
+    version: "desk_args_reminder/v3",
     maxTokens: 100,
     schema: obj({ text: str(200), when_text: str(80) }),
     prompt: `You are Sandman's front desk. ${c.owner} wants a reminder. Only handle the reminder part.
@@ -220,7 +220,7 @@ Reply with question_id, then response: ${c.owner}'s answer, in their words.`,
 
 export function deskArgsAdd(c: DeskCtx): P {
   return {
-    version: "desk_args_add/v2",
+    version: "desk_args_add/v3",
     maxTokens: 150,
     schema: obj({ card_id: oneOf(c.cards.map((x) => x.id)), note: str(400) }),
     prompt: `You are Sandman's front desk. ${c.owner} is adding something to an existing card.

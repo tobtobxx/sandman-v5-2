@@ -66,6 +66,8 @@ export const cases: Case[] = [
         [!!c && c.done_when.length >= 1 && c.done_when.length <= 3, `done_when ${c?.done_when?.length}`],
       );
     }),
+  desk("remark-without-cards", () => ({ topic_id: topic("Raised bed irrigation", "Drip kits for the raised beds.").id }), "the drip kit also needs to reach the two balcony pots", (o) =>
+    all([!o.receipts.some((r: any) => r.kind === "reminder_set"), `receipts: ${kinds(o)}`], [o.receipts.length <= 1, `receipts: ${kinds(o)}`])),
   desk("add-to-running-card", irrigation, "the kit must also reach the two balcony pots", (o) =>
     all(
       [kinds(o) === "added_to_card", `receipts: ${kinds(o)}`],

@@ -44,6 +44,27 @@ export const cases: Case[] = [
     },
   },
   {
+    id: "episode/capture-no-cross-talk",
+    desc: "from a live trace: items must not act on each other's parts (no borrowed cards or dates)",
+    run: async () => {
+      const irr = topic("Raised bed irrigation", "Drip kits for the raised beds.");
+      const cap = receiveCapture({ text: "garden: the drip kit also needs to reach the two balcony pots. remind me Friday to file the tax extension, and find out if Velostation Nord repairs e-bikes and what a service costs" });
+      const r = await processCapture(cap.id);
+      return { irr, r, receipts: db().all(`SELECT * FROM receipts`), cards: db().all(`SELECT * FROM cards`) };
+    },
+    check: (o) => {
+      const inIrr = o.receipts.filter((r: any) => r.topic_id === o.irr.id);
+      const tasks = o.cards.filter((c: any) => c.kind === "task");
+      const rems = o.cards.filter((c: any) => c.kind === "reminder");
+      return all(
+        [o.r.items.length === 3, `${o.r.items.length} items: ${o.r.items.map((i: any) => i.quote).join(" | ")}`],
+        [!inIrr.some((r: any) => /bike|tax/i.test(r.text)), `irrigation topic got: ${inIrr.map((r: any) => r.text).join(", ")}`],
+        [tasks.length === 1 && /e-bike|velostation/i.test(tasks[0].title), `tasks: ${tasks.map((c: any) => c.title).join(", ")}`],
+        [rems.length === 1 && /tax/i.test(rems[0].title), `reminders: ${rems.map((c: any) => c.title).join(", ")}`],
+      );
+    },
+  },
+  {
     id: "episode/undo-new-card",
     desc: "M3 accept 4: undoing a 'new card' receipt cancels the card",
     run: async () => {
