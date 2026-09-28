@@ -4,292 +4,463 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sandman</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
 :root {
-  --bg: #f6f5f2; --panel: #ffffff; --ink: #1d1d1f; --muted: #6b6b70; --line: #e4e2dc; --accent: #3b5bdb;
-  --accent-soft: #e7ecff; --warn: #c2410c; --warn-soft: #fff1e6; --ok: #2f7d4f; --ok-soft: #e6f4ea; --chip: #efeee9;
+  --bg: #f4f3ef; --side: #ecebe5; --panel: #ffffff; --head: #f8f7f3; --ink: #1c1d21; --muted: #63646b; --line: #dedcd4;
+  --accent: #2f4fc4; --accent-ink: #1f3796; --accent-soft: #dfe5f9; --on-accent: #ffffff;
+  --warn: #9a3d0c; --warn-soft: #fbeee3; --warn-line: #edcdb5; --badge: #b4480f;
+  --ok: #2b7a4b; --ok-soft: #e3f2e8; --ok-line: #bcdcc7; --chip: #e9e7e0;
+  --sans: "Instrument Sans", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg: #151517; --panel: #1e1e21; --ink: #ececef; --muted: #9a9aa2; --line: #2e2e33; --accent: #8ea2ff;
-    --accent-soft: #252b45; --warn: #fb923c; --warn-soft: #3a2616; --ok: #6ccf93; --ok-soft: #1c3326; --chip: #2a2a2f; }
-}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #16171a; --side: #1c1d21; --panel: #222328; --head: #1e1f23; --ink: #ecebe7; --muted: #9b9ca3; --line: #33343a;
+  --accent: #8ea2ff; --accent-ink: #b4c2ff; --accent-soft: #262d4a; --on-accent: #10121c;
+  --warn: #f5a36d; --warn-soft: #3a2518; --warn-line: #5a3a24; --badge: #d9642a;
+  --ok: #7fd09c; --ok-soft: #1b3024; --ok-line: #2d4d38; --chip: #2b2c31; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #16171a; --side: #1c1d21; --panel: #222328; --head: #1e1f23; --ink: #ecebe7; --muted: #9b9ca3; --line: #33343a;
+  --accent: #8ea2ff; --accent-ink: #b4c2ff; --accent-soft: #262d4a; --on-accent: #10121c;
+  --warn: #f5a36d; --warn-soft: #3a2518; --warn-line: #5a3a24; --badge: #d9642a;
+  --ok: #7fd09c; --ok-soft: #1b3024; --ok-line: #2d4d38; --chip: #2b2c31; color-scheme: dark; }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
-header h1 { font-size: 17px; margin: 0; }
-header nav { display: flex; gap: 4px; flex-wrap: wrap; }
-header nav button { background: none; border: 0; padding: 6px 10px; border-radius: 8px; color: var(--muted); cursor: pointer; font: inherit; }
-header nav button.on { background: var(--accent-soft); color: var(--accent); }
-header .sp { flex: 1; }
-select, input, textarea, button { font: inherit; color: inherit; }
-.badge { background: var(--warn); color: #fff; border-radius: 10px; padding: 0 7px; font-size: 12px; margin-left: 4px; }
-main { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 16px; max-width: 1200px; margin: 0 auto; }
-@media (max-width: 800px) { main { grid-template-columns: 1fr; } aside { order: 2; } }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
-.panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 10px; }
-.capture-panel { grid-column: 1 / -1; margin-bottom: 0; border-color: var(--accent); }
-.capture { display: flex; gap: 8px; }
-.capture textarea { flex: 1; min-height: 120px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--bg); font-size: 17px; }
-.capture textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-.capture-panel .btn { padding: 8px 18px; }
-.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
-.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-.btn.small { padding: 2px 8px; font-size: 13px; }
-.btn:disabled { opacity: .5; cursor: default; }
-.muted { color: var(--muted); }
-.small { font-size: 13px; }
-.topics a { display: flex; justify-content: space-between; padding: 6px 8px; border-radius: 8px; color: inherit; text-decoration: none; }
-.topics a.on, .topics a:hover { background: var(--chip); }
-.q { border-left: 3px solid var(--warn); padding: 8px 10px; background: var(--warn-soft); border-radius: 0 8px 8px 0; margin-bottom: 8px; }
-.q .opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-.q form { display: flex; gap: 6px; margin-top: 6px; }
-.q input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; background: var(--panel); }
-.card { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; }
-.state { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: var(--chip); color: var(--muted); }
-.state.done { background: var(--ok-soft); color: var(--ok); }
-.state.blocked, .state.failed { background: var(--warn-soft); color: var(--warn); }
-.state.running, .state.verifying { background: var(--accent-soft); color: var(--accent); }
-.kids { margin: 6px 0 0 12px; font-size: 13px; }
-.msg { padding: 6px 0; border-bottom: 1px dashed var(--line); }
-.msg .who { font-size: 12px; color: var(--muted); }
-.msg.receipt { color: var(--muted); font-size: 13px; }
-.msg.card_result { background: var(--ok-soft); border-radius: 8px; padding: 8px 10px; border: 0; margin: 6px 0; }
-.msg.reminder { background: var(--accent-soft); border-radius: 8px; padding: 8px 10px; border: 0; margin: 6px 0; }
-.compose { display: flex; gap: 8px; margin-top: 10px; }
-.compose input { flex: 1; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--bg); }
-.confirm { background: var(--ok-soft); border-radius: 10px; padding: 10px; margin-top: 10px; }
-.fact { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
-.fact span:first-child { flex: 1; }
-.cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-.working { color: var(--accent); font-size: 13px; }
-pre { white-space: pre-wrap; font-size: 13px; background: var(--bg); padding: 8px; border-radius: 8px; max-height: 360px; overflow: auto; }
-a { color: var(--accent); }
-.empty { color: var(--muted); font-size: 14px; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+a { color: var(--accent); text-decoration: none; } a:hover { color: var(--accent-ink); }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app { display: flex; height: 100%; }
+/* sidebar */
+aside { width: 260px; flex-shrink: 0; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; padding: 18px 14px; overflow-y: auto; }
+.brand { padding: 0 8px; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
+.brand a { font: 500 12px var(--sans); color: var(--muted); }
+.home-btn { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; color: var(--accent-ink); font-weight: 600; font-size: 14px; border: 1px solid var(--accent-soft); }
+.home-btn.on { background: var(--accent-soft); }
+.meta { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.navlist { display: flex; flex-direction: column; gap: 2px; }
+.navlist a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; color: var(--ink); font-size: 14px; }
+.navlist a span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navlist a:hover { background: var(--chip); }
+.navlist a.on { background: var(--accent-soft); font-weight: 600; }
+.navlist a.conv span:first-child { color: var(--muted); }
+.badge { background: var(--badge); color: #fff; border-radius: 9px; font-size: 11px; padding: 1px 7px; font-weight: 600; flex-shrink: 0; }
+.newtag { font-size: 11px; font-weight: 600; color: var(--ok); flex-shrink: 0; }
+.side-bottom { margin-top: auto; border-top: 1px solid var(--line); padding-top: 10px; }
+.side-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 12px; color: var(--muted); }
+.side-foot select { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
+/* main */
+main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.scroll { flex: 1; overflow-y: auto; }
+.center { max-width: 760px; margin: 0 auto; padding-inline: 24px; }
+.menu-btn { display: none; }
+@media (max-width: 820px) {
+  aside { position: fixed; inset: 0 auto 0 0; z-index: 10; transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 40px rgba(0,0,0,.25); }
+  aside.open { transform: none; }
+  .menu-btn { display: inline-flex; position: fixed; top: 10px; left: 10px; z-index: 5; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 10px; }
+  .center { padding-inline: 16px; }
+}
+/* home */
+.home { padding-block: 12vh 40px; display: flex; flex-direction: column; gap: 36px; }
+.home h1 { margin: 6px 0 14px; font-size: clamp(26px, 4vw, 34px); font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
+.composer { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 6px 24px rgba(40, 38, 30, 0.07); }
+.composer textarea { border: 0; outline: none; resize: vertical; min-height: 110px; font-size: 18px; line-height: 1.5; background: transparent; }
+.composer-row { display: flex; align-items: center; gap: 10px; }
+.icon-btn { width: 40px; height: 40px; border-radius: 20px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.icon-btn:disabled { opacity: .55; cursor: default; }
+.hint { flex: 1; font-size: 13px; color: var(--muted); }
+.send-btn { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 20px; background: var(--accent); color: var(--on-accent); font-weight: 600; border: 0; }
+.send-btn:disabled { opacity: .6; cursor: default; }
+.twocol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+@media (max-width: 640px) { .twocol { grid-template-columns: 1fr; } }
+.qrow { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; color: var(--ink); }
+.qrow span:last-child { color: var(--muted); white-space: nowrap; }
+.qrow:hover { color: var(--accent); }
+.empty { color: var(--muted); font-size: 14px; padding: 10px 0; border-top: 1px solid var(--line); }
+/* send result */
+.sendview { padding-block: 48px; display: flex; flex-direction: column; gap: 24px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.itemcard { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.itemcard.new { border: 2px solid var(--ok); padding: 15px; }
+.itemcard h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.quote { margin: 0; font-size: 14px; color: var(--muted); font-style: italic; }
+.go { display: flex; justify-content: center; align-items: center; height: 40px; border-radius: 20px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 14px; margin-top: auto; }
+.go:hover { color: var(--on-accent); filter: brightness(1.08); }
+/* topic */
+.topic-head { padding: 16px 32px 12px 32px; border-bottom: 1px solid var(--line); background: var(--head); display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 820px) { .topic-head { padding-left: 64px; } }
+.topic-head .row1 { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.topic-head h1 { margin: 0; font-size: 21px; font-weight: 600; }
+.topic-head .sum { font-size: 13px; color: var(--muted); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.chip { padding: 2px 10px; border-radius: 12px; background: var(--chip); color: var(--muted); }
+.chip.run { background: var(--accent-soft); color: var(--accent-ink); }
+.chip.q { background: var(--warn-soft); color: var(--warn); }
+.chip.done { background: var(--ok-soft); color: var(--ok); }
+.timeline { padding: 20px 32px; display: flex; flex-direction: column; gap: 12px; min-height: 100%; justify-content: flex-end; }
+@media (max-width: 640px) { .timeline { padding: 16px; } }
+.day { align-self: center; }
+.me { align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; max-width: min(600px, 85%); }
+.me .b { background: var(--accent); color: var(--on-accent); padding: 10px 14px; border-radius: 16px 16px 4px 16px; white-space: pre-wrap; word-wrap: break-word; }
+.me.fresh .b { box-shadow: 0 0 0 3px var(--accent-soft); }
+.sub { font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.sm { align-self: flex-start; max-width: min(660px, 90%); background: var(--panel); border: 1px solid var(--line); border-radius: 16px 16px 16px 4px; padding: 11px 15px; white-space: pre-wrap; word-wrap: break-word; }
+.receipt { align-self: flex-start; display: flex; flex-direction: column; gap: 6px; max-width: 90%; }
+.receipt .line { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.receipt .line.undone { text-decoration: line-through; }
+.receipt svg { color: var(--ok); flex-shrink: 0; }
+.workcard { width: min(560px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.workcard b { font-weight: 600; }
+.workcard .st { white-space: nowrap; }
+.st.running, .st.verifying, .st.new, .st.ready, .st.waiting { color: var(--accent-ink); }
+.st.done { color: var(--ok); } .st.blocked, .st.failed { color: var(--warn); } .st.cancelled { color: var(--muted); }
+.question { align-self: flex-start; max-width: min(620px, 92%); background: var(--warn-soft); border: 1px solid var(--warn-line); border-radius: 16px 16px 16px 4px; padding: 12px 15px; display: flex; flex-direction: column; gap: 10px; }
+.question.answered { background: var(--panel); border-color: var(--line); }
+.opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.opt { border: 1px solid var(--warn-line); background: var(--panel); border-radius: 18px; padding: 5px 13px; font-size: 14px; }
+.opt:hover { border-color: var(--warn); }
+.qform { display: flex; gap: 6px; }
+.qform input { flex: 1; min-width: 0; border: 1px solid var(--warn-line); border-radius: 8px; padding: 4px 8px; background: var(--panel); font-size: 14px; }
+.result { align-self: flex-start; max-width: min(660px, 92%); background: var(--ok-soft); border: 1px solid var(--ok-line); border-radius: 16px 16px 16px 4px; padding: 11px 15px; display: flex; flex-direction: column; gap: 6px; }
+.result.failed, .result.cancelled { background: var(--panel); border-color: var(--line); }
+.result .txt { white-space: pre-wrap; }
+.reminder { align-self: flex-start; background: var(--accent-soft); border-radius: 12px; padding: 9px 14px; }
+.system { align-self: center; font-size: 13px; color: var(--muted); }
+.working { align-self: flex-start; font-size: 13px; color: var(--accent); display: flex; gap: 8px; align-items: center; }
+.dots::after { content: "…"; animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: .2; } }
+@media (prefers-reduced-motion: reduce) { .dots::after { animation: none; } aside { transition: none; } }
+.chatbar { padding: 12px 32px 18px; }
+@media (max-width: 640px) { .chatbar { padding: 10px 12px 14px; } }
+.chatbar form { display: flex; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 7px 7px 7px 14px; }
+.chatbar input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-size: 15px; }
+.mover { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.mover select { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); font-size: 13px; padding: 2px 4px; }
+.linkbtn { border: 0; background: none; color: var(--accent); padding: 0; font-size: 13px; }
+.linkbtn:hover { color: var(--accent-ink); }
+/* secondary views */
+.page { padding-block: 32px 48px; display: flex; flex-direction: column; gap: 16px; }
+.page h1 { margin: 0; font-size: 24px; font-weight: 600; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 4px 12px; font-size: 13px; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.fact { display: flex; gap: 8px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
+.fact span:first-child { flex: 1; min-width: 200px; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Sandman</h1>
-  <nav id="nav"></nav>
-  <span class="sp"></span>
-  <label class="small muted">mode
-    <select id="mode"><option>active</option><option>driving</option><option>dnd</option></select>
-  </label>
-  <a class="small" href="/observer">observer</a>
-</header>
-<main>
-  <div class="panel capture-panel">
-    <h2>Quick capture</h2>
-    <div class="capture">
-      <textarea id="cap" placeholder="Say or type anything. Several things at once is fine."></textarea>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-      <button class="btn primary" id="capBtn">Capture</button>
-      <button class="btn" disabled title="Voice capture is not implemented in the prototype">🎙 Voice</button>
-      <span id="capState" class="small muted"></span>
-    </div>
-    <div id="confirm"></div>
-  </div>
-  <aside>
-    <div class="panel">
-      <h2>Topics</h2>
-      <div class="topics" id="topics"></div>
-    </div>
+<button class="menu-btn" id="menuBtn" aria-label="Open topics">☰</button>
+<div class="app">
+  <aside id="side">
+    <div class="brand"><span>Sandman</span><a href="/observer">observer</a></div>
+    <a class="home-btn" href="#home" id="homeBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+      Home · new message
+    </a>
+    <div class="meta" style="padding: 0 10px">Topics</div>
+    <nav class="navlist" id="topics"></nav>
+    <div class="side-bottom navlist" id="secondary"></div>
+    <div class="side-foot"><label for="mode">Mode</label>
+      <select id="mode"><option>active</option><option>driving</option><option>dnd</option></select></div>
   </aside>
-  <section id="view"></section>
-</main>
+  <main id="main"></main>
+</div>
 <script>
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const api = async (path, body, method) => {
+const cmid = () => crypto.randomUUID();
+const CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"></path></svg>`;
+async function api(path, body, method) {
   const r = await fetch(path, body !== undefined || method ? { method: method ?? "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body ?? {}) } : undefined);
-  const d = await r.json();
+  const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d.error ?? r.statusText);
   return d;
-};
-const cmid = () => crypto.randomUUID();
-const S = { view: "needs", topic: null, captures: {}, working: {} };
-try { Object.assign(S, JSON.parse(localStorage.getItem("sandman.view") ?? "{}")); } catch {}
-const save = () => { try { localStorage.setItem("sandman.view", JSON.stringify({ view: S.view, topic: S.topic })); } catch {} };
-
-const VIEWS = { needs: "Needs you", topic: "Topic", review: "Review", board: "Board", memory: "Memory" };
-async function nav() {
-  const needs = await api("/needs-you");
-  const rev = await api("/review");
-  $("#nav").innerHTML = Object.entries(VIEWS).filter(([k]) => k !== "topic" || S.topic).map(([k, v]) =>
-    `<button data-v="${k}" class="${S.view === k ? "on" : ""}">${v}${k === "needs" && needs.length ? `<span class="badge">${needs.length}</span>` : ""}${k === "review" && rev.length ? `<span class="badge" style="background:var(--muted)">${rev.length}</span>` : ""}</button>`).join("");
 }
-$("#nav").onclick = (e) => { const b = e.target.closest("button"); if (b) { S.view = b.dataset.v; save(); render(); } };
-$("#mode").onchange = (e) => api("/presence", { mode: e.target.value, topic_id: S.topic });
+function toast(t) { const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.append(el); setTimeout(() => el.remove(), 2600); }
+const time = (iso) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-async function topics() {
-  const ts = await api("/topics");
-  $("#topics").innerHTML = ts.map((t) => `<a href="#" data-t="${t.id}" class="${S.topic === t.id && S.view === "topic" ? "on" : ""}"><span>${esc(t.title)}</span><span class="small muted">${t.open_questions ? `<span class="badge">${t.open_questions}</span>` : ""}${t.open_cards ? ` ${t.open_cards}▸` : ""}</span></a>`).join("") || `<div class="empty">No topics yet. Capture something.</div>`;
+// ---------------------------------------------------------------- routing
+function route() {
+  const [view, id] = (location.hash.slice(1) || "home").split("/");
+  return { view, id };
 }
-$("#topics").onclick = (e) => { const a = e.target.closest("a"); if (a) { e.preventDefault(); S.topic = a.dataset.t; S.view = "topic"; save(); render(); api("/presence", { mode: $("#mode").value, topic_id: S.topic }); } };
+window.addEventListener("hashchange", () => { $("#side").classList.remove("open"); render(true); });
+$("#menuBtn").onclick = () => $("#side").classList.toggle("open");
+$("#mode").onchange = (e) => api("/presence", { mode: e.target.value, topic_id: route().view === "topic" ? route().id : null });
 
-// ---- capture
-$("#capBtn").onclick = async () => {
-  const text = $("#cap").value.trim();
-  if (!text) return;
-  const c = await api("/captures", { text, source: "text", client_msg_id: cmid() });
-  S.captures[c.id] = true;
-  $("#cap").value = "";
-  $("#capState").textContent = "Working…";
-};
-$("#cap").onkeydown = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("#capBtn").click(); };
-async function showConfirmation(capture_id) {
-  const c = await api(`/captures/${capture_id}`);
-  $("#capState").textContent = "";
-  const rs = c.items.flatMap((i) => i.receipts.map((r) => ({ ...r, topic: i.topic })));
-  $("#confirm").innerHTML = `<div class="confirm"><div>${esc(c.confirmation?.text)}</div>
-    ${c.items.map((i) => `<div class="small muted" style="margin-top:6px">“${esc(i.quote)}” → <a href="#" data-topic="${i.topic.id}">${esc(i.topic.title)}</a>${i.provisional ? " (unsure)" : ""}</div>`).join("")}
-    ${rs.length ? `<div style="margin-top:6px">${rs.map((r) => `<div class="small">${esc(r.text)} ${r.undone_at ? "<i>(undone)</i>" : `<button class="btn small" data-undo="${r.id}">Undo</button>`}</div>`).join("")}</div>` : ""}</div>`;
+// ---------------------------------------------------------------- sidebar
+let topicsCache = [];
+async function sidebar() {
+  const [ts, home] = await Promise.all([api("/topics"), api("/home")]);
+  topicsCache = ts;
+  const r = route();
+  $("#homeBtn").classList.toggle("on", r.view === "home");
+  $("#topics").innerHTML = ts.map((t) => `<a href="#topic/${t.id}" class="${t.kind === "conversation" ? "conv" : ""} ${r.view === "topic" && r.id === t.id ? "on" : ""}">
+      <span>${esc(t.title)}</span>${t.open_questions ? `<span class="badge">${t.open_questions}</span>` : t.is_new ? `<span class="newtag">NEW</span>` : ""}</a>`).join("")
+    || `<div class="empty" style="border:0;padding:4px 10px">No topics yet.</div>`;
+  const sec = [["needs", "Needs you", home.needs_you_count, true], ["review", "Review", home.review_count, false], ["board", "Board"], ["memory", "Memory"]];
+  $("#secondary").innerHTML = sec.map(([k, l, n, hot]) => `<a href="#${k}" class="${r.view === k ? "on" : ""}"><span>${l}</span>${n ? (hot ? `<span class="badge">${n}</span>` : `<span style="color:var(--muted);font-size:12px">${n}</span>`) : ""}</a>`).join("");
+  return home;
 }
-$("#confirm").onclick = async (e) => {
-  const u = e.target.dataset.undo, t = e.target.dataset.topic;
-  if (u) { const r = await api(`/receipts/${u}/undo`); e.target.replaceWith(Object.assign(document.createElement("i"), { textContent: `(${r.note})` })); }
-  if (t) { e.preventDefault(); S.topic = t; S.view = "topic"; render(); }
-};
 
-// ---- question widget
-function question(q, showTopic = false) {
-  return `<div class="q" data-q="${q.id}"><div>${esc(q.text)}</div>
-    ${showTopic ? `<div class="small muted">${esc(q.topic_title ?? "")}${q.blocked_cards ? ` · ${q.blocked_cards} card${q.blocked_cards > 1 ? "s" : ""} waiting` : ""}</div>` : ""}
-    ${q.options?.length ? `<div class="opts">${q.options.map((o, i) => `<button class="btn small" data-opt="${i}">${i + 1}. ${esc(o)}</button>`).join("")}</div>` : ""}
-    <form><input placeholder="…or answer in your own words"><button class="btn small">Answer</button></form></div>`;
+// ---------------------------------------------------------------- home
+let draft = "";
+try { draft = localStorage.getItem("sandman.draft") ?? ""; } catch {}
+function viewHome(home) {
+  return `<div class="scroll"><div class="center home">
+    <div>
+      <div class="meta">${esc(home.now)}</div>
+      <h1>What's on your mind, ${esc(home.owner)}?</h1>
+      <form class="composer" id="homeForm">
+        <label for="prompt" class="meta" style="letter-spacing:.04em">Message</label>
+        <textarea id="prompt" placeholder="Anything: a question, a task, a reminder, or several at once.">${esc(draft)}</textarea>
+        <div class="composer-row">
+          <button type="button" class="icon-btn" disabled aria-label="Voice input (not built yet)" title="Voice input is not built yet">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+          </button>
+          <span class="hint" id="homeHint">Several things at once is fine. Sandman files each one into its topic. Ctrl+Enter sends.</span>
+          <button class="send-btn" id="sendBtn">Send
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </button>
+        </div>
+      </form>
+    </div>
+    <div class="twocol">
+      <section><div class="meta" style="padding-bottom:8px">Needs you · ${home.needs_you_count}</div>
+        ${home.needs_you.map((q) => `<a class="qrow" href="#topic/${q.topic_id}"><span>${esc(q.text)}</span><span>${esc(q.topic_title)}</span></a>`).join("") || `<div class="empty">Nothing needs you.</div>`}</section>
+      <section><div class="meta" style="padding-bottom:8px">Finished in the last day</div>
+        ${home.finished.map((f) => `<a class="qrow" href="#topic/${f.topic_id}"><span>${esc(f.title)}</span><span>${esc(f.topic_title)}</span></a>`).join("") || `<div class="empty">Nothing finished yet.</div>`}</section>
+    </div>
+  </div></div>`;
 }
-document.addEventListener("click", async (e) => {
-  const b = e.target.closest("[data-opt]");
-  if (b) { const q = b.closest("[data-q]").dataset.q; await api(`/questions/${q}/answer`, { option: Number(b.dataset.opt) }); render(); }
-});
-document.addEventListener("submit", async (e) => {
-  const q = e.target.closest("[data-q]");
-  if (!q) return;
-  e.preventDefault();
-  const text = e.target.querySelector("input").value.trim();
-  if (text) { await api(`/questions/${q.dataset.q}/answer`, { text }); render(); }
-});
+function bindHome() {
+  const ta = $("#prompt");
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  ta.oninput = () => { try { localStorage.setItem("sandman.draft", ta.value); } catch {} draft = ta.value; };
+  ta.onkeydown = (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("#homeForm").requestSubmit(); } };
+  $("#homeForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const text = ta.value.trim();
+    if (!text) return;
+    $("#sendBtn").disabled = true;
+    $("#homeHint").innerHTML = `<span class="dots">Filing</span>`;
+    try {
+      const r = await api("/send", { text, client_msg_id: cmid() });
+      draft = ""; try { localStorage.removeItem("sandman.draft"); } catch {}
+      freshItems = new Set(r.items.map((i) => i.item_id));
+      location.hash = r.items.length === 1 ? `topic/${r.items[0].topic_id}` : `send/${r.send_id}`;
+    } catch (err) {
+      $("#sendBtn").disabled = false;
+      $("#homeHint").textContent = `Could not send: ${err.message}. Your text is kept; try again.`;
+    }
+  };
+}
 
-// ---- views
+// ---------------------------------------------------------------- send result
+async function viewSend(id) {
+  const s = await api(`/sends/${id}`);
+  const card = (it) => `<article class="itemcard ${it.created ? "new" : ""}">
+      <div class="meta" style="${it.created ? "color:var(--ok)" : ""}">${it.topic_kind === "conversation" ? "Conversation" : it.created ? "New topic" : "Existing topic"}</div>
+      <h2>${esc(it.topic_title)}</h2>
+      <p class="quote">“${esc(it.quote)}”</p>
+      <div class="receipt">${it.receipts.length ? it.receipts.map(receiptLine).join("") : it.reply ? `<div class="line">${CHECK}<span>Answered</span></div>` : s.state === "handled" ? `<div class="line">Noted, no action needed.</div>` : `<div class="working"><span class="dots">Working</span></div>`}</div>
+      ${moverHtml(it.item_id)}
+      <a class="go" href="#topic/${it.topic_id}">Continue here</a>
+    </article>`;
+  return `<div class="scroll"><div class="center sendview" style="max-width:980px">
+    <div class="me" style="align-self:flex-start;max-width:100%"><div class="sub">You · from home</div><div class="b" style="border-radius:16px 16px 16px 4px">${esc(s.text)}</div></div>
+    <div><h1 style="margin:0;font-size:25px;font-weight:600">Filed as ${s.items.length} items. Where do you want to continue?</h1>
+    <p style="margin:6px 0 0;color:var(--muted);font-size:15px">Each part went to its own topic and was acted on. Every action can be undone, and every filing can be moved.</p></div>
+    <div class="cards">${s.items.map(card).join("")}</div>
+    <a href="#home" style="font-size:14px">Back to home</a>
+  </div></div>`;
+}
+const receiptLine = (r) => `<div class="line ${r.undone ? "undone" : ""}">${CHECK}<span>${esc(r.text)}</span>${r.undone ? "" : `<button class="linkbtn" data-undo="${r.id}">Undo</button>`}</div>`;
+const moverHtml = (item_id) => item_id ? `<div class="mover" data-mover="${item_id}"><button class="linkbtn" data-move-open>Move…</button></div>` : "";
+
+// ---------------------------------------------------------------- topic
+let freshItems = new Set();
+async function viewTopic(id) {
+  const t = await api(`/topics/${id}`);
+  const chips = [
+    ...t.chips.cards.map((c) => `<span class="chip ${c.state === "done" ? "done" : ["blocked", "failed", "cancelled"].includes(c.state) ? "" : "run"}">${esc(c.title)} · ${esc(c.state)}</span>`),
+    t.chips.open_questions ? `<span class="chip q">${t.chips.open_questions} question${t.chips.open_questions > 1 ? "s" : ""}</span>` : "",
+    t.chips.facts ? `<span class="chip">${t.chips.facts} facts</span>` : "",
+  ].join("");
+  const sub = t.topic.kind === "conversation" ? "General talk, not about one subject. Sees all topics." : (t.topic.summary || "");
+  return `<div class="topic-head">
+      <div class="row1"><h1>${esc(t.topic.title)}</h1>${t.topic.is_new ? `<span class="newtag">NEW TOPIC</span>` : ""}<span class="sum">${esc(sub.split("\n")[0].slice(0, 220))}</span></div>
+      ${chips ? `<div class="chips">${chips}</div>` : ""}
+    </div>
+    <div class="scroll" id="tl"><div class="timeline">${t.timeline.map(entry).join("")}
+      ${t.working ? `<div class="working"><span class="dots">Sandman is working</span></div>` : ""}</div></div>
+    <div class="chatbar"><form id="chatForm"><input id="chatIn" aria-label="Message in ${esc(t.topic.title)}" placeholder="Message ${esc(t.topic.title)}…" autocomplete="off">
+      <button class="send-btn" style="height:36px">Send</button></form></div>`;
+}
+function entry(e) {
+  switch (e.type) {
+    case "day": return `<div class="day meta">${esc(e.label)}</div>`;
+    case "owner": return `<div class="me ${freshItems.has(e.item_id) ? "fresh" : ""}"><div class="b">${esc(e.text)}</div>
+        <div class="sub"><span>${e.from_home ? "from home, " : ""}${time(e.at)}${e.siblings ? ` · part of a message with ${e.siblings + 1} items` : ""}</span>${e.item_id ? moverHtml(e.item_id) : ""}</div></div>`;
+    case "reply": return `<div class="sm">${esc(e.text)}</div>`;
+    case "receipt": return `<div class="receipt">${receiptLine(e)}${e.card ? `<div class="workcard"><b>${esc(e.card.title)}</b><span class="st ${e.card.state}">${esc(stateLabel(e.card))}</span></div>` : ""}</div>`;
+    case "question": return `<div class="question ${e.status !== "open" ? "answered" : ""}" data-q="${e.id}"><div>${esc(e.text)}</div>
+        ${e.status === "open" ? `${e.options.length ? `<div class="opts">${e.options.map((o, i) => `<button class="opt" data-opt="${i}">${i + 1} · ${esc(o)}</button>`).join("")}</div>` : ""}
+        <form class="qform"><input aria-label="Answer in your own words" placeholder="…or answer in your own words"><button class="btn">Answer</button></form>`
+        : `<div style="font-size:13px;color:var(--muted)">${e.status === "answered" ? `Answered: ${esc(e.answer)}` : "No longer needed"}</div>`}</div>`;
+    case "result": return `<div class="result ${e.state}"><div class="meta" style="color:${e.state === "done" ? "var(--ok)" : "var(--muted)"}">${e.state === "done" ? "Result" : e.state} · ${esc(e.title)}</div>
+        <div class="txt">${esc(e.summary ?? "")}</div>${e.recommendation ? `<div><b>Recommendation:</b> ${esc(e.recommendation)}</div>` : ""}
+        ${(e.artifacts ?? []).map((a) => `<div style="font-size:13px"><button class="linkbtn" data-art="${a.id}">${esc(a.name)}</button></div>`).join("")}</div>`;
+    case "reminder": return `<div class="reminder"><span class="meta">Reminder</span><div>${esc(e.text)}</div></div>`;
+    default: return `<div class="system">${esc(e.text)}</div>`;
+  }
+}
+const stateLabel = (c) => c.state === "done" ? "done" : c.progress ? `${c.state} · ${c.progress}` : c.state;
+function bindTopic(id, keepFocus) {
+  const tl = $("#tl"); tl.scrollTop = tl.scrollHeight;
+  const input = $("#chatIn");
+  if (keepFocus) input.focus();
+  try { input.value = sessionStorage.getItem(`sandman.chat.${id}`) ?? ""; } catch {}
+  input.oninput = () => { try { sessionStorage.setItem(`sandman.chat.${id}`, input.value); } catch {} };
+  $("#chatForm").onsubmit = async (e) => {
+    e.preventDefault();
+    const text = input.value.trim(); if (!text) return;
+    input.value = ""; try { sessionStorage.removeItem(`sandman.chat.${id}`); } catch {}
+    try { await api(`/topics/${id}/messages`, { text, client_msg_id: cmid() }); } catch (err) { input.value = text; toast(`Could not send: ${err.message}`); }
+    render(false, true);
+  };
+}
+
+// ---------------------------------------------------------------- secondary views
 async function viewNeeds() {
   const qs = await api("/needs-you");
-  return `<div class="panel"><h2>Needs you</h2>${qs.map((q) => question(q, true)).join("") || `<div class="empty">Nothing needs you right now.</div>`}
-    <div style="margin-top:10px"><button class="btn" id="brief">Brief me</button></div><div id="briefing"></div></div>`;
+  return `<div class="scroll"><div class="center page"><h1>Needs you</h1>
+    ${qs.map((q) => `<div class="question" style="max-width:100%" data-q="${q.id}"><div>${esc(q.text)}</div>
+      <div style="font-size:13px;color:var(--muted)"><a href="#topic/${q.topic_id}">${esc(q.topic_title ?? "")}</a>${q.blocked_cards ? ` · ${q.blocked_cards} card${q.blocked_cards > 1 ? "s" : ""} waiting` : ""}</div>
+      ${q.options?.length ? `<div class="opts">${q.options.map((o, i) => `<button class="opt" data-opt="${i}">${i + 1} · ${esc(o)}</button>`).join("")}</div>` : ""}
+      <form class="qform"><input aria-label="Answer in your own words" placeholder="…or answer in your own words"><button class="btn">Answer</button></form></div>`).join("") || `<div class="empty">Nothing needs you right now.</div>`}
+    <div><button class="btn" id="brief">Brief me (scripted, for voice)</button></div><div id="briefing"></div></div></div>`;
 }
-async function viewTopic() {
-  if (!S.topic) return `<div class="empty">Pick a topic.</div>`;
-  const p = await api(`/topics/${S.topic}/page`);
-  const card = (c) => `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.title)}</b><span class="state ${c.state}">${c.state}</span></div>
-    ${c.kind === "reminder" ? `<div class="small muted">Reminder · ${new Date(c.due_at).toLocaleString()}</div>` : ""}
-    ${c.result?.summary ? `<div class="small" style="margin-top:4px">${esc(c.result.summary)}</div>` : ""}
-    ${c.result?.recommendation ? `<div class="small"><b>Recommendation:</b> ${esc(c.result.recommendation)}</div>` : ""}
-    ${c.children?.length ? `<div class="kids">${c.children.map((k) => `<div><span class="state ${k.state}">${k.state}</span> ${esc(k.title)}</div>`).join("")}</div>` : ""}
-    ${!["done", "failed", "cancelled"].includes(c.state) ? `<div style="margin-top:6px"><button class="btn small" data-cancel="${c.id}">Cancel</button></div>` : ""}</div>`;
-  const msg = (m) => {
-    if (m.kind === "receipt") return `<div class="msg receipt">✓ ${esc(m.body)} ${m.payload?.receipt_id ? `<button class="btn small" data-undo="${m.payload.receipt_id}">Undo</button>` : ""}</div>`;
-    if (m.kind === "card_result") return `<div class="msg card_result"><div class="who">Result · ${esc(m.payload.title)} · ${m.payload.state}</div>${esc(m.body)}${m.payload.recommendation ? `<div><b>Recommendation:</b> ${esc(m.payload.recommendation)}</div>` : ""}${(m.payload.artifacts ?? []).map((a) => `<div class="small"><a href="#" data-art="${a.id}">${esc(a.name)}</a></div>`).join("")}</div>`;
-    if (m.kind === "reminder") return `<div class="msg reminder"><div class="who">Reminder</div>${esc(m.body)}</div>`;
-    if (m.kind === "question") return `<div class="msg"><div class="who">Sandman asks</div>${esc(m.body)}</div>`;
-    return `<div class="msg"><div class="who">${m.role === "owner" ? (m.kind === "capture_item" ? "You (capture)" : "You") : "Sandman"}</div>${esc(m.body)}</div>`;
-  };
-  return `<div class="panel"><h2>${esc(p.topic.title)}</h2>
-      <div>${esc(p.summary) || `<span class="empty">No summary yet.</span>`}</div></div>
-    ${p.needs_you.length ? `<div class="panel"><h2>Needs you</h2>${p.needs_you.map((q) => question(q)).join("")}</div>` : ""}
-    ${p.review.length ? `<div class="panel"><h2>To check</h2>${p.review.map(review).join("")}</div>` : ""}
-    <div class="panel"><h2>Work</h2>${p.work.map(card).join("") || `<div class="empty">No work in this topic.</div>`}</div>
-    <div class="panel"><h2>Decisions and facts</h2>${p.facts.map((f) => `<div class="fact"><span>${esc(f.text)}</span><span class="small muted">${f.source?.type === "owner" ? "you said" : "from memory"}, ${String(f.observed_at).slice(0, 10)}</span><button class="btn small" data-edit="${f.id}">Edit</button><button class="btn small" data-del="${f.id}">✕</button></div>`).join("") || `<div class="empty">Nothing yet.</div>`}</div>
-    <div class="panel"><h2>Conversation</h2>${p.messages.map(msg).join("")}<div class="working" id="working">${S.working[S.topic] ? "Sandman is working…" : ""}</div>
-      <form class="compose" id="compose"><input placeholder="Write on this topic…"><button class="btn primary">Send</button></form></div>`;
-}
-function review(r) {
-  const acts = { filing_check: [["ok", "Looks right"], ["move", "Move…"]], unfiled_text: [["file", "File"], ["ignore", "Ignore"]], topic_merge: [["merge", "Merge"], ["keep", "Keep separate"]], topic_archived: [["undo", "Undo"], ["ok", "OK"]] }[r.kind] ?? [["ok", "OK"]];
-  const text = { filing_check: `Filed “${r.payload.quote}” under ${r.payload.topic_title}. Right?`, unfiled_text: `Part of your capture wasn't filed: “${r.payload.text}”`, topic_merge: `“${r.payload.a}” and “${r.payload.b}” look like the same topic.`, topic_archived: `Archived “${r.payload.title}” (quiet for a while).` }[r.kind] ?? r.kind;
-  return `<div class="card" data-rev="${r.id}"><div class="small">${esc(text)}</div><div style="margin-top:6px;display:flex;gap:6px">${acts.map(([a, l]) => `<button class="btn small" data-act="${a}">${l}</button>`).join("")}</div></div>`;
+function reviewCard(r) {
+  const acts = { filing_check: [["ok", "Looks right"]], unfiled_text: [["file", "File"], ["ignore", "Ignore"]], topic_merge: [["merge", "Merge"], ["keep", "Keep separate"]], topic_archived: [["undo", "Undo"], ["ok", "OK"]] }[r.kind] ?? [["ok", "OK"]];
+  const text = { filing_check: `Filed “${r.payload.quote}” under ${r.payload.topic_title}. Right?`, unfiled_text: `Part of a message wasn't filed: “${r.payload.text}”`, topic_merge: `“${r.payload.a}” and “${r.payload.b}” look like the same topic.`, topic_archived: `Archived “${r.payload.title}” (quiet for a while).` }[r.kind] ?? r.kind;
+  return `<div class="panel" data-rev="${r.id}"><div style="font-size:14px">${esc(text)}</div><div style="display:flex;gap:6px;flex-wrap:wrap">${acts.map(([a, l]) => `<button class="btn" data-act="${a}">${l}</button>`).join("")}
+    ${r.kind === "filing_check" ? moverHtml(r.ref_ids[0]) : ""}</div></div>`;
 }
 async function viewReview() {
   const rs = await api("/review");
-  return `<div class="panel"><h2>Review</h2>${rs.map(review).join("") || `<div class="empty">Nothing to review.</div>`}</div>`;
+  return `<div class="scroll"><div class="center page"><h1>Review</h1>${rs.map(reviewCard).join("") || `<div class="empty">Nothing to review.</div>`}</div></div>`;
 }
 async function viewBoard() {
   const cs = await api("/cards");
   const states = ["new", "ready", "running", "waiting", "blocked", "verifying", "done", "failed", "cancelled"];
-  return `<div class="panel"><h2>Board</h2><div class="cols">${states.map((s) => {
+  return `<div class="scroll"><div class="center page" style="max-width:1200px"><h1>Board</h1><div class="cols">${states.map((s) => {
     const xs = cs.filter((c) => c.state === s && c.kind === "task");
-    return `<div><div class="small muted" style="margin-bottom:6px">${s} (${xs.length})</div>${xs.map((c) => `<div class="card small"><div>${esc(c.title)}</div><div class="muted">${c.role}${c.depth ? " · child" : ""}</div></div>`).join("")}</div>`;
-  }).join("")}</div></div>`;
+    return `<div><div class="meta" style="margin-bottom:6px">${s} · ${xs.length}</div>${xs.map((c) => `<div class="panel" style="margin-bottom:8px;font-size:14px"><div>${esc(c.title)}</div><div style="color:var(--muted);font-size:12px">${c.role}${c.depth ? " · part" : ""}</div>
+      ${["blocked", "failed"].includes(s) ? `<div><button class="btn" data-retry="${c.id}">Retry</button></div>` : ""}${!["done", "failed", "cancelled"].includes(s) ? `<div><button class="btn" data-cancel="${c.id}">Cancel</button></div>` : ""}</div>`).join("")}</div>`;
+  }).join("")}</div></div></div>`;
 }
+let memq = "";
 async function viewMemory() {
-  const q = S.memq ?? "";
-  const ns = await api(`/memory/notes${q ? `?query=${encodeURIComponent(q)}` : ""}`);
-  return `<div class="panel"><h2>Memory</h2><form id="memq" style="display:flex;gap:6px;margin-bottom:10px"><input value="${esc(q)}" placeholder="Search notes" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--bg)"><button class="btn small">Search</button><button class="btn small" type="button" id="consolidate">Consolidate now</button></form>
-    ${ns.map((n) => `<div class="card"><b>${esc(n.title)}</b> <span class="small muted">${n.kind}${n.status !== "active" ? " · " + n.status : ""}</span>
-      ${n.claims.map((c) => `<div class="fact small"><span>${esc(c.text)}${c.stale ? " <i class='muted'>(may be outdated)</i>" : ""}</span><span class="muted">${String(c.observed_at).slice(0, 10)} · ${c.volatility}${c.corroborations ? ` · ×${c.corroborations + 1}` : ""}</span><button class="btn small" data-retract="${c.id}">Retract</button></div>`).join("")}</div>`).join("") || `<div class="empty">Memory is empty.</div>`}</div>`;
+  const ns = await api(`/memory/notes${memq ? `?query=${encodeURIComponent(memq)}` : ""}`);
+  return `<div class="scroll"><div class="center page"><h1>Memory</h1>
+    <form id="memq" style="display:flex;gap:6px"><input aria-label="Search notes" value="${esc(memq)}" placeholder="Search notes" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--panel)"><button class="btn">Search</button><button class="btn" type="button" id="consolidate">Consolidate now</button></form>
+    ${ns.map((n) => `<div class="panel"><div><b>${esc(n.title)}</b> <span style="color:var(--muted);font-size:12px">${n.kind}</span></div>
+      ${n.claims.map((c) => `<div class="fact"><span>${esc(c.text)}${c.stale ? ` <i style="color:var(--muted)">(may be outdated)</i>` : ""}</span><span style="color:var(--muted);font-size:12px">${String(c.observed_at).slice(0, 10)} · ${c.volatility}</span><button class="btn" data-retract="${c.id}">Retract</button></div>`).join("")}</div>`).join("") || `<div class="empty">Memory is empty.</div>`}</div></div>`;
 }
 
-async function render() {
-  await Promise.all([nav(), topics()]);
-  const v = { needs: viewNeeds, topic: viewTopic, review: viewReview, board: viewBoard, memory: viewMemory }[S.view] ?? viewNeeds;
-  $("#view").innerHTML = await v();
-}
-
-$("#view").addEventListener("click", async (e) => {
-  const d = e.target.dataset;
-  if (d.undo) { await api(`/receipts/${d.undo}/undo`); render(); }
-  if (d.cancel) { await api(`/cards/${d.cancel}/cancel`); render(); }
-  if (d.del) { await api(`/topics/${S.topic}/facts/${d.del}`, {}, "DELETE"); render(); }
-  if (d.edit) { const t = prompt("Edit fact", e.target.parentElement.firstElementChild.textContent); if (t) { await api(`/topics/${S.topic}/facts/${d.edit}`, { text: t }, "PATCH"); render(); } }
-  if (d.retract) { await api("/memory/retract", { claim_id: d.retract }); render(); }
-  if (d.art) { e.preventDefault(); const a = await api(`/artifacts/${d.art}`); const w = window.open("", "_blank"); w.document.write(`<pre style="white-space:pre-wrap;font:14px system-ui">${esc(a.content)}</pre>`); }
-  if (d.act) {
-    const id = e.target.closest("[data-rev]").dataset.rev;
-    let body = {};
-    if (d.act === "move") { const ts = await api("/topics"); const pick = prompt("Move to which topic?\n" + ts.map((t, i) => `${i + 1}. ${t.title}`).join("\n") + "\n(or type 'new')"); if (!pick) return; body.topic_id = pick === "new" ? "new" : ts[Number(pick) - 1]?.id; }
-    await api(`/review/${id}/${d.act}`, body); render();
+// ---------------------------------------------------------------- render
+let rendering = null;
+async function render(navigated = false, keepFocus = false) {
+  if (rendering) { rendering.again = true; return; }
+  rendering = { again: false };
+  try {
+    const r = route();
+    const home = await sidebar();
+    const main = $("#main");
+    if (r.view === "home") { if (navigated || !$("#prompt")) { main.innerHTML = viewHome(home); bindHome(); } }
+    else if (r.view === "send") main.innerHTML = await viewSend(r.id);
+    else if (r.view === "topic") {
+      const focused = keepFocus || (document.activeElement && document.activeElement.id === "chatIn");
+      main.innerHTML = await viewTopic(r.id); bindTopic(r.id, focused || navigated);
+    }
+    else if (r.view === "needs") main.innerHTML = await viewNeeds();
+    else if (r.view === "review") main.innerHTML = await viewReview();
+    else if (r.view === "board") main.innerHTML = await viewBoard();
+    else if (r.view === "memory") main.innerHTML = await viewMemory();
+    else { location.hash = "home"; }
+    if (navigated) api("/presence", { mode: $("#mode").value, topic_id: r.view === "topic" ? r.id : null }).catch(() => {});
+  } catch (err) {
+    $("#main").innerHTML = `<div class="center page"><h1>Could not load this view</h1><p>${esc(err.message)}</p><a href="#home">Back to home</a></div>`;
+  } finally {
+    const again = rendering.again; rendering = null;
+    if (again) render();
   }
-  if (e.target.id === "consolidate") { e.target.disabled = true; await api("/memory/consolidate"); render(); }
-  if (e.target.id === "brief") briefStart();
+}
+
+// ---------------------------------------------------------------- actions (delegated)
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("button, a"); if (!t) return;
+  const d = t.dataset;
+  try {
+    if (d.undo) { const r = await api(`/receipts/${d.undo}/undo`); toast(r.note ?? "Undone"); render(); }
+    else if (d.opt !== undefined) { const q = t.closest("[data-q]").dataset.q; await api(`/questions/${q}/answer`, { option: Number(d.opt) }); render(); }
+    else if (d.moveOpen !== undefined) {
+      const box = t.closest("[data-mover]");
+      box.innerHTML = `<label for="mv-${box.dataset.mover}">Move to</label><select id="mv-${box.dataset.mover}">${topicsCache.filter((x) => x.kind !== "conversation").map((x) => `<option value="${x.id}">${esc(x.title)}</option>`).join("")}<option value="new">A new topic</option></select><button class="linkbtn" data-move-go>Move</button><button class="linkbtn" data-move-cancel>Cancel</button>`;
+    }
+    else if (d.moveCancel !== undefined) render();
+    else if (d.moveGo !== undefined) {
+      const box = t.closest("[data-mover]");
+      const topic = await api(`/items/${box.dataset.mover}/move`, { topic_id: box.querySelector("select").value });
+      toast(`Moved to ${topic.title}`); location.hash = `topic/${topic.id}`; render();
+    }
+    else if (d.art) { const a = await api(`/artifacts/${d.art}`); const w = window.open("", "_blank"); if (w) w.document.body.innerHTML = `<pre style="white-space:pre-wrap;font:14px system-ui">${esc(a.content)}</pre>`; }
+    else if (d.cancel) { await api(`/cards/${d.cancel}/cancel`); render(); }
+    else if (d.retry) { await api(`/cards/${d.retry}/retry`); render(); }
+    else if (d.retract) { await api("/memory/retract", { claim_id: d.retract }); render(); }
+    else if (d.act) { const id = t.closest("[data-rev]").dataset.rev; await api(`/review/${id}/${d.act}`, {}); render(); }
+    else if (t.id === "consolidate") { t.disabled = true; await api("/memory/consolidate"); render(); }
+    else if (t.id === "brief") briefStart();
+  } catch (err) { toast(err.message); }
 });
-$("#view").addEventListener("submit", async (e) => {
-  if (e.target.id === "compose") {
+document.addEventListener("submit", async (e) => {
+  const q = e.target.closest("[data-q]");
+  if (q && e.target.classList.contains("qform")) {
     e.preventDefault();
-    const i = e.target.querySelector("input"); const text = i.value.trim(); if (!text) return;
-    i.value = ""; await api("/messages", { topic_id: S.topic, text, client_msg_id: cmid() });
+    const text = e.target.querySelector("input").value.trim();
+    if (text) { try { await api(`/questions/${q.dataset.q}/answer`, { text }); } catch (err) { toast(err.message); } render(); }
   }
-  if (e.target.id === "memq") { e.preventDefault(); S.memq = e.target.querySelector("input").value; render(); }
+  if (e.target.id === "memq") { e.preventDefault(); memq = e.target.querySelector("input").value; render(); }
 });
-
-// ---- briefing (text version of the voice dialogue)
 async function briefStart() {
   const b = await api("/briefings");
-  S.brief = b.id;
-  $("#briefing").innerHTML = `<div class="confirm" id="bl"><div>${esc(b.prompt.text)}</div></div><form id="bf" class="compose"><input placeholder="one / two / skip / repeat / stop"><button class="btn">Reply</button></form>`;
+  $("#briefing").innerHTML = `<div class="panel" id="bl"><div>${esc(b.prompt.text)}</div></div><form id="bf" class="qform" style="margin-top:8px"><input aria-label="Reply" placeholder="one / two / skip / repeat / stop"><button class="btn">Reply</button></form>`;
   $("#bf").onsubmit = async (e) => {
     e.preventDefault();
     const i = e.target.querySelector("input"); const t = i.value; i.value = "";
-    const r = await api(`/briefings/${S.brief}/reply`, { text: t });
-    $("#bl").insertAdjacentHTML("beforeend", `<div class="small muted">› ${esc(t)}</div><div>${esc(r.text)}</div>`);
+    const r = await api(`/briefings/${b.id}/reply`, { text: t });
+    $("#bl").insertAdjacentHTML("beforeend", `<div style="color:var(--muted);font-size:13px">› ${esc(t)}</div><div>${esc(r.text)}</div>`);
     if (r.ended) e.target.remove();
   };
 }
 
-// ---- live updates
+// ---------------------------------------------------------------- live updates
 let pending = null;
-const later = () => { clearTimeout(pending); pending = setTimeout(render, 300); };
-let cursor = -1;
-try { cursor = Number(localStorage.getItem("sandman.cursor") ?? -1); } catch {}
-const es = new EventSource(`/events/stream?after=${Number.isFinite(cursor) ? cursor : -1}`);
+const later = (ms = 250) => { clearTimeout(pending); pending = setTimeout(() => render(), ms); };
+const es = new EventSource(`/events/stream?after=-1`);
 es.onmessage = (m) => {
   const ev = JSON.parse(m.data);
-  try { localStorage.setItem("sandman.cursor", ev.id); } catch {}
-  if (ev.type === "capture.confirmed" && S.captures[ev.ref_id]) showConfirmation(ev.ref_id);
-  if (ev.type === "desk.working") S.working[ev.topic_id] = true;
-  if (ev.type === "desk.idle") S.working[ev.topic_id] = false;
-  if (ev.notify === "push" && document.hidden && "Notification" in window && Notification.permission === "granted") new Notification("Sandman", { body: ev.payload?.body ?? ev.type });
-  later();
+  const r = route();
+  if (r.view === "topic" && ev.topic_id && ev.topic_id !== r.id && !/^topic\./.test(ev.type)) { if (/question\.|message\.created/.test(ev.type)) later(800); return; }
+  later(r.view === "home" ? 800 : 250);
+  if (ev.notify === "push" && document.hidden && "Notification" in window && Notification.permission === "granted") new Notification("Sandman", { body: ev.payload?.body ?? ev.payload?.text ?? ev.type });
 };
-if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
-render();
+if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
+render(true);
 </script>
 </body>
 </html>
