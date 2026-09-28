@@ -6,7 +6,7 @@ import { llmJson } from "../llm/gateway.ts";
 import * as W from "../prompts/work.ts";
 import { addComment, Card, createCard, getCard, maxSteps, transition } from "./board.ts";
 import { fill, getRecipe, RECIPES } from "./recipes.ts";
-import { findNotes, profileText, renderNotes } from "../memory/retriever.ts";
+import { findNotes, noteUrls, profileText, renderNotes } from "../memory/retriever.ts";
 import { createQuestion } from "../conversation/questions.ts";
 import { endSession, startSession } from "../trace.ts";
 
@@ -41,7 +41,7 @@ export async function runLibrarian(card: Card): Promise<"answered" | "narrow" | 
     const used = notes.filter((n) => ids.includes(n.id));
     const a = await ask<{ summary: string }>("render_answer", W.renderAnswer({ goal: card.goal, notes: renderNotes(used) }), card, session_id);
     endSession(session_id, "answered");
-    transition(card.id, "verifying", "librarian_answered", "librarian", { result: { summary: a.summary, facts: [], source: "memory", notes: ids }, result_source: "memory" });
+    transition(card.id, "verifying", "librarian_answered", "librarian", { result: { summary: a.summary, facts: [], sources: noteUrls(used), source: "memory", notes: ids }, result_source: "memory" });
     return "answered";
   }
   if (r.verdict === "narrow" && r.narrowed_goal) {
