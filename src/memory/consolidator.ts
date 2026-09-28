@@ -3,7 +3,7 @@
 import { db, ftsQuery, j, nowIso, Row } from "../db.ts";
 import { newId } from "../ids.ts";
 import { config } from "../config.ts";
-import { llmJson } from "../llm/gateway.ts";
+import { llmJson, LLMFailure } from "../llm/gateway.ts";
 import * as M from "../prompts/memory.ts";
 import { indexNote } from "./retriever.ts";
 import { createQuestion } from "../conversation/questions.ts";
@@ -163,15 +163,24 @@ export function consolidationRunning(): boolean {
   return running.has(db());
 }
 
+export interface ConsolidationError {
+  fact_id: string;
+  subject: string;
+  text: string;
+  error: string;
+}
+
 /** Running state, the last completed run (from the event log, so it survives restarts) and the queue size. */
 export function consolidationStatus() {
   const r = running.get(db());
   const last = db().get(`SELECT payload, at FROM events WHERE type='memory.consolidated' ORDER BY id DESC LIMIT 1`);
+  const { errors = [], ...counts } = last ? j<Record<string, any>>(last.payload, {}) : {};
   return {
     running: !!r,
     started_at: r?.started_at ?? null,
     last_completed_at: last?.at ?? null,
-    last_counts: last ? j<Record<string, number>>(last.payload, {}) : null,
+    last_counts: last ? counts as Record<string, number> : null,
+    last_errors: errors as ConsolidationError[],
     pending: db().get(`SELECT count(*) n FROM facts WHERE status='pending'`)!.n as number,
   };
 }
@@ -189,15 +198,19 @@ export function consolidate(limit = 50): Promise<Record<string, number>> {
 
 async function consolidateRun(limit: number): Promise<Record<string, number>> {
   const counts: Record<string, number> = {};
+  const errors: ConsolidationError[] = [];
   for (const f of db().all(`SELECT * FROM facts WHERE status='pending' ORDER BY created_at LIMIT ?`, limit)) {
     try {
       const d = await consolidateOne(f);
       counts[d] = (counts[d] ?? 0) + 1;
     } catch (e) {
       counts.error = (counts.error ?? 0) + 1;
-      console.error("consolidate:", f.id, (e as Error).message);
+      // the fact stays pending; say which one failed and why, so the Memory page can show it
+      const error = e instanceof LLMFailure ? `${e.kind}: ${e.message}` : String((e as Error).message ?? e);
+      errors.push({ fact_id: f.id, subject: String(f.subject ?? ""), text: String(f.text ?? "").slice(0, 200), error: error.slice(0, 500) });
+      console.error("consolidate:", f.id, error);
     }
   }
-  emit("memory.consolidated", { payload: counts });
+  emit("memory.consolidated", { payload: errors.length ? { ...counts, errors } : counts });
   return counts;
 }

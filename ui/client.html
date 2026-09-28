@@ -186,6 +186,8 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: h
 .s-failed { --sc: var(--lane-stop); } .s-cancelled { --sc: var(--muted); }
 .fact { display: flex; gap: 8px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .fact span:first-child { flex: 1; min-width: 200px; }
+.fact .err, .cons-errors { color: var(--warn); font-size: 12px; }
+.cons-errors { margin: -4px 0 10px; } .cons-errors ul { margin: 4px 0 0; padding-left: 18px; } .cons-errors li { margin: 2px 0; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
 </style>
 </head>
@@ -432,18 +434,27 @@ async function viewBoard() {
 let memq = "";
 function consolidationLine(st) {
   const when = (iso) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
-  const counts = Object.entries(st.last_counts ?? {}).map(([k, n]) => `${n} ${k}`).join(", ");
+  const counts = Object.entries(st.last_counts ?? {}).map(([k, n]) => `${n} ${k === "error" ? "failed" : k}`).join(", ");
   const last = st.running ? `Consolidating since ${time(st.started_at)}…`
     : st.last_completed_at ? `Last consolidated ${when(st.last_completed_at)}${counts ? ` (${counts})` : ""}` : "Never consolidated";
   return `${last} · ${st.pending} pending`;
 }
+function consolidationErrors(st) {
+  const es = st.running ? [] : st.last_errors ?? [];
+  if (!es.length) return "";
+  // shown open, not in <details>: live updates re-render this view and would close it
+  return `<div class="cons-errors">${es.length} fact${es.length > 1 ? "s" : ""} could not be consolidated. They stay pending and are tried again next run.
+    <ul>${es.slice(0, 5).map((e) => `<li><b>${esc(e.subject)}</b>: ${esc(e.error)}</li>`).join("")}${es.length > 5 ? `<li>…and ${es.length - 5} more (all are in the Observer's events tab, under memory.consolidated)</li>` : ""}</ul></div>`;
+}
 async function viewMemory() {
   const [ns, st] = await Promise.all([api(`/memory/notes${memq ? `?query=${encodeURIComponent(memq)}` : ""}`), api("/memory/status")]);
+  const failed = new Map((st.last_errors ?? []).map((e) => [e.fact_id, e.error]));
   return `<div class="scroll"><div class="center page"><h1>Memory</h1>
     <form id="memq" style="display:flex;gap:6px"><input aria-label="Search notes" value="${esc(memq)}" placeholder="Search notes" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--panel)"><button class="btn">Search</button><button class="btn" type="button" id="consolidate"${st.running ? " disabled" : ""}>${st.running ? "Consolidating…" : "Consolidate now"}</button></form>
     <div style="color:var(--muted);font-size:12px;margin:6px 0 10px">${esc(consolidationLine(st))}</div>
+    ${consolidationErrors(st)}
     ${ns.map((n) => `<div class="panel"><div><b>${esc(n.title)}</b> <span style="color:var(--muted);font-size:12px">${n.status === "pending" ? "pending · not consolidated yet" : n.kind}</span></div>
-      ${n.claims.map((c) => `<div class="fact"><span${c.pending ? ` style="color:var(--muted)"` : ""}>${esc(c.text)}${c.stale ? ` <i style="color:var(--muted)">(may be outdated)</i>` : ""}</span><span style="color:var(--muted);font-size:12px">${String(c.observed_at).slice(0, 10)} · ${c.volatility}</span>${c.pending ? "" : `<button class="btn" data-retract="${c.id}">Retract</button>`}</div>`).join("")}</div>`).join("") || `<div class="empty">${memq ? "Nothing matches." : "Memory is empty."}</div>`}</div></div>`;
+      ${n.claims.map((c) => `<div class="fact"><span${c.pending ? ` style="color:var(--muted)"` : ""}>${esc(c.text)}${c.stale ? ` <i style="color:var(--muted)">(may be outdated)</i>` : ""}${c.pending && failed.get(c.id) ? `<div class="err">Last consolidation failed: ${esc(failed.get(c.id))}</div>` : ""}</span><span style="color:var(--muted);font-size:12px">${String(c.observed_at).slice(0, 10)} · ${c.volatility}</span>${c.pending ? "" : `<button class="btn" data-retract="${c.id}">Retract</button>`}</div>`).join("")}</div>`).join("") || `<div class="empty">${memq ? "Nothing matches." : "Memory is empty."}</div>`}</div></div>`;
 }
 
 // ---------------------------------------------------------------- render
