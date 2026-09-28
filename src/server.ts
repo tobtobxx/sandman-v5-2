@@ -11,7 +11,7 @@ import { startDispatcher } from "./work/dispatcher.ts";
 import { addComment, cancelCard, createCard, getCard, transition } from "./work/board.ts";
 import { moveItem, processCapture, receiveCapture } from "./conversation/capture.ts";
 import { undoReceipt } from "./conversation/receipts.ts";
-import { createTopic, listTopics, updateTopic } from "./conversation/topics.ts";
+import { listTopics, updateTopic } from "./conversation/topics.ts";
 import { ownerMessage, topicPage } from "./conversation/pages.ts";
 import { answerQuestion, needsYou } from "./conversation/questions.ts";
 import { replyBriefing, startBriefing } from "./conversation/briefing.ts";
@@ -46,7 +46,6 @@ route("POST", "/receipts/:id/undo", (_r, p) => undoReceipt(p.id));
 
 // ---------------------------------------------------------------- topics & messages
 route("GET", "/topics", (_r, _p, _b, u) => listTopics(u.searchParams.get("status") ?? "active"));
-route("POST", "/topics", (_r, _p, b) => createTopic(b.title));
 route("PATCH", "/topics/:id", (_r, p, b) => (updateTopic(p.id, pick(b, ["title", "status", "summary"])), { ok: true }));
 route("GET", "/topics/:id/page", (_r, p) => topicPage(p.id));
 route("POST", "/messages", (_r, _p, b) => {

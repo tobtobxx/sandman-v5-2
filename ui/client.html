@@ -27,8 +27,11 @@ main { display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 16px
 @media (max-width: 800px) { main { grid-template-columns: 1fr; } aside { order: 2; } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
 .panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 10px; }
+.capture-panel { grid-column: 1 / -1; margin-bottom: 0; border-color: var(--accent); }
 .capture { display: flex; gap: 8px; }
-.capture textarea { flex: 1; min-height: 44px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); }
+.capture textarea { flex: 1; min-height: 120px; resize: vertical; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--bg); font-size: 17px; }
+.capture textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.capture-panel .btn { padding: 8px 18px; }
 .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn.small { padding: 2px 8px; font-size: 13px; }
@@ -75,23 +78,22 @@ a { color: var(--accent); }
   <a class="small" href="/observer">observer</a>
 </header>
 <main>
-  <aside>
-    <div class="panel">
-      <h2>Quick capture</h2>
-      <div class="capture">
-        <textarea id="cap" placeholder="Say or type anything. Several things at once is fine."></textarea>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-        <button class="btn primary" id="capBtn">Capture</button>
-        <button class="btn" disabled title="Voice capture is not implemented in the prototype">🎙 Voice</button>
-        <span id="capState" class="small muted"></span>
-      </div>
-      <div id="confirm"></div>
+  <div class="panel capture-panel">
+    <h2>Quick capture</h2>
+    <div class="capture">
+      <textarea id="cap" placeholder="Say or type anything. Several things at once is fine."></textarea>
     </div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <button class="btn primary" id="capBtn">Capture</button>
+      <button class="btn" disabled title="Voice capture is not implemented in the prototype">🎙 Voice</button>
+      <span id="capState" class="small muted"></span>
+    </div>
+    <div id="confirm"></div>
+  </div>
+  <aside>
     <div class="panel">
       <h2>Topics</h2>
       <div class="topics" id="topics"></div>
-      <form id="newTopic" style="display:flex;gap:6px;margin-top:8px"><input placeholder="New topic" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--bg)"><button class="btn small">Add</button></form>
     </div>
   </aside>
   <section id="view"></section>
@@ -125,7 +127,6 @@ async function topics() {
   $("#topics").innerHTML = ts.map((t) => `<a href="#" data-t="${t.id}" class="${S.topic === t.id && S.view === "topic" ? "on" : ""}"><span>${esc(t.title)}</span><span class="small muted">${t.open_questions ? `<span class="badge">${t.open_questions}</span>` : ""}${t.open_cards ? ` ${t.open_cards}▸` : ""}</span></a>`).join("") || `<div class="empty">No topics yet. Capture something.</div>`;
 }
 $("#topics").onclick = (e) => { const a = e.target.closest("a"); if (a) { e.preventDefault(); S.topic = a.dataset.t; S.view = "topic"; save(); render(); api("/presence", { mode: $("#mode").value, topic_id: S.topic }); } };
-$("#newTopic").onsubmit = async (e) => { e.preventDefault(); const i = e.target.querySelector("input"); if (!i.value.trim()) return; const t = await api("/topics", { title: i.value.trim() }); i.value = ""; S.topic = t.id; S.view = "topic"; render(); };
 
 // ---- capture
 $("#capBtn").onclick = async () => {
