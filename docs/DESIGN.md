@@ -1523,7 +1523,7 @@ All endpoints require `Authorization: Bearer <client token>`. JSON in, JSON out.
 | POST | `/items/{id}/move` `{topic_id \| "new"}` | Correct a filing (re-parents cards and reminders) |
 | POST | `/receipts/{id}/undo` | Undo an action |
 | GET | `/topics?status=active\|archived` | Topic list with unread counts |
-| POST/PATCH | `/topics`, `/topics/{id}` | Create, rename, archive, unarchive |
+| PATCH | `/topics/{id}` | Rename, archive, unarchive (topics are only created by capture routing) |
 | GET | `/topics/{id}/page` | Topic page (§6.5) |
 | GET | `/topics/{id}/messages?before=<msg_id>&limit=` | Conversation history |
 | POST | `/messages` `{topic_id, text, client_msg_id}` | Conversation-mode message on a topic page (topic required) |
