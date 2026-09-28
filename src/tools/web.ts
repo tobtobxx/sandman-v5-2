@@ -57,6 +57,15 @@ function snippet(text: string, q: string[]): string {
 }
 
 // ---- live ----
+// DDG challenges bursts (about the third request within a few seconds); one request per 6 s passes.
+const DDG_GAP_MS = 6000;
+let ddgNext = 0;
+async function ddgSlot() {
+  const at = Math.max(Date.now(), ddgNext);
+  ddgNext = at + DDG_GAP_MS; // reserved synchronously, so concurrent callers queue up
+  if (at > Date.now()) await new Promise((r) => setTimeout(r, at - Date.now()));
+}
+
 async function liveSearch(query: string): Promise<SearchHit[]> {
   const searx = Deno.env.get("SANDMAN_SEARXNG");
   if (searx) {
@@ -64,8 +73,25 @@ async function liveSearch(query: string): Promise<SearchHit[]> {
     const d = await r.json();
     return (d.results ?? []).slice(0, 6).map((x: any) => ({ title: x.title, url: x.url, snippet: (x.content ?? "").slice(0, 200) }));
   }
-  const r = await fetch(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, { headers: { "User-Agent": "Mozilla/5.0 sandman" } });
+  await ddgSlot();
+  // DDG answers with a 202 bot-challenge page ("anomaly") to GETs, and to POSTs carrying Deno's default
+  // `Accept-Encoding: gzip, br`. A form POST with plain gzip and a Referer gets real results.
+  const r = await fetch("https://html.duckduckgo.com/html/", {
+    method: "POST",
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Accept-Encoding": "gzip",
+      "Referer": "https://html.duckduckgo.com/",
+    },
+    body: new URLSearchParams({ q: query }),
+    signal: AbortSignal.timeout(20000),
+  });
   const html = await r.text();
+  if (r.status === 202 || /anomaly-modal|challenge-form/.test(html)) {
+    throw new Error("DuckDuckGo served a bot challenge (rate limited). Try again later, or set SANDMAN_SEARXNG.");
+  }
+  if (!r.ok) throw new Error(`DuckDuckGo returned HTTP ${r.status}.`);
   const hits: SearchHit[] = [];
   const re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?class="result__snippet"[^>]*>([\s\S]*?)<\/a>/g;
   let m;
@@ -73,6 +99,7 @@ async function liveSearch(query: string): Promise<SearchHit[]> {
     let url = m[1];
     const u = url.match(/uddg=([^&]+)/);
     if (u) url = decodeURIComponent(u[1]);
+    else if (url.startsWith("//")) url = "https:" + url;
     hits.push({ title: htmlToText(m[2]), url, snippet: htmlToText(m[3]).slice(0, 200) });
   }
   return hits;

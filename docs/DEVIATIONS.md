@@ -20,8 +20,8 @@ question nagging, quiet hours. `report_mode: desk` is not implemented; results a
 Simpler to inspect and to isolate per bench case.
 
 **Live web search is best effort.** `SANDMAN_WEB=live` uses SearXNG if `SANDMAN_SEARXNG` is set,
-else DuckDuckGo's HTML endpoint (which may serve a bot challenge). The bench always uses the
-offline corpus (§14.3).
+else DuckDuckGo's HTML endpoint (form POST, throttled to one request per 6 s; a bot challenge is
+reported as a tool error, not as "no results"). The bench always uses the offline corpus (§14.3).
 
 **Shorter IDs.** `prefix_` + 12 base32 chars (time + random) instead of a 26-char ULID. They stay
 unique and sortable, and cost fewer prompt tokens when the model has to choose one.
