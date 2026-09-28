@@ -90,11 +90,9 @@ Memory details:
 - `GET /memory/notes?query=` matches word prefixes. It also returns candidate facts still waiting for
   the consolidator, grouped by subject, as `{ kind: "fact", status: "pending", claims: [{ pending: true, … }] }`.
 - `POST /memory/consolidate` starts a run in the background and returns at once with
-  `{ started, running, started_at, last_completed_at, last_counts, last_errors, pending }`. Only one run
-  happens at a time: while one is in flight, the button, the idle loop and the nightly run join it, and
-  `started` is `false`. The events `memory.consolidating` and `memory.consolidated` mark the start and end.
-- `last_errors` lists the facts the last run could not consolidate, as `[{ fact_id, subject, text, error }]`
-  (`error` is e.g. `transport: HTTP 429: …` or `parse: …`). Those facts stay pending and are retried.
+  `{ started, running, started_at, last_completed_at, last_counts, pending }`. Only one run happens at a
+  time: while one is in flight, the button, the idle loop and the nightly run join it, and `started` is
+  `false`. The events `memory.consolidating` and `memory.consolidated` mark the start and end.
 - `GET /memory/status` returns the same status without starting anything.
 
 ## Events (`GET /events/stream?after=<id>`, SSE)
