@@ -54,7 +54,7 @@ export async function verifyCard(card_id: string): Promise<"pass" | "fail"> {
   } else if (card.attempt < config.board.max_attempts) {
     transition(card.id, "ready", "verify_failed", "verifier", { attempt: card.attempt + 1 });
   } else {
-    escalate(card.id, `The result failed its checks twice. ${fails[0]}`);
+    escalate(card.id, `The result failed its checks twice. ${fails[0]}`, fails);
   }
   return "fail";
 }

@@ -17,7 +17,9 @@ export async function failCard(card_id: string, category: string, reason: string
   escalate(card.id, reason);
 }
 
-export function escalate(card_id: string, reason: string) {
+/** Ask the owner what to do with a stuck card. The question text stays short; `why` (default: the full
+ *  reason) and the card's latest result go along as details, so the owner can see what went wrong. */
+export function escalate(card_id: string, reason: string, why: string[] = [reason]) {
   const card = getCard(card_id);
   const short = reason.split(/(?<=\.)\s/)[0].slice(0, 90);
   const q = createQuestion({
@@ -26,6 +28,7 @@ export function escalate(card_id: string, reason: string) {
     text: `"${card.title}" is stuck: ${short} What now?`,
     options: ["Retry", "Cancel", "Add guidance"],
     reason: "escalation",
+    details: { why: why.filter((w) => w.trim() && w.trim() !== short.trim()), result: card.result?.summary ?? null },
   });
   transition(card.id, "blocked", "escalate", "harness", { blocked_reason: "escalation", lease_owner: null }, { question_id: q.id });
 }

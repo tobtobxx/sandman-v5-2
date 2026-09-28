@@ -184,6 +184,9 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: h
 .s-waiting, .s-blocked { --sc: var(--badge); }
 .s-done { --sc: var(--ok); }
 .s-failed { --sc: var(--lane-stop); } .s-cancelled { --sc: var(--muted); }
+.qdetails { font-size: 13px; line-height: 1.45; display: grid; gap: 6px; }
+.qdetails ul { margin: 2px 0 0; padding-left: 18px; } .qdetails li { margin: 2px 0; }
+.qdetails .draft { white-space: pre-wrap; max-height: 9.5em; overflow: auto; padding: 6px 9px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 6%, transparent); }
 .fact { display: flex; gap: 8px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .fact span:first-child { flex: 1; min-width: 200px; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
@@ -346,7 +349,7 @@ function entry(e) {
         <div class="sub"><span>${e.from_home ? "from home, " : ""}${time(e.at)}${e.siblings ? ` · part of a message with ${e.siblings + 1} items` : ""}</span>${e.item_id ? moverHtml(e.item_id) : ""}</div></div>`;
     case "reply": return `<div class="sm">${esc(e.text)}</div>`;
     case "receipt": return `<div class="receipt">${receiptLine(e)}${e.card ? `<div class="workcard"><b>${esc(e.card.title)}</b><span class="st ${e.card.state}">${esc(stateLabel(e.card))}</span></div>` : ""}</div>`;
-    case "question": return `<div class="question ${e.status !== "open" ? "answered" : ""}" data-q="${e.id}"><div>${esc(e.text)}</div>
+    case "question": return `<div class="question ${e.status !== "open" ? "answered" : ""}" data-q="${e.id}"><div>${esc(e.text)}</div>${e.status === "open" ? qDetails(e.details) : ""}
         ${e.status === "open" ? `${e.options.length ? `<div class="opts">${e.options.map((o, i) => `<button class="opt" data-opt="${i}">${i + 1} · ${esc(o)}</button>`).join("")}</div>` : ""}
         <form class="qform"><input aria-label="Answer in your own words" placeholder="…or answer in your own words"><button class="btn">Answer</button></form>`
         : `<div style="font-size:13px;color:var(--muted)">${e.status === "answered" ? `Answered: ${esc(e.answer)}` : "No longer needed"}</div>`}</div>`;
@@ -356,6 +359,12 @@ function entry(e) {
     case "reminder": return `<div class="reminder"><span class="meta">Reminder</span><div>${esc(e.text)}</div></div>`;
     default: return `<div class="system">${esc(e.text)}</div>`;
   }
+}
+// Why a question is asked and the work so far (e.g. the checks a result failed, and the result itself).
+function qDetails(d) {
+  if (!d || (!d.why?.length && !d.result)) return "";
+  return `<div class="qdetails">${d.why?.length ? `<div><b>What went wrong</b><ul>${d.why.map((w) => `<li>${esc(w)}</li>`).join("")}</ul></div>` : ""}
+    ${d.result ? `<div><b>Latest result</b><div class="draft">${esc(d.result)}</div></div>` : ""}</div>`;
 }
 const stateLabel = (c) => c.state === "done" ? "done" : c.progress ? `${c.state} · ${c.progress}` : c.state;
 function bindTopic(id, keepFocus) {
@@ -379,6 +388,7 @@ async function viewNeeds() {
   return `<div class="scroll"><div class="center page"><h1>Needs you</h1>
     ${qs.map((q) => `<div class="question" style="max-width:100%" data-q="${q.id}"><div>${esc(q.text)}</div>
       <div style="font-size:13px;color:var(--muted)"><a href="#topic/${q.topic_id}">${esc(q.topic_title ?? "")}</a>${q.blocked_cards ? ` · ${q.blocked_cards} card${q.blocked_cards > 1 ? "s" : ""} waiting` : ""}</div>
+      ${qDetails(q.details)}
       ${q.options?.length ? `<div class="opts">${q.options.map((o, i) => `<button class="opt" data-opt="${i}">${i + 1} · ${esc(o)}</button>`).join("")}</div>` : ""}
       <form class="qform"><input aria-label="Answer in your own words" placeholder="…or answer in your own words"><button class="btn">Answer</button></form></div>`).join("") || `<div class="empty">Nothing needs you right now.</div>`}
     <div><button class="btn" id="brief">Brief me (scripted, for voice)</button></div><div id="briefing"></div></div></div>`;

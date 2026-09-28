@@ -58,12 +58,16 @@ Everything the chat screen draws, in one call. Opening a topic marks it seen.
     { "type": "owner", "id": "msg_…", "text": "…", "at": "…", "from_home": true, "item_id": "itm_…", "siblings": 2 },
     { "type": "reply", "id": "msg_…", "text": "…", "at": "…" },
     { "type": "receipt", "id": "rcp_…", "text": "…", "undone": false, "card": { "id", "title", "state", "progress": "3 of 4 parts done" } | null },
-    { "type": "question", "id": "qst_…", "text": "…", "options": ["…"], "status": "open" | "answered", "answer": "…" | null },
+    { "type": "question", "id": "qst_…", "text": "…", "options": ["…"], "details": { "why": ["…"], "result": "…" | null } | null, "status": "open" | "answered", "answer": "…" | null },
     { "type": "result", "card_id": "…", "title": "…", "state": "done", "summary": "…", "recommendation": "…" | null, "artifacts": [{ "id", "name" }], "at": "…" },
     { "type": "reminder", "text": "…", "at": "…" },
     { "type": "system", "text": "…", "at": "…" }
   ] }
 ```
+
+A question's `details` say why it is asked. For a stuck card: `why` lists what went wrong (for a failed
+verification, each failed check with the verifier's reason) and `result` is the card's latest result summary.
+`GET /needs-you` returns the same `details` on each question.
 
 ### `POST /topics/:id/messages` `{ text, client_msg_id }`
 A message typed in the topic's chat goes straight to that topic (no splitting, no routing).
