@@ -170,6 +170,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: h
 .lane-empty { border: 1px dashed var(--line); border-radius: 10px; padding: 18px 10px; text-align: center; font-size: 13px; color: var(--muted); }
 .bcard { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--sc, var(--c)); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; box-shadow: 0 1px 2px rgba(40, 38, 30, 0.05); }
 .bcard .t { font-weight: 500; line-height: 1.35; overflow-wrap: anywhere; }
+.bcard .sum { font-size: 13px; color: var(--muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .bcard .m { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
 .bcard .m .ago { margin-left: auto; white-space: nowrap; }
 .bcard .why { font-size: 12px; color: var(--warn); background: var(--warn-soft); border-radius: 6px; padding: 4px 8px; overflow-wrap: anywhere; }
@@ -187,6 +188,34 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: h
 .qdetails { font-size: 13px; line-height: 1.45; display: grid; gap: 6px; }
 .qdetails ul { margin: 2px 0 0; padding-left: 18px; } .qdetails li { margin: 2px 0; }
 .qdetails .draft { white-space: pre-wrap; max-height: 9.5em; overflow: auto; padding: 6px 9px; border-radius: 8px; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+/* clickable cards + card details */
+.cardlink { border: 0; background: none; padding: 0; margin: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.cardlink:hover { color: var(--accent-ink); }
+[data-card], [data-go] { cursor: pointer; }
+.bcard[data-card], .workcard[data-card], .itemcard[data-go] { transition: border-color .12s, box-shadow .12s; }
+.bcard[data-card]:hover, .workcard[data-card]:hover, .itemcard[data-go]:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(40, 38, 30, 0.09); }
+.bcard[data-card]:hover { border-left-color: var(--sc, var(--c)); }
+.result[data-card]:hover { box-shadow: 0 0 0 2px var(--ok-line); }
+button.chip { border: 0; font: inherit; cursor: pointer; } button.chip:hover { filter: brightness(0.96); }
+.workcard .t { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.carddlg { width: min(640px, calc(100% - 32px)); max-height: calc(100% - 48px); padding: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.carddlg::backdrop { background: rgba(20, 20, 24, .38); }
+.cd { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px 20px; }
+.cd-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.cd-head h2 { margin: 2px 0 0; font-size: 20px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.cd-head .icon-btn { width: 32px; height: 32px; font-size: 18px; }
+.cd .m { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--muted); }
+.cd section { display: flex; flex-direction: column; gap: 5px; font-size: 14px; }
+.cd section > .meta { padding-bottom: 2px; }
+.cd ul { margin: 0; padding-left: 18px; } .cd li { margin: 2px 0; overflow-wrap: anywhere; }
+.cd .why { font-size: 13px; color: var(--warn); background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; overflow-wrap: anywhere; }
+.cd .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cd .row { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.cd .row > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.cd .row .sp, .cd .row .when { flex-shrink: 0; }
+.cd .when { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.cd .hist { font-size: 13px; }
+.cd .acts { display: flex; gap: 6px; flex-wrap: wrap; }
 .fact { display: flex; gap: 8px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .fact span:first-child { flex: 1; min-width: 200px; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
@@ -209,6 +238,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: h
   </aside>
   <main id="main"></main>
 </div>
+<dialog class="carddlg" id="cardDlg" aria-labelledby="cardDlgTitle"></dialog>
 <script>
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -228,7 +258,7 @@ function route() {
   const [view, id] = (location.hash.slice(1) || "home").split("/");
   return { view, id };
 }
-window.addEventListener("hashchange", () => { $("#side").classList.remove("open"); render(true); });
+window.addEventListener("hashchange", () => { $("#side").classList.remove("open"); if ($("#cardDlg").open) $("#cardDlg").close(); render(true); });
 $("#menuBtn").onclick = () => $("#side").classList.toggle("open");
 $("#mode").onchange = (e) => api("/presence", { mode: e.target.value, topic_id: route().view === "topic" ? route().id : null });
 
@@ -304,7 +334,7 @@ function bindHome() {
 // ---------------------------------------------------------------- send result
 async function viewSend(id) {
   const s = await api(`/sends/${id}`);
-  const card = (it) => `<article class="itemcard ${it.created ? "new" : ""}">
+  const card = (it) => `<article class="itemcard ${it.created ? "new" : ""}" data-go="topic/${it.topic_id}">
       <div class="meta" style="${it.created ? "color:var(--ok)" : ""}">${it.topic_kind === "conversation" ? "Conversation" : it.created ? "New topic" : "Existing topic"}</div>
       <h2>${esc(it.topic_title)}</h2>
       <p class="quote">“${esc(it.quote)}”</p>
@@ -328,7 +358,7 @@ let freshItems = new Set();
 async function viewTopic(id) {
   const t = await api(`/topics/${id}`);
   const chips = [
-    ...t.chips.cards.map((c) => `<span class="chip ${c.state === "done" ? "done" : ["blocked", "failed", "cancelled"].includes(c.state) ? "" : "run"}">${esc(c.title)} · ${esc(c.state)}</span>`),
+    ...t.chips.cards.map((c) => `<button class="chip ${c.state === "done" ? "done" : ["blocked", "failed", "cancelled"].includes(c.state) ? "" : "run"}" data-card="${c.id}" title="Card details">${esc(c.title)} · ${esc(c.state)}</button>`),
     t.chips.open_questions ? `<span class="chip q">${t.chips.open_questions} question${t.chips.open_questions > 1 ? "s" : ""}</span>` : "",
     t.chips.facts ? `<span class="chip">${t.chips.facts} facts</span>` : "",
   ].join("");
@@ -348,12 +378,12 @@ function entry(e) {
     case "owner": return `<div class="me ${freshItems.has(e.item_id) ? "fresh" : ""}"><div class="b">${esc(e.text)}</div>
         <div class="sub"><span>${e.from_home ? "from home, " : ""}${time(e.at)}${e.siblings ? ` · part of a message with ${e.siblings + 1} items` : ""}</span>${e.item_id ? moverHtml(e.item_id) : ""}</div></div>`;
     case "reply": return `<div class="sm">${esc(e.text)}</div>`;
-    case "receipt": return `<div class="receipt">${receiptLine(e)}${e.card ? `<div class="workcard"><b>${esc(e.card.title)}</b><span class="st ${e.card.state}">${esc(stateLabel(e.card))}</span></div>` : ""}</div>`;
-    case "question": return `<div class="question ${e.status !== "open" ? "answered" : ""}" data-q="${e.id}"><div>${esc(e.text)}</div>${e.status === "open" ? qDetails(e.details) : ""}
+    case "receipt": return `<div class="receipt">${receiptLine(e)}${e.card ? `<div class="workcard" data-card="${e.card.id}"><button class="t cardlink" data-card="${e.card.id}">${esc(e.card.title)}</button><span class="st ${e.card.state}">${esc(stateLabel(e.card))}</span></div>` : ""}</div>`;
+    case "question": return `<div class="question ${e.status !== "open" ? "answered" : ""}" data-q="${e.id}"><div>${esc(e.text)}</div>${e.status === "open" ? qDetails(e.details) : ""}${e.card_id ? `<div><button class="linkbtn" data-card="${e.card_id}">Card details</button></div>` : ""}
         ${e.status === "open" ? `${e.options.length ? `<div class="opts">${e.options.map((o, i) => `<button class="opt" data-opt="${i}">${i + 1} · ${esc(o)}</button>`).join("")}</div>` : ""}
         <form class="qform"><input aria-label="Answer in your own words" placeholder="…or answer in your own words"><button class="btn">Answer</button></form>`
         : `<div style="font-size:13px;color:var(--muted)">${e.status === "answered" ? `Answered: ${esc(e.answer)}` : "No longer needed"}</div>`}</div>`;
-    case "result": return `<div class="result ${e.state}"><div class="meta" style="color:${e.state === "done" ? "var(--ok)" : "var(--muted)"}">${e.state === "done" ? "Result" : e.state} · ${esc(e.title)}</div>
+    case "result": return `<div class="result ${e.state}"${e.card_id ? ` data-card="${e.card_id}"` : ""}><div class="meta" style="color:${e.state === "done" ? "var(--ok)" : "var(--muted)"}">${e.state === "done" ? "Result" : e.state} · ${e.card_id ? `<button class="cardlink" data-card="${e.card_id}">${esc(e.title)}</button>` : esc(e.title)}</div>
         <div class="txt">${esc(e.summary ?? "")}</div>${e.recommendation ? `<div><b>Recommendation:</b> ${esc(e.recommendation)}</div>` : ""}
         ${(e.artifacts ?? []).map((a) => `<div style="font-size:13px"><button class="linkbtn" data-art="${a.id}">${esc(a.name)}</button></div>`).join("")}</div>`;
     case "reminder": return `<div class="reminder"><span class="meta">Reminder</span><div>${esc(e.text)}</div></div>`;
@@ -387,7 +417,7 @@ async function viewNeeds() {
   const qs = await api("/needs-you");
   return `<div class="scroll"><div class="center page"><h1>Needs you</h1>
     ${qs.map((q) => `<div class="question" style="max-width:100%" data-q="${q.id}"><div>${esc(q.text)}</div>
-      <div style="font-size:13px;color:var(--muted)"><a href="#topic/${q.topic_id}">${esc(q.topic_title ?? "")}</a>${q.blocked_cards ? ` · ${q.blocked_cards} card${q.blocked_cards > 1 ? "s" : ""} waiting` : ""}</div>
+      <div style="font-size:13px;color:var(--muted)"><a href="#topic/${q.topic_id}">${esc(q.topic_title ?? "")}</a>${q.blocked_cards ? ` · ${q.blocked_cards} card${q.blocked_cards > 1 ? "s" : ""} waiting` : ""}${q.card_id ? ` · <button class="linkbtn" data-card="${q.card_id}">Card details</button>` : ""}</div>
       ${qDetails(q.details)}
       ${q.options?.length ? `<div class="opts">${q.options.map((o, i) => `<button class="opt" data-opt="${i}">${i + 1} · ${esc(o)}</button>`).join("")}</div>` : ""}
       <form class="qform"><input aria-label="Answer in your own words" placeholder="…or answer in your own words"><button class="btn">Answer</button></form></div>`).join("") || `<div class="empty">Nothing needs you right now.</div>`}
@@ -424,7 +454,9 @@ function boardCard(c) {
     ["blocked", "failed"].includes(c.state) ? `<button class="btn" data-retry="${c.id}">Retry</button>` : "",
     !["done", "failed", "cancelled"].includes(c.state) ? `<button class="btn" data-cancel="${c.id}">Cancel</button>` : "",
   ].join("");
-  return `<div class="bcard s-${c.state}"><div class="t">${esc(c.title)}</div>
+  const sum = c.result?.summary || (c.goal && c.goal !== c.title ? c.goal : "");
+  return `<div class="bcard s-${c.state}" data-card="${c.id}"><button class="t cardlink" data-card="${c.id}">${esc(c.title)}</button>
+    ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}
     <div class="m"><span class="sp">${esc(c.state)}</span><span>${esc(c.role)}${c.depth ? " · part" : ""}${c.attempt > 1 ? ` · try ${c.attempt}` : ""}</span>${c.updated_at ? `<span class="ago">${ago(c.updated_at)}</span>` : ""}</div>
     ${c.state === "blocked" && c.blocked_reason ? `<div class="why">${esc(c.blocked_reason)}</div>` : ""}
     ${topic || acts ? `<div class="foot"><span>${topic ? `<a href="#topic/${topic.id}">${esc(topic.title)}</a>` : ""}</span>${acts ? `<div class="acts">${acts}</div>` : ""}</div>` : ""}</div>`;
@@ -439,9 +471,78 @@ async function viewBoard() {
         <div class="lane-body">${xs.map(boardCard).join("") || `<div class="lane-empty">Nothing here</div>`}</div></section>`;
     }).join("")}</div></div></div>`;
 }
+// ---------------------------------------------------------------- card details (dialog over any view)
+let cardOpen = null;
+const when = (iso) => iso ? new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "";
+const srcLink = (s) => /^https?:\/\//.test(s) ? `<a href="${esc(s)}" target="_blank" rel="noopener">${esc(s)}</a>` : esc(s);
+const ul = (xs, f = esc) => `<ul>${xs.map((x) => `<li>${f(x)}</li>`).join("")}</ul>`;
+const sect = (label, body) => body ? `<section><div class="meta">${label}</div>${body}</section>` : "";
+function cardView(d) {
+  const c = d.card, r = c.result;
+  const topic = topicsCache.find((t) => t.id === c.origin_topic_id);
+  const done = d.children.filter((k) => k.state === "done").length;
+  const acts = [
+    ["blocked", "failed"].includes(c.state) ? `<button class="btn" data-retry="${c.id}">Retry</button>` : "",
+    !["done", "failed", "cancelled"].includes(c.state) ? `<button class="btn" data-cancel="${c.id}">Cancel</button>` : "",
+    topic ? `<a class="btn" href="#topic/${topic.id}">Open topic</a>` : "",
+  ].join("");
+  const result = r ? [
+    r.summary ? `<div class="txt">${esc(r.summary)}</div>` : "",
+    r.items?.length ? ul(r.items, (i) => `<b>${esc(i.name)}</b>${i.note ? ` · ${esc(i.note)}` : ""}`) : "",
+    r.recommendation ? `<div><b>Recommendation:</b> ${esc(r.recommendation)}</div>` : "",
+    r.facts?.length ? `<div><b>Facts</b>${ul(r.facts, (f) => esc(f.claim ?? f))}</div>` : "",
+    r.open_questions?.length ? `<div><b>Open questions</b>${ul(r.open_questions)}</div>` : "",
+    r.sources?.length ? `<div><b>Sources</b>${ul(r.sources, srcLink)}</div>` : "",
+  ].join("") : "";
+  return `<div class="cd">
+    <div class="cd-head"><div><div class="meta">${c.depth ? "Part of a task" : "Task"} · ${esc(c.role)}</div><h2 id="cardDlgTitle">${esc(c.title)}</h2></div>
+      <button class="icon-btn" data-close aria-label="Close">×</button></div>
+    <div class="m s-${c.state}"><span class="sp">${esc(c.state)}</span>${d.children.length ? `<span>${done} of ${d.children.length} parts done</span>` : ""}${c.attempt > 1 ? `<span>try ${c.attempt}</span>` : ""}
+      <span>created ${esc(ago(c.created_at))}</span>${c.updated_at && c.updated_at !== c.created_at ? `<span>updated ${esc(ago(c.updated_at))}</span>` : ""}${c.due_at ? `<span>due ${esc(when(c.due_at))}</span>` : ""}
+      ${topic ? `<span>in <a href="#topic/${topic.id}">${esc(topic.title)}</a></span>` : ""}</div>
+    ${c.state === "blocked" && c.blocked_reason ? `<div class="why">${esc(c.blocked_reason)}</div>` : ""}
+    ${c.parent_id ? `<div style="font-size:13px">Part of <button class="linkbtn" data-card="${c.parent_id}">the parent task</button></div>` : ""}
+    ${sect("Goal", `<div class="txt">${esc(c.goal)}</div>${c.original_goal && c.original_goal !== c.goal ? `<div style="font-size:13px;color:var(--muted)">Originally: ${esc(c.original_goal)}</div>` : ""}`)}
+    ${sect("Done when", c.done_when.length ? ul(c.done_when) : "")}
+    ${sect("Constraints", c.constraints.length ? ul(c.constraints) : "")}
+    ${sect(c.state === "done" ? "Result" : "Latest result", result)}
+    ${sect("Parts", d.children.map((k) => `<div class="row s-${k.state}"><button class="cardlink" data-card="${k.id}">${esc(k.title)}</button><span class="sp">${esc(k.state)}</span></div>`).join(""))}
+    ${sect("Files", d.artifacts.map((a) => `<div class="row"><button class="linkbtn" data-art="${a.id}">${esc(a.name)}</button><span class="when">${a.bytes ? `${Math.max(1, Math.round(a.bytes / 1024))} KB` : ""}</span></div>`).join(""))}
+    ${sect("Questions", d.questions.map((q) => `<div class="row"><span>${esc(q.text)}${q.status === "answered" ? `<br><span style="color:var(--muted);font-size:13px">Answered: ${esc(q.answer_option ?? q.answer_text ?? "")}</span>` : ""}</span>
+      ${q.status === "open" && q.topic_id ? `<a class="when" href="#topic/${q.topic_id}">Answer</a>` : `<span class="when">${esc(q.status)}</span>`}</div>`).join(""))}
+    <section><div class="meta">Comments</div>
+      ${d.comments.map((m) => `<div class="row"><span><b>${m.author === "owner" ? "You" : esc(m.author)}</b> ${esc(m.body)}</span><span class="when">${esc(ago(m.created_at))}</span></div>`).join("")}
+      <form class="qform" id="cardComment"><input aria-label="Comment on this card" placeholder="Add a comment for the worker…" style="border-color:var(--line)"><button class="btn">Comment</button></form></section>
+    ${sect("History", d.events.length ? `<details class="hist"><summary>${d.events.length} step${d.events.length > 1 ? "s" : ""}</summary>${d.events.map((e) => `<div class="row"><span>${e.from_state ? `${esc(e.from_state)} → ` : ""}<b>${esc(e.to_state)}</b> · ${esc(e.event)}${e.actor ? ` <span style="color:var(--muted)">(${esc(e.actor)})</span>` : ""}</span><span class="when">${esc(when(e.at))}</span></div>`).join("")}</details>` : "")}
+    ${acts ? `<div class="acts">${acts}</div>` : ""}
+  </div>`;
+}
+async function refreshCard() {
+  const dlg = $("#cardDlg"), id = cardOpen;
+  if (!id) return;
+  const input = $("#cardComment input", dlg), typed = input?.value ?? "", focused = document.activeElement === input;
+  const open = $(".hist", dlg)?.open;
+  let html;
+  try { html = cardView(await api(`/cards/${id}`)); }
+  catch (err) { html = `<div class="cd"><div class="cd-head"><h2 id="cardDlgTitle">Could not load this card</h2><button class="icon-btn" data-close aria-label="Close">×</button></div><p>${esc(err.message)}</p></div>`; }
+  if (cardOpen !== id) return;
+  dlg.innerHTML = html;
+  const inp = $("#cardComment input", dlg);
+  if (inp) { inp.value = typed; if (focused) inp.focus(); }
+  if (open) $(".hist", dlg).open = true;
+}
+async function openCard(id) {
+  const dlg = $("#cardDlg");
+  cardOpen = id;
+  await refreshCard();
+  if (!dlg.open) dlg.showModal();
+  dlg.scrollTop = 0;
+  $("[data-close]", dlg)?.focus();
+}
+$("#cardDlg").addEventListener("close", () => { cardOpen = null; });
+$("#cardDlg").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); }); // backdrop
 let memq = "";
 function consolidationLine(st) {
-  const when = (iso) => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
   const counts = Object.entries(st.last_counts ?? {}).map(([k, n]) => `${n} ${k}`).join(", ");
   const last = st.running ? `Consolidating since ${time(st.started_at)}…`
     : st.last_completed_at ? `Last consolidated ${when(st.last_completed_at)}${counts ? ` (${counts})` : ""}` : "Never consolidated";
@@ -476,6 +577,7 @@ async function render(navigated = false, keepFocus = false) {
     else if (r.view === "board") main.innerHTML = await viewBoard();
     else if (r.view === "memory") main.innerHTML = await viewMemory();
     else { location.hash = "home"; }
+    if (cardOpen) await refreshCard();
     if (navigated) api("/presence", { mode: $("#mode").value, topic_id: r.view === "topic" ? r.id : null }).catch(() => {});
   } catch (err) {
     $("#main").innerHTML = `<div class="center page"><h1>Could not load this view</h1><p>${esc(err.message)}</p><a href="#home">Back to home</a></div>`;
@@ -487,10 +589,20 @@ async function render(navigated = false, keepFocus = false) {
 
 // ---------------------------------------------------------------- actions (delegated)
 document.addEventListener("click", async (e) => {
-  const t = e.target.closest("button, a"); if (!t) return;
+  const t = e.target.closest("button, a");
+  if (!t) {
+    // A click anywhere else on a card opens it, unless it ends a text selection or lands in a form.
+    const box = e.target.closest("[data-card], [data-go]");
+    if (!box || e.target.closest("form, input, select, textarea, summary") || String(getSelection()).trim()) return;
+    if (box.dataset.go) location.hash = box.dataset.go;
+    else openCard(box.dataset.card);
+    return;
+  }
   const d = t.dataset;
   try {
-    if (d.undo) { const r = await api(`/receipts/${d.undo}/undo`, {}); toast(r.note ?? "Undone"); render(); }
+    if (d.card) openCard(d.card);
+    else if (d.close !== undefined) $("#cardDlg").close();
+    else if (d.undo) { const r = await api(`/receipts/${d.undo}/undo`, {}); toast(r.note ?? "Undone"); render(); }
     else if (d.opt !== undefined) { const q = t.closest("[data-q]").dataset.q; await api(`/questions/${q}/answer`, { option: Number(d.opt) }); render(); }
     else if (d.moveOpen !== undefined) {
       const box = t.closest("[data-mover]");
@@ -517,6 +629,12 @@ document.addEventListener("submit", async (e) => {
     e.preventDefault();
     const text = e.target.querySelector("input").value.trim();
     if (text) { try { await api(`/questions/${q.dataset.q}/answer`, { text }); } catch (err) { toast(err.message); } render(); }
+  }
+  if (e.target.id === "cardComment") {
+    e.preventDefault();
+    const input = e.target.querySelector("input"), text = input.value.trim();
+    if (!text || !cardOpen) return;
+    try { await api(`/cards/${cardOpen}/comment`, { text }); input.value = ""; await refreshCard(); } catch (err) { toast(err.message); }
   }
   if (e.target.id === "memq") { e.preventDefault(); memq = e.target.querySelector("input").value; render(); }
 });

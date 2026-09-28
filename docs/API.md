@@ -58,7 +58,7 @@ Everything the chat screen draws, in one call. Opening a topic marks it seen.
     { "type": "owner", "id": "msg_…", "text": "…", "at": "…", "from_home": true, "item_id": "itm_…", "siblings": 2 },
     { "type": "reply", "id": "msg_…", "text": "…", "at": "…" },
     { "type": "receipt", "id": "rcp_…", "text": "…", "undone": false, "card": { "id", "title", "state", "progress": "3 of 4 parts done" } | null },
-    { "type": "question", "id": "qst_…", "text": "…", "options": ["…"], "details": { "why": ["…"], "result": "…" | null } | null, "status": "open" | "answered", "answer": "…" | null },
+    { "type": "question", "id": "qst_…", "card_id": "crd_…" | null, "text": "…", "options": ["…"], "details": { "why": ["…"], "result": "…" | null } | null, "status": "open" | "answered", "answer": "…" | null },
     { "type": "result", "card_id": "…", "title": "…", "state": "done", "summary": "…", "recommendation": "…" | null, "artifacts": [{ "id", "name" }], "at": "…" },
     { "type": "reminder", "text": "…", "at": "…" },
     { "type": "system", "text": "…", "at": "…" }
@@ -87,7 +87,7 @@ Returns `{ message_id }`; the desk's receipts and reply arrive as events.
 ## Secondary views (unchanged)
 
 `GET /needs-you`, `GET /review` + `POST /review/:id/:action`, `GET /cards?state=`,
-`GET /cards/:id`, `GET /artifacts/:id`, `GET /memory/notes?query=`, `POST /memory/retract`,
+`GET /cards/:id` (the client's card details dialog; also the observer), `GET /artifacts/:id`, `GET /memory/notes?query=`, `POST /memory/retract`,
 `POST /memory/consolidate`, `PATCH|DELETE /topics/:id/facts/:claim`.
 
 Memory details:
