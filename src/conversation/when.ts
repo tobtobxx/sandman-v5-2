@@ -136,6 +136,11 @@ export function fmtWhen(d: Date): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone: TZ(), weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d).replace(",", "");
 }
 
+/** Date only, e.g. "12 Sep 2026". */
+export function fmtDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: TZ(), day: "numeric", month: "short", year: "numeric" }).format(d);
+}
+
 export function fmtNow(): string {
   const d = now();
   return new Intl.DateTimeFormat("en-GB", { timeZone: TZ(), weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d) + ` (${TZ()})`;
