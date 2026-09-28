@@ -28,21 +28,23 @@ Reply with analysis (one sentence), then items.`,
   };
 }
 
-export function routeItem(c: { quote: string; candidates: { slug: string; title: string; summary: string }[] }): P {
+export function routeItem(c: { quote: string; candidates: { slug: string; title: string; summary: string }[]; allowChat?: boolean }): P {
+  const opts = [...c.candidates.map((t) => t.slug), "new", ...(c.allowChat ? ["chat"] : [])];
   return {
-    version: "route_item/v1",
+    version: "route_item/v2",
     maxTokens: 120,
-    schema: obj({ analysis: str(300), choice: oneOf([...c.candidates.map((t) => t.slug), "new"]), confidence: oneOf(["high", "low"]) }),
-    prompt: `Decide which topic this item belongs to.
+    schema: obj({ analysis: str(300), choice: oneOf(opts), confidence: oneOf(["high", "low"]) }),
+    prompt: `Decide which topic this message belongs to.
 
 Topics:
 ${lines(c.candidates.map((t) => `${t.slug}: ${t.title}.${t.summary ? " " + t.summary.split("\n")[0].slice(0, 160) : ""}`))}
-- new: none of these topics fits; this starts a new subject
+- new: none of these topics fits; this starts a new subject${c.allowChat ? `
+- chat: not about one subject: a greeting, small talk, or a question about everything (how things stand, a briefing, an overview)` : ""}
 
 If the owner names a topic explicitly (e.g. "Garden: …"), choose the topic that name refers to.
 Choose new only if no topic is about the same subject.
 
-Item (from a voice memo or quick note, may contain transcription errors):
+Message (from a voice memo or quick note, may contain transcription errors):
 "${c.quote}"
 
 Reply with analysis (one sentence), then choice, then confidence: high if clearly right, low if you're unsure.`,
@@ -110,15 +112,18 @@ export interface DeskCtx {
   transcript?: string;
   receipts: string[];
   now: string;
+  /** conversation topics only: where every topic stands, built in code */
+  overview?: string;
 }
 
 function deskContext(c: DeskCtx) {
   const s: string[] = [];
   s.push(`Topic: ${c.topic_title}${c.topic_summary ? `\n${c.topic_summary}` : ""}`);
   if (c.profile) s.push(`About ${c.owner}:\n${c.profile}`);
+  if (c.overview) s.push(`Where things stand:\n${c.overview}`);
   if (c.memory) s.push(`Known from memory:\n${c.memory}`);
   if (c.history.length) s.push(`Recent messages:\n${c.history.join("\n")}`);
-  s.push(`Cards in this topic:\n${lines(c.cards.map((x) => `${x.id}: ${x.line}`))}`);
+  s.push(`${c.overview ? "Open cards (all topics)" : "Cards in this topic"}:\n${lines(c.cards.map((x) => `${x.id}: ${x.line}`))}`);
   s.push(`Open questions:\n${lines(c.questions.map((x) => `${x.id}: ${x.line}`))}`);
   s.push(`Now: ${c.now}`);
   return s.join("\n\n");
@@ -271,10 +276,12 @@ Reply with card_id: the card to stop.`,
 
 export function deskReply(c: DeskCtx): P {
   return {
-    version: "desk_reply/v1",
-    maxTokens: 300,
+    version: "desk_reply/v2",
+    maxTokens: 500,
     schema: {},
     prompt: `You are Sandman, ${c.owner}'s assistant. Reply to ${c.owner} in 1-3 short sentences.
+If ${c.owner} asks for an overview or a list, use one short line per topic instead. If ${c.owner} asks for a
+length (e.g. one sentence), keep to it. Plain text, no markdown.
 Only say you did something if it is listed under "Done". If you don't know something, say so.
 ${c.mode === "capture" ? "Keep it short and easy to listen to." : ""}
 

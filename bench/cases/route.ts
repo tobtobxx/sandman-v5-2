@@ -13,7 +13,7 @@ function world() {
   topic("Mom's 70th birthday", "Party and present for mom's 70th birthday in November.");
 }
 
-function route(name: string, quote: string, want: string | "new", extra?: (o: any) => string | null): Case {
+function route(name: string, quote: string, want: string | "new" | "chat", extra?: (o: any) => string | null): Case {
   return {
     id: `route/${name}`,
     run: async () => {
@@ -22,7 +22,7 @@ function route(name: string, quote: string, want: string | "new", extra?: (o: an
       return { ...r, slug: db().get(`SELECT slug, title FROM topics WHERE id=?`, r.topic_id) };
     },
     check: (o) => {
-      const got = o.created ? "new" : o.slug.slug;
+      const got = o.kind === "conversation" ? "chat" : o.created ? "new" : o.slug.slug;
       if (got !== want) return { pass: false, detail: `routed to ${got} (${o.slug.title}), want ${want}` };
       const e = extra?.(o);
       return e ? { pass: false, detail: e } : true;
@@ -48,5 +48,11 @@ export const cases: Case[] = [
   route("implicit-mom", "what's a good present for someone turning 70 who loves gardening, it's for mom", "moms-70th-birthday"),
   route("new-subject", "look up how loud a heat pump is at night", "new", titleOk),
   route("new-subject-2", "find a dentist near Oerlikon who takes new patients", "new", titleOk),
+  route("chat-hi", "hi", "chat"),
+  route("chat-how-are-you", "hey sandman, how's it going?", "chat"),
+  route("chat-brief", "brief me in one sentence", "chat"),
+  route("chat-overview", "give me an overview of everything that's going on", "chat"),
+  route("not-chat-topic-question", "what did the bike shop say about e-bikes again?", "bike-maintenance"),
+  route("not-chat-named-overview", "give me an overview of where the kitchen renovation stands", "kitchen-renovation"),
   route("new-not-similar-word", "my ski helmet is broken, find a new one before the season starts", "new", titleOk),
 ];

@@ -141,6 +141,18 @@ The local validator repaired 29 of 900 outputs, mostly `analysis` strings over t
 9. **Follow-up captures / full-memo context** — giving the desk the whole memo causes cross-talk;
    each item is now handled alone (row 15).
 
+## Chat-first client (after v9)
+
+The chat-first client (docs/DEVIATIONS.md) added 12 cases: 6 routing cases for the new `chat`
+option ("hi", "brief me in one sentence", "give me an overview", and topic questions that must
+*not* go to chat), 5 desk cases in a conversation topic (greeting, overview covering every open
+topic, "in one sentence", new work filed into a subject topic, answering another topic's question)
+and one episode ("hi, what's new?" from home). Result over 3 repeats: **357/363 (98.3%)**; routing
+48/48, desk 64/66, episodes 30/30, no regressions elsewhere.
+
+One fix came from a live run, not the bench: "hi" in a conversation topic got no answer, because the
+desk chose `nothing`. `nothing` is no longer offered in conversation topics (`desk/conversation-hi`).
+
 ## Cost
 
 The whole session, including smoke tests and 10 benchmark runs, used about $0.80 of OpenRouter

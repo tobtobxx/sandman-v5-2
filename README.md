@@ -34,10 +34,13 @@ With Nix: `nix run` starts the server, `nix run .#bench` runs the benchmark.
 
 ## The two UIs
 
-- **Client** (`/`): quick capture (type several things at once; a confirmation with undo per
-  receipt comes back), the ranked needs-you list with option buttons and free answers, "Brief me"
-  (the voice briefing as text), topic pages (where things stand, needs you, work, decisions and
-  facts with edit/delete, conversation), review pile, board, memory browser. Live via SSE.
+- **Client** (`/`), chat-first: the home screen is one prompt. A message sent from home is split
+  and filed: one item opens its topic, several items open a screen that lists the topics they went
+  to, and small talk ("hi", "brief me in one sentence", "give me an overview") opens a conversation
+  topic that can see all topics. Each topic is a chat history with receipts (undo), running cards,
+  inline questions with option buttons, and results; typing in a topic goes straight to it. Needs
+  you, Review, Board and Memory sit at the bottom of the topic sidebar. Live via SSE. The API it
+  uses is in [docs/API.md](docs/API.md).
 - **Observer** (`/observer`): overview (calls, tokens, cost by call type), every card with its
   contract, state timeline, comments, harness-recorded facts and artifacts; every session step by
   step (prompt, raw output, parsed action, tool result, dedupe/repair flags); every LLM call with

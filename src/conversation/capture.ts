@@ -8,7 +8,7 @@ import { emit } from "../events.ts";
 import { llmJson } from "../llm/gateway.ts";
 import * as C from "../prompts/conversation.ts";
 import { postMessage } from "./messages.ts";
-import { createTopic, getTopic, updateTopic } from "./topics.ts";
+import { createConversationTopic, createTopic, getTopic, updateTopic } from "./topics.ts";
 import { createReview } from "./review.ts";
 import { deskTurn, DeskResult } from "./desk.ts";
 
@@ -78,37 +78,45 @@ export interface RouteResult {
   created: boolean;
   candidates: string[];
   choice: string;
+  kind: "subject" | "conversation";
 }
 
 export function routeCandidates(quote: string): Row[] {
-  const recent = db().all(`SELECT * FROM topics WHERE status='active' AND is_system=0 ORDER BY last_activity_at DESC LIMIT ?`, config.router.recent_candidates);
+  const recent = db().all(`SELECT * FROM topics WHERE status='active' AND is_system=0 AND kind='subject' ORDER BY last_activity_at DESC LIMIT ?`, config.router.recent_candidates);
   const seen = new Set(recent.map((t) => t.id));
   const q = ftsQuery(quote);
   const fts = q
-    ? db().all(`SELECT t.* FROM topics_fts f JOIN topics t ON t.id=f.id WHERE topics_fts MATCH ? AND t.is_system=0 AND t.merged_into IS NULL ORDER BY rank LIMIT ?`, q, config.router.fts_candidates + 3)
+    ? db().all(`SELECT t.* FROM topics_fts f JOIN topics t ON t.id=f.id WHERE topics_fts MATCH ? AND t.is_system=0 AND t.kind='subject' AND t.merged_into IS NULL ORDER BY rank LIMIT ?`, q, config.router.fts_candidates + 3)
       .filter((t) => !seen.has(t.id)).slice(0, config.router.fts_candidates)
     : [];
   return [...recent, ...fts];
 }
 
-export async function routeItem(quote: string): Promise<RouteResult> {
+/** Route one item. `allowChat`: general talk may go to a new conversation topic (messages from home). */
+export async function routeItem(quote: string, opts: { allowChat?: boolean } = {}): Promise<RouteResult> {
+  const allowChat = opts.allowChat ?? true;
   const cands = routeCandidates(quote);
   let choice = "new", confidence: "high" | "low" = "high";
-  if (cands.length) {
-    const p = C.routeItem({ quote, candidates: cands.map((t) => ({ slug: t.slug, title: t.title, summary: t.summary ?? "" })) });
+  if (cands.length || allowChat) {
+    const p = C.routeItem({ quote, candidates: cands.map((t) => ({ slug: t.slug, title: t.title, summary: t.summary ?? "" })), allowChat });
     const r = await llmJson<{ choice: string; confidence: "high" | "low" }>("route_item", p.prompt, p.schema, { maxTokens: p.maxTokens, version: p.version, priority: "interactive" });
     choice = r.choice;
     confidence = r.confidence;
+  }
+  const slugs = cands.map((c) => c.slug);
+  if (choice === "chat") {
+    const t = createConversationTopic();
+    return { topic_id: t.id, confidence, created: true, candidates: slugs, choice, kind: "conversation" };
   }
   if (choice === "new") {
     const p = C.topicTitle({ quote });
     const r = await llmJson<{ title: string }>("topic_title", p.prompt, p.schema, { maxTokens: p.maxTokens, version: p.version, priority: "interactive" });
     const t = createTopic(r.title.trim() || quote.slice(0, 40));
-    return { topic_id: t.id, confidence, created: true, candidates: cands.map((c) => c.slug), choice };
+    return { topic_id: t.id, confidence, created: true, candidates: slugs, choice, kind: "subject" };
   }
   const t = cands.find((c) => c.slug === choice)!;
   if (t.status === "archived") updateTopic(t.id, { status: "active", archived_at: null });
-  return { topic_id: t.id, confidence, created: false, candidates: cands.map((c) => c.slug), choice };
+  return { topic_id: t.id, confidence, created: false, candidates: slugs, choice, kind: "subject" };
 }
 
 // ---------------------------------------------------------------- capture
@@ -130,32 +138,60 @@ export interface ItemOutcome {
   desk: DeskResult;
 }
 
-export async function processCapture(capture_id: string): Promise<{ items: ItemOutcome[]; confirmation: { text: string; speech: string } }> {
+export interface FiledItem {
+  item_id: string;
+  quote: string;
+  route: RouteResult;
+}
+
+/** Step 1 of a send (docs/API.md POST /send): split and file. Fast: segmentation and routing only. */
+export async function fileCapture(capture_id: string): Promise<FiledItem[]> {
   const cap = db().get(`SELECT * FROM captures WHERE id=?`, capture_id)!;
+  const existing = db().all(`SELECT * FROM capture_items WHERE capture_id=? ORDER BY seq`, capture_id);
+  if (existing.length) return existing.map((i) => ({ item_id: i.id, quote: i.quote, route: j<RouteResult>(i.route_info, {} as RouteResult) }));
   const seg = await segment(cap.transcript, capture_id);
   db().update("captures", capture_id, { state: "segmented" });
   emit("capture.segmented", { ref_id: capture_id, payload: { items: seg.items, matches: seg.matches, uncovered: seg.uncovered } });
-  const out: ItemOutcome[] = [];
+  const out: FiledItem[] = [];
   let seq = 0;
   for (const quote of seg.items) {
     const item_id = newId("itm");
-    const route = await routeItem(quote);
+    const route = await routeItem(quote, { allowChat: true });
     const msg = postMessage({ topic_id: route.topic_id, role: "owner", kind: "capture_item", body: quote, capture_item_id: item_id, payload: { capture_id, provisional: route.confidence === "low" } });
     db().insert("capture_items", {
       id: item_id, capture_id, seq: seq++, quote, topic_id: route.topic_id, route_confidence: route.confidence, provisional: route.confidence === "low",
       message_id: msg.id, route_info: route,
     });
     emit("item.routed", { topic_id: route.topic_id, ref_id: item_id, payload: { item_id, quote, ...route } });
-    if (route.confidence === "low") createReview({ kind: "filing_check", topic_id: route.topic_id, ref_ids: [item_id], payload: { quote, topic_title: getTopic(route.topic_id).title } });
-    const desk = await deskTurn({ topic_id: route.topic_id, mode: "capture", input: quote, transcript: cap.transcript, capture_item_id: item_id, url: cap.url });
-    db().update("capture_items", item_id, { desk_turn_id: desk.turn_id });
-    out.push({ item_id, quote, route, desk });
+    if (route.confidence === "low" && route.kind === "subject") createReview({ kind: "filing_check", topic_id: route.topic_id, ref_ids: [item_id], payload: { quote, topic_title: getTopic(route.topic_id).title } });
+    out.push({ item_id, quote, route });
   }
   for (const u of seg.uncovered) createReview({ kind: "unfiled_text", ref_ids: [capture_id], payload: { text: u } });
+  db().update("captures", capture_id, { state: "filed" });
+  emit("send.filed", { ref_id: capture_id, payload: { items: out.map((i) => ({ item_id: i.item_id, topic_id: i.route.topic_id })) } });
+  return out;
+}
+
+/** Step 2: the desk handles each filed item. Conversation topics get a conversation-mode turn (a reply). */
+export async function handleCapture(capture_id: string, filed: FiledItem[]) {
+  const cap = db().get(`SELECT * FROM captures WHERE id=?`, capture_id)!;
+  const out: ItemOutcome[] = [];
+  for (const it of filed) {
+    const conv = it.route.kind === "conversation";
+    const desk = await deskTurn({ topic_id: it.route.topic_id, mode: conv ? "conversation" : "capture", input: it.quote, transcript: cap.transcript, capture_item_id: it.item_id, url: cap.url });
+    db().update("capture_items", it.item_id, { desk_turn_id: desk.turn_id });
+    out.push({ ...it, desk });
+  }
   const confirmation = confirm(out);
   db().update("captures", capture_id, { state: "handled", confirmation });
   emit("capture.confirmed", { ref_id: capture_id, payload: { capture_id, ...confirmation }, kind: "receipt" });
+  emit("send.handled", { ref_id: capture_id, payload: { capture_id } });
   return { items: out, confirmation };
+}
+
+/** Both steps, awaited (benchmark, tests). */
+export async function processCapture(capture_id: string): Promise<{ items: ItemOutcome[]; confirmation: { text: string; speech: string } }> {
+  return await handleCapture(capture_id, await fileCapture(capture_id));
 }
 
 const NUM = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];

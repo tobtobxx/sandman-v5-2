@@ -1,30 +1,27 @@
-# Bench v9 — 2026-09-28T20:52:41.605Z
+# Bench chat-v1 — 2026-09-28T22:35:29.612Z
 
 Model: qwen/qwen3.6-35b-a3b (thinking off). Judge: xiaomi/mimo-v2.6-pro. Repeats: 3.
-**318/327 passed (97.2%)** — 900 target calls, $0.1014 total incl. judge, 207s
+**357/363 passed (98.3%)** — 960 target calls, $0.1048 total incl. judge, 265s
 
 | group | pass | rate | calls | cost $ |
 |---|---|---|---|---|
-| segment | 27/27 | 100% | 24 | 0.0028 |
-| route | 30/30 | 100% | 39 | 0.0028 |
-| desk | 50/51 | 98% | 162 | 0.0111 |
-| triage | 26/27 | 96% | 27 | 0.0032 |
-| planner | 18/21 | 86% | 21 | 0.0023 |
-| worker | 39/39 | 100% | 129 | 0.0211 |
-| verifier | 27/27 | 100% | 27 | 0.0017 |
-| librarian | 15/15 | 100% | 33 | 0.0027 |
-| memory | 34/36 | 94% | 48 | 0.0043 |
+| segment | 26/27 | 96% | 24 | 0.0027 |
+| route | 48/48 | 100% | 57 | 0.0044 |
+| desk | 64/66 | 97% | 213 | 0.0149 |
+| triage | 27/27 | 100% | 27 | 0.0032 |
+| planner | 18/21 | 86% | 21 | 0.0024 |
+| worker | 39/39 | 100% | 124 | 0.0197 |
+| verifier | 27/27 | 100% | 27 | 0.0018 |
+| librarian | 15/15 | 100% | 33 | 0.0025 |
+| memory | 36/36 | 100% | 48 | 0.0042 |
 | answers | 27/27 | 100% | 21 | 0.0011 |
-| episode | 25/27 | 93% | 369 | 0.0434 |
+| episode | 30/30 | 100% | 365 | 0.0424 |
 
 ## Failures
 
-- **desk/answer-one-of-two** #2: receipts: added_to_card,answered
-- **episode/compare-card** #2: state waiting; result: undefined
-- **episode/memory-reuse** #1: second: done, source worker; notes Alex (profile), Velostation Nord; consolidation {"new":1}; 1 worker sessions
-- **memory/relevance-trivial** #2: keep=true: {"analysis":"The fact that Bern is the capital of Switzerland is a well-established piece of geographic knowledge that does not require external verification for future tasks, is not specific to the mechanics of t","costly":false,"reusable":true,"task_mechanics":false,"trivial":false}
-- **memory/relevance-trivial** #3: keep=true: {"analysis":"The fact is a verifiable piece of geographic information that is not trivial common knowledge for all contexts, is reusable for other queries about Switzerland, and does not pertain to task mechanics.","costly":false,"reusable":true,"task_mechanics":false,"trivial":false}
-- **planner/generate-trip** #1: judge: "Each subtask can be done on its own, without needing the result of another subtask" — Subtasks 2 and 3 explicitly depend on the route/cities from subtask 1 ('identified cities', 'proposed itinerary'), so they cannot be done independently.
-- **planner/generate-trip** #2: judge: "Each subtask can be done on its own, without needing the result of another subtask" — Subtasks 2, 3, and 4 all explicitly depend on the route/cities from subtask 1 ("in the cities identified in the route", "between the cities in the proposed itinerary", "consistent with the hotel locations"). They cannot be done independently.
-- **planner/generate-trip** #3: judge: "Each subtask can be done on its own, without needing the result of another subtask" — Subtask 2 (hotels) and 3 (trains) both depend on the route defined in subtask 1, since they require knowing which cities/nights to cover. They cannot be done independently without the result of subtask 1.
-- **triage/write-missing-info** #1: got yes, want missing. The task requires drafting a letter regarding an insurance claim, which involves retrieving claim details and composing a formal response. This fits within a single session as it primarily involves reading existing artifacts (claim info) and writing a new artifact (the letter).
+- **desk/conversation-work-goes-to-topic** #3: receipts: answered,card_created
+- **desk/status-from-context** #2: judge: "The reply says the comparison is still in progress or waiting, and mentions the open question about AquaLine's water use" — The reply says the comparison is running (in progress) and blocked on AquaLine data, but frames the open question as a choice between using a forum estimate or excluding them, not specifically about AquaLine's water use.
+- **planner/generate-trip** #1: judge: "Each subtask can be done on its own, without needing the result of another subtask" — Subtasks 2 and 3 explicitly depend on the itinerary from subtask 1 (hotels for each night, train routes between cities in the plan), so they cannot be done independently.
+- **planner/generate-trip** #2: judge: "Each subtask can be done on its own, without needing the result of another subtask" — Subtasks 2 and 3 explicitly depend on the route/cities from subtask 1 ("each night of the 10-day trip", "between the cities identified in the itinerary"). They cannot be done independently without subtask 1's output.
+- **planner/generate-trip** #3: judge: "Each subtask can be done on its own, without needing the result of another subtask" — Subtasks 2 and 3 explicitly depend on the route/cities from subtask 1 ("between the key stops in the proposed itinerary", "in each city"). They cannot be done independently.
+- **segment/one-long-subject** #3: 2 items, want 1: ["I think we should add compost and maybe some sand before planting the garlic in October","please look into how much compost three beds of 1.2 by 3 metres need"]

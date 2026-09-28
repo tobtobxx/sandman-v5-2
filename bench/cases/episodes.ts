@@ -65,6 +65,21 @@ export const cases: Case[] = [
     },
   },
   {
+    id: "episode/send-hi",
+    desc: "chat-first client: small talk from home lands in a conversation topic and gets a reply, no subject topic",
+    run: async () => {
+      topic("Raised bed irrigation", "Comparing drip kits for the three raised beds.");
+      const r = await processCapture(receiveCapture({ text: "hi, what's new?" }).id);
+      return { r, topics: db().all(`SELECT title, kind FROM topics`) };
+    },
+    check: (o) => all(
+      [o.r.items.length === 1, `${o.r.items.length} items`],
+      [o.r.items[0]?.route.kind === "conversation", `filed as ${o.r.items[0]?.route.kind}`],
+      [!!o.r.items[0]?.desk.reply, "no reply"],
+      [o.topics.filter((t: any) => t.kind === "subject").length === 1, `topics: ${o.topics.map((t: any) => t.title).join(", ")}`],
+    ),
+  },
+  {
     id: "episode/undo-new-card",
     desc: "M3 accept 4: undoing a 'new card' receipt cancels the card",
     run: async () => {

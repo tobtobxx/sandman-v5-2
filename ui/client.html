@@ -106,7 +106,10 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: h
 .sub { font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .sm { align-self: flex-start; max-width: min(660px, 90%); background: var(--panel); border: 1px solid var(--line); border-radius: 16px 16px 16px 4px; padding: 11px 15px; white-space: pre-wrap; word-wrap: break-word; }
 .receipt { align-self: flex-start; display: flex; flex-direction: column; gap: 6px; max-width: 90%; }
-.receipt .line { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.receipt .line { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--muted); }
+.receipt .line span { min-width: 0; }
+.receipt .line svg { margin-top: 3px; }
+.receipt .line .linkbtn { margin-left: 6px; }
 .receipt .line.undone { text-decoration: line-through; }
 .receipt svg { color: var(--ok); flex-shrink: 0; }
 .workcard { width: min(560px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
@@ -231,7 +234,7 @@ function viewHome(home) {
       <section><div class="meta" style="padding-bottom:8px">Needs you · ${home.needs_you_count}</div>
         ${home.needs_you.map((q) => `<a class="qrow" href="#topic/${q.topic_id}"><span>${esc(q.text)}</span><span>${esc(q.topic_title)}</span></a>`).join("") || `<div class="empty">Nothing needs you.</div>`}</section>
       <section><div class="meta" style="padding-bottom:8px">Finished in the last day</div>
-        ${home.finished.map((f) => `<a class="qrow" href="#topic/${f.topic_id}"><span>${esc(f.title)}</span><span>${esc(f.topic_title)}</span></a>`).join("") || `<div class="empty">Nothing finished yet.</div>`}</section>
+        ${home.finished.map((f) => `<a class="qrow" href="#topic/${f.topic_id}"><span>${esc(f.title)}</span><span>${f.topic_title === f.title ? "" : esc(f.topic_title)}</span></a>`).join("") || `<div class="empty">Nothing finished yet.</div>`}</section>
     </div>
   </div></div>`;
 }
@@ -278,7 +281,7 @@ async function viewSend(id) {
     <a href="#home" style="font-size:14px">Back to home</a>
   </div></div>`;
 }
-const receiptLine = (r) => `<div class="line ${r.undone ? "undone" : ""}">${CHECK}<span>${esc(r.text)}</span>${r.undone ? "" : `<button class="linkbtn" data-undo="${r.id}">Undo</button>`}</div>`;
+const receiptLine = (r) => `<div class="line ${r.undone ? "undone" : ""}">${CHECK}<span>${esc(r.text)}${r.undone ? "" : `<button class="linkbtn" data-undo="${r.id}">Undo</button>`}</span></div>`;
 const moverHtml = (item_id) => item_id ? `<div class="mover" data-mover="${item_id}"><button class="linkbtn" data-move-open>Move…</button></div>` : "";
 
 // ---------------------------------------------------------------- topic

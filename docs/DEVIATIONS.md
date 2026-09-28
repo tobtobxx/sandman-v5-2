@@ -35,6 +35,28 @@ prompt and checks its schema.
 timeout). Rate-limit and 5xx responses *before* generation starts are retried with backoff,
 since nothing is running server-side then.
 
+## Chat-first client (owner decision, after the first benchmark)
+
+The design separates capture, organization and attention and has no chat window (§6.1): talking
+happened only on topic pages, and nothing handled "hi" or "give me an overview" (a live test filed
+"hi" into a new topic called "General Greeting" and answered nothing). The client is now chat-first
+(API in docs/API.md):
+
+- **Home is one prompt.** A message sent from home is segmented and routed as a capture. One item
+  opens its topic; several items open a screen listing the topics they went to.
+- **`chat` routing option.** `route_item` can choose `chat` for a greeting, small talk or a
+  question about everything. That creates a **conversation topic** (`topics.kind = 'conversation'`,
+  titled "Conversation 10:15"). The design's `reply_only`-without-a-topic outcome is gone.
+- **Conversation topics see all topics.** Their desk context holds a code-built overview (every
+  subject topic with its open cards and questions, results of the last day, pending reminders), all
+  open cards and all open questions. `nothing` is not offered there, so Sandman always answers.
+  Work or a reminder asked for in a conversation is routed into a subject topic (with a note there).
+- **Topic pages are chat histories.** A message typed in a topic goes straight to that topic.
+- **Sending is two steps.** `POST /send` segments and routes, then returns so the client can
+  navigate at once; the desk turns run in the background and arrive as events.
+- **Conversation topics are archived after one quiet day**, without a review notice, and never get
+  merge suggestions. They are never routing candidates.
+
 ## Behaviour changed because of the benchmark
 
 **Segmentation threshold 12 words, not 30 (§6.3, BENCH row 1).** The design's own M3 acceptance

@@ -8,7 +8,8 @@ import { getTopic, updateTopic } from "./topics.ts";
 import { emit } from "../events.ts";
 
 export async function tidy(opts: { archive_after_days?: number } = {}) {
-  const topics = db().all(`SELECT * FROM topics WHERE status='active' AND is_system=0 AND merged_into IS NULL`);
+  const all = db().all(`SELECT * FROM topics WHERE status='active' AND is_system=0 AND merged_into IS NULL`);
+  const topics = all.filter((t) => t.kind !== "conversation");
   const suggested = new Set(db().all(`SELECT ref_ids FROM review_items WHERE kind='topic_merge'`).map((r) => j<string[]>(r.ref_ids, []).sort().join()));
   for (const a of topics) {
     const q = ftsQuery(`${a.title} ${a.summary ?? ""}`);
@@ -23,13 +24,14 @@ export async function tidy(opts: { archive_after_days?: number } = {}) {
     }
   }
   const days = opts.archive_after_days ?? 14;
-  const cutoff = new Date(now().getTime() - days * 86400e3).toISOString();
-  for (const t of topics) {
+  for (const t of all) {
+    // conversation topics are small talk: archived after one quiet day, and silently
+    const cutoff = new Date(now().getTime() - (t.kind === "conversation" ? 1 : days) * 86400e3).toISOString();
     if ((t.last_activity_at ?? t.created_at) > cutoff) continue;
     const open = db().get(`SELECT (SELECT count(*) FROM cards WHERE origin_topic_id=? AND state NOT IN ('done','failed','cancelled')) + (SELECT count(*) FROM questions WHERE topic_id=? AND status='open') n`, t.id, t.id)!.n;
     if (open) continue;
     updateTopic(t.id, { status: "archived", archived_at: nowIso() });
-    createReview({ kind: "topic_archived", topic_id: t.id, ref_ids: [t.id], payload: { title: t.title } });
+    if (t.kind !== "conversation") createReview({ kind: "topic_archived", topic_id: t.id, ref_ids: [t.id], payload: { title: t.title } });
   }
 }
 

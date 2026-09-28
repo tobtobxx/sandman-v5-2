@@ -10,6 +10,7 @@ PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = OFF;
 
 CREATE TABLE IF NOT EXISTS topics (id TEXT PRIMARY KEY, slug TEXT UNIQUE, aliases TEXT DEFAULT '[]', title TEXT,
+  kind TEXT DEFAULT 'subject', seen_at TEXT,
   status TEXT DEFAULT 'active', merged_into TEXT, is_system INTEGER DEFAULT 0, summary TEXT DEFAULT '',
   summary_msg_count INTEGER DEFAULT 0, last_activity_at TEXT, archived_at TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS captures (id TEXT PRIMARY KEY, client_id TEXT, client_msg_id TEXT, source TEXT,
@@ -85,6 +86,11 @@ export class DB {
     }
     this.raw = new DatabaseSync(path);
     this.raw.exec(SCHEMA);
+    // columns added after the first release: add them to existing databases
+    for (const [table, col, def] of [["topics", "kind", "TEXT DEFAULT 'subject'"], ["topics", "seen_at", "TEXT"]]) {
+      const cols = this.raw.prepare(`PRAGMA table_info(${table})`).all() as Row[];
+      if (!cols.some((c) => c.name === col)) this.raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+    }
   }
   all(sql: string, ...params: any[]): Row[] {
     return this.raw.prepare(sql).all(...params.map(norm)) as Row[];

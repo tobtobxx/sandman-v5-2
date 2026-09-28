@@ -3,6 +3,7 @@
 
 import { all, blockedCard, Case, cardWithResult, has, topic } from "../lib.ts";
 import { deskTurn } from "../../src/conversation/desk.ts";
+import { createConversationTopic } from "../../src/conversation/topics.ts";
 import { db, j } from "../../src/db.ts";
 import { getCard } from "../../src/work/board.ts";
 import { zoned } from "../../src/conversation/when.ts";
@@ -32,7 +33,36 @@ function irrigation() {
   return { topic_id: t.id, running };
 }
 
+// A conversation topic next to a small world of subject topics.
+function conversationWorld() {
+  const irr = topic("Raised bed irrigation", "Comparing drip kits for the three raised beds.");
+  const tax = topic("Taxes 2026", "Tax return 2026; extension requested by 30 September.");
+  topic("Kitchen renovation", "Matte tiles chosen for the backsplash. No open work.");
+  cardWithResult({ topic_id: irr.id, title: "Compare drip kits", state: "running" });
+  blockedCard({ topic_id: tax.id, title: "Request extension", question: "Should I request the paid extension to November?", options: ["Yes", "No"] });
+  const conv = createConversationTopic();
+  return { topic_id: conv.id, irr, tax };
+}
+
 export const cases: Case[] = [
+  desk("conversation-hi", conversationWorld, "hi", (o) =>
+    all([o.receipts.length === 0, `receipts: ${kinds(o)}`], [!!o.turn.reply, "no reply"]), "conversation"),
+  desk("conversation-overview", conversationWorld, "give me an overview", (o) =>
+    all([o.receipts.length === 0, `receipts: ${kinds(o)}`], [/drip|irrigation/i.test(o.turn.reply ?? "") && /tax/i.test(o.turn.reply ?? ""), `reply misses a topic: ${o.turn.reply}`]), "conversation", {
+    criteria: ["The reply gives a short overview that covers the drip kit comparison (running) and the open tax extension question", "The reply does not claim that Sandman started or changed anything"],
+    material: (o) => `Owner: give me an overview\nReply: ${o.turn.reply}`,
+  }),
+  desk("conversation-one-sentence", conversationWorld, "brief me in one sentence", (o) =>
+    all([!!o.turn.reply, "no reply"], [((o.turn.reply ?? "").match(/[.!?](\s|$)/g) ?? []).length <= 1, `more than one sentence: ${o.turn.reply}`]), "conversation"),
+  desk("conversation-work-goes-to-topic", conversationWorld, "find out when to plant garlic in Zurich", (o) => {
+    const c = o.cards[0];
+    const t = c ? db().get(`SELECT kind FROM topics WHERE id=?`, c.origin_topic_id) : null;
+    return all([kinds(o) === "card_created", `receipts: ${kinds(o)}`], [t?.kind === "subject", `card filed in a ${t?.kind} topic`]);
+  }, "conversation"),
+  desk("conversation-answers-question", conversationWorld, "yes, request the paid extension", (o) => {
+    const q = db().get(`SELECT * FROM questions`);
+    return all([kinds(o) === "answered", `receipts: ${kinds(o)}`], [q.answer_option === "Yes", `answer ${q.answer_option}`]);
+  }, "conversation"),
   desk("reminder-only", () => ({ topic_id: topic("Taxes 2026", "Tax return 2026").id }), "remind me Friday to file the tax extension", (o) => {
     const c = o.cards[0];
     const z = c ? zoned(new Date(c.due_at)) : null;

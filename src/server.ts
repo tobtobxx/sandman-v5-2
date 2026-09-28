@@ -9,10 +9,11 @@ import { spend } from "./llm/gateway.ts";
 import { seedRecipes } from "./work/recipes.ts";
 import { startDispatcher } from "./work/dispatcher.ts";
 import { addComment, cancelCard, createCard, getCard, transition } from "./work/board.ts";
-import { moveItem, processCapture, receiveCapture } from "./conversation/capture.ts";
+import { fileCapture, handleCapture, moveItem, processCapture, receiveCapture } from "./conversation/capture.ts";
 import { undoReceipt } from "./conversation/receipts.ts";
 import { listTopics, updateTopic } from "./conversation/topics.ts";
-import { ownerMessage, topicPage } from "./conversation/pages.ts";
+import { ownerMessage } from "./conversation/pages.ts";
+import { homeView, sendView, topicView } from "./conversation/views.ts";
 import { answerQuestion, needsYou } from "./conversation/questions.ts";
 import { replyBriefing, startBriefing } from "./conversation/briefing.ts";
 import { listReview } from "./conversation/review.ts";
@@ -34,11 +35,24 @@ const bg = (p: Promise<unknown>) => p.catch((e) => console.error("background:", 
 route("GET", "/events", (_r, _p, _b, u) => eventsAfter(Number(u.searchParams.get("after") ?? 0)));
 
 // ---------------------------------------------------------------- capture
-route("POST", "/captures", (_r, _p, b) => {
-  const cap = receiveCapture({ text: b.text ?? "", url: b.url, source: b.source ?? "text", client_id: b.client_id, client_msg_id: b.client_msg_id });
-  if (cap.state === "transcribed") bg(processCapture(cap.id));
-  return cap;
+// Send from home (docs/API.md): split and file now, let the desk work in the background.
+route("POST", "/send", async (_r, _p, b) => {
+  const text = String(b.text ?? "").trim();
+  if (!text) throw new Error("empty message");
+  const cap = receiveCapture({ text, url: b.url, source: b.source ?? "text", client_id: b.client_id, client_msg_id: b.client_msg_id });
+  const fresh = cap.state === "transcribed";
+  const filed = await fileCapture(cap.id);
+  if (fresh) bg(handleCapture(cap.id, filed));
+  return {
+    send_id: cap.id,
+    items: filed.map((f) => {
+      const t = db().get(`SELECT title, kind FROM topics WHERE id=?`, f.route.topic_id);
+      return { item_id: f.item_id, quote: f.quote, topic_id: f.route.topic_id, topic_title: t?.title, topic_kind: t?.kind, created: f.route.created, confidence: f.route.confidence };
+    }),
+  };
 });
+route("GET", "/sends/:id", (_r, p) => sendView(p.id));
+route("GET", "/home", () => homeView());
 route("GET", "/captures", () => db().all(`SELECT * FROM captures ORDER BY created_at DESC LIMIT 50`).map((c) => ({ ...c, confirmation: j(c.confirmation, null) })));
 route("GET", "/captures/:id", (_r, p) => captureDetail(p.id));
 route("POST", "/items/:id/move", (_r, p, b) => moveItem(p.id, b.topic_id ?? "new"));
@@ -47,10 +61,14 @@ route("POST", "/receipts/:id/undo", (_r, p) => undoReceipt(p.id));
 // ---------------------------------------------------------------- topics & messages
 route("GET", "/topics", (_r, _p, _b, u) => listTopics(u.searchParams.get("status") ?? "active"));
 route("PATCH", "/topics/:id", (_r, p, b) => (updateTopic(p.id, pick(b, ["title", "status", "summary"])), { ok: true }));
-route("GET", "/topics/:id/page", (_r, p) => topicPage(p.id));
-route("POST", "/messages", (_r, _p, b) => {
-  bg(ownerMessage({ topic_id: b.topic_id, text: b.text, client_id: b.client_id, client_msg_id: b.client_msg_id }));
-  return { ok: true };
+route("GET", "/topics/:id", (_r, p) => topicView(p.id));
+// A message typed in a topic goes straight to that topic (no splitting, no routing).
+route("POST", "/topics/:id/messages", (_r, p, b) => {
+  const text = String(b.text ?? "").trim();
+  if (!text) throw new Error("empty message");
+  const { message, done } = ownerMessage({ topic_id: p.id, text, client_id: b.client_id, client_msg_id: b.client_msg_id });
+  bg(done);
+  return { message_id: message.id };
 });
 route("PATCH", "/topics/:id/facts/:claim", (_r, p, b) => {
   const c = db().get(`SELECT * FROM claims WHERE id=?`, p.claim);
