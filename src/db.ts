@@ -172,8 +172,11 @@ export const nowIso = () => now().toISOString();
 
 /** Escape user text into an FTS5 OR query over its words. */
 export function ftsQuery(text: string): string {
-  const words = (text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).filter((w) => !STOP.has(w)).slice(0, 12);
-  return words.map((w) => `"${w}"`).join(" OR ");
+  return ftsWords(text).map((w) => `"${w}"`).join(" OR ");
+}
+/** The words ftsQuery searches for: lower case, 3+ letters, no stop words, at most 12. */
+export function ftsWords(text: string): string[] {
+  return [...new Set((text.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? []).filter((w) => !STOP.has(w)))].slice(0, 12);
 }
 const STOP = new Set(
   "the and for with that this from what have has are was were you your can could would should will about into also then than them they their there which who whom when where how why not but all any some our out get got its just like make made more most much need needs only other over such very want wants find check".split(" "),

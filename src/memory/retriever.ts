@@ -1,6 +1,6 @@
 // Memory retrieval (DESIGN §7.6): exact/alias lookup + FTS, staleness computed in code.
 
-import { db, ftsQuery, j, now, Row } from "../db.ts";
+import { db, ftsQuery, ftsWords, j, now, Row } from "../db.ts";
 import { config } from "../config.ts";
 
 export interface NoteView {
@@ -10,6 +10,7 @@ export interface NoteView {
   one_liner: string;
   claims: (Row & { stale: boolean })[];
   answerable: boolean;
+  pending?: boolean; // candidate facts the consolidator has not reviewed yet
 }
 
 export function isStale(c: Row): boolean {
@@ -44,7 +45,46 @@ export function findNotes(text: string, entities: string[] = [], k = config.memo
       if (n) seen.set(n.id, n);
     }
   }
-  return [...seen.values()].slice(0, k).map(noteView).filter((v) => v.claims.length);
+  const notes = [...seen.values()].slice(0, k).map(noteView).filter((v) => v.claims.length);
+  return [...notes, ...findPendingFacts(text, entities, Math.ceil(k / 2))];
+}
+
+// Candidate facts wait for the consolidator (≥20 pending, or nightly). Until then they are shown as
+// unreviewed notes, one per subject, so what a card found today can be used by the next card.
+// There are few of them, so they are matched in code: at least two words shared with the query (one if the
+// query has one; a word of 4+ letters may be the start of a longer one), or the subject named exactly. Negative results are left out until reviewed: an owner who
+// asks to try again right after a failed search should get a new search, not the failure back.
+const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "");
+
+export function findPendingFacts(text: string, entities: string[] = [], k = 3): NoteView[] {
+  const words = new Set([...ftsWords(fold(text)), ...ftsWords(fold(entities.join(" ")))]);
+  const ents = new Set(entities.map((e) => fold(e.toLowerCase())));
+  const groups = new Map<string, { score: number; facts: Row[] }>();
+  const need = Math.min(2, words.size);
+  for (const f of db().all(`SELECT * FROM facts WHERE status='pending' ORDER BY created_at DESC LIMIT 200`)) {
+    if (j<Row>(f.source, {}).negative) continue;
+    const subj = fold(String(f.subject ?? "").toLowerCase().trim());
+    const have = new Set(fold(`${f.subject} ${f.text}`.toLowerCase()).match(/[\p{L}\p{N}]{3,}/gu) ?? []);
+    // a word of 4+ letters also matches the start of a longer one: "wald" finds "waldlabor"
+    let score = [...words].filter((w) => have.has(w) || (w.length >= 4 && [...have].some((h) => h.startsWith(w)))).length;
+    if (ents.has(subj)) score += 10;
+    const g = groups.get(subj) ?? { score: 0, facts: [] };
+    g.score = Math.max(g.score, score);
+    if (!g.facts.some((x) => x.text === f.text)) g.facts.push(f);
+    groups.set(subj, g);
+  }
+  return [...groups.values()]
+    .filter((g) => need > 0 && g.score >= need)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, k)
+    .map((g) => {
+      const f0 = g.facts[0];
+      const claims = g.facts.map((f) => {
+        const c = { text: f.text, source: f.source, observed_at: f.created_at, volatility: f.volatility };
+        return { ...c, stale: isStale(c) };
+      });
+      return { id: f0.id, kind: "entity", title: String(f0.subject), one_liner: "", claims, answerable: claims.some((c) => !c.stale), pending: true };
+    });
 }
 
 export function renderNotes(notes: NoteView[]): string {
@@ -56,7 +96,8 @@ export function renderNotes(notes: NoteView[]): string {
         const from = src ? `; source: ${src}` : "";
         return `  - ${c.text}${c.stale ? ` [as of ${date}, may be outdated${from}]` : ` (${date}${from})`}`;
       });
-      return `${n.id}: ${n.title}${n.kind === "negative" ? " (earlier search that found nothing)" : ""}\n${cl.join("\n")}`;
+      const label = [n.kind === "negative" ? "earlier search that found nothing" : "", n.pending ? "found recently, not yet reviewed" : ""].filter(Boolean).join("; ");
+      return `${n.id}: ${n.title}${label ? ` (${label})` : ""}\n${cl.join("\n")}`;
     })
     .join("\n");
 }
