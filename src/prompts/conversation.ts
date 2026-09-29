@@ -174,9 +174,11 @@ Reply with analysis (one sentence), then intent.`,
 /** Gate for later passes (P2): only after "something is left" are actions offered again. */
 export function deskMore(c: DeskCtx): P {
   return {
-    version: "desk_more/v1",
+    // v1 asked "is a request still NOT handled? yes/no": the negation flipped the answer, and the model
+    // often wrote "nothing is left" in its analysis and then left: yes (#24). Named options avoid that.
+    version: "desk_more/v2",
     maxTokens: 100,
-    schema: obj({ analysis: str(300), left: oneOf(["yes", "no"]) }),
+    schema: obj({ analysis: str(300), left: oneOf(["nothing", "another_request"]) }),
     prompt: `You are Sandman's front desk. Check whether everything ${c.owner} said has been handled.
 
 ${deskInput(c)}
@@ -184,9 +186,11 @@ ${deskInput(c)}
 Done so far:
 ${lines(c.receipts)}
 
-Is a clearly separate request in it still NOT handled? Details of a request that was handled don't count.
+Does the message contain another, clearly separate request that the actions above did not handle?
+Details of a handled request don't count. When an action answered a question, the words of that answer
+count as handled too (e.g. "yes, book it" answering "Should I book it?").
 
-Reply with analysis (one sentence), then left: yes or no.`,
+Reply with analysis (one sentence), then left: nothing (all handled) or another_request.`,
   };
 }
 

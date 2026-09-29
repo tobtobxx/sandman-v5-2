@@ -86,6 +86,7 @@ Each row was found in a trace, fixed, and confirmed by the next run.
 | 17 | Verifier passed "I wrote the email and saved it" with no file | Trusted the result over the record | "If the result claims something the system did not record, it did not happen" | P12 |
 | 18 | 6 worker parse errors (all recovered by retry) | Provider Darkbloom doesn't enforce `anyOf`/`const`; model writes `"action": "web_fetch"` | Quirk repair: tool name as action → tool action (logged as a repair) | §10.2 |
 | 19 | "Research X and message me about it" and "There was X. Research why." split into two topics (issue #19) | "Don't combine two subjects" read as "split at every request or sentence" | `segment_capture/v3`: "split only where each part would still be clear on its own", plus a three-line list of what stays together (background + request, follow-up on another part's result, back-references like "it", "why") | P2 |
+| 20 | "yes, request the paid extension" answered the question, then also added to the card or created a card (issue #24) | `desk_more` v1 asked "is a request still NOT handled? yes/no"; the negation flipped the answer: in 16 of 30 traces the analysis said nothing was left and the answer was `yes` | `desk_more/v2`: options `nothing` / `another_request`, and the words of an answer to a question count as handled | P2 |
 
 **A negative result (v5).** Splitting triage's `missing_info` into its own gated call
 ("Can work start without asking the owner?") made it *worse*: triage dropped from 96% to 85%
@@ -169,6 +170,23 @@ nothing, and a one-sentence version of the list ("background, a follow-up on its
 'there', 'why'") dropped to 94–97%. Route, desk and the
 capture episodes showed no failures traceable to the change. `desk/conversation-answers-question`
 (no segmenter call) fails now and then on both prompt versions.
+
+## Extra actions after an answer (issue #24)
+
+`desk/conversation-answers-question` ("yes, request the paid extension" against an open question
+"Should I request the paid extension to November?") failed 7 of 40 runs on master: after the
+correct `answered` receipt the desk also added to the tax card or created a card. The traces
+showed the cause in `desk_more`, not in the answer: the gate asked "is a separate request still
+NOT handled? yes/no", and the model answered the un-negated question. In 16 of 30 traced runs its
+analysis said "no separate or pending requests" and then `left: yes`; the second `desk_intent`
+pass then acted on the answer text. All 30 first `desk_more` calls went to one provider (AkashML),
+and it answered both ways, so the flip is the prompt, not a provider.
+
+`desk_more/v2` (row 20) names its options (`nothing` / `another_request`) and says that the words of
+an answer count as handled. Result: the case 40/40 (master 33/40); desk + episode groups × 3:
+96/96 (master 94/96, one of the two failures the same bug in
+`desk/conversation-work-goes-to-topic`), with 204 desk calls instead of 215. The case is in
+`HARD` now.
 
 ## Cost
 

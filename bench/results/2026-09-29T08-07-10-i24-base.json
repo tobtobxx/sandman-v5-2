@@ -1,0 +1,171 @@
+{
+ "label": "i24-base",
+ "model": "qwen/qwen3.6-35b-a3b",
+ "set": "full",
+ "repeat": 10,
+ "spend": {
+  "usd": 0.0029404583999999997,
+  "calls": 56,
+  "byType": {
+   "desk_intent": {
+    "calls": 14,
+    "usd": 0.000978417,
+    "tin": 7274,
+    "tout": 647
+   },
+   "desk_args_answer": {
+    "calls": 10,
+    "usd": 0.00043684739999999995,
+    "tin": 1609,
+    "tout": 364
+   },
+   "match_answer": {
+    "calls": 10,
+    "usd": 0.00045837000000000004,
+    "tin": 1064,
+    "tout": 433
+   },
+   "desk_more": {
+    "calls": 11,
+    "usd": 0.000577962,
+    "tin": 1423,
+    "tout": 519
+   },
+   "desk_reply": {
+    "calls": 10,
+    "usd": 0.000450549,
+    "tin": 3805,
+    "tout": 237
+   },
+   "desk_args_add": {
+    "calls": 1,
+    "usd": 0.000038313,
+    "tin": 256,
+    "tout": 37
+   }
+  }
+ },
+ "results": [
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 1,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0002864169,
+   "tokens_in": 1165,
+   "tokens_out": 186,
+   "ms": 3684,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 6,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000304722,
+   "tokens_in": 1163,
+   "tokens_out": 196,
+   "ms": 4095,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 5,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0002701215,
+   "tokens_in": 1273,
+   "tokens_out": 206,
+   "ms": 4840,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 2,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0002763585,
+   "tokens_in": 1997,
+   "tokens_out": 240,
+   "ms": 5605,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 4,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.000289476,
+   "tokens_in": 1903,
+   "tokens_out": 239,
+   "ms": 6487,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 3,
+   "pass": false,
+   "calls": 8,
+   "cost": 0.000408474,
+   "tokens_in": 2322,
+   "tokens_out": 324,
+   "ms": 6686,
+   "judged": false,
+   "detail": "receipts: added_to_card,answered"
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 8,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0002564595,
+   "tokens_in": 1266,
+   "tokens_out": 196,
+   "ms": 3035,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 7,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.00023126400000000001,
+   "tokens_in": 1383,
+   "tokens_out": 194,
+   "ms": 4381,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 10,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0002348775,
+   "tokens_in": 1374,
+   "tokens_out": 207,
+   "ms": 4290,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 9,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0003822885,
+   "tokens_in": 1585,
+   "tokens_out": 249,
+   "ms": 7464,
+   "judged": false
+  }
+ ]
+}

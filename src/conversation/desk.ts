@@ -139,7 +139,7 @@ export async function deskTurn(d: DeskInput): Promise<DeskResult> {
     for (let i = 0; i < config.desk.max_actions; i++) {
       if (i > 0) {
         const more = await ask<{ left: string }>("desk_more", C.deskMore(ctx), ++step);
-        if (more.left !== "yes") {
+        if (more.left !== "another_request") {
           intents.push("done");
           break;
         }

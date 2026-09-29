@@ -19,6 +19,7 @@ const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "
 const HARD = [
   "answers/model-free-text",
   "desk/answer-one-of-two",
+  "desk/conversation-answers-question",
   "desk/conversation-work-goes-to-topic",
   "desk/status-from-context",
   "episode/capture-no-cross-talk",

@@ -1,0 +1,428 @@
+{
+ "label": "i24-base2",
+ "model": "qwen/qwen3.6-35b-a3b",
+ "set": "full",
+ "repeat": 30,
+ "spend": {
+  "usd": 0.011736619042499995,
+  "calls": 183,
+  "byType": {
+   "desk_intent": {
+    "calls": 49,
+    "usd": 0.0042691473,
+    "tin": 23923,
+    "tout": 2269
+   },
+   "desk_args_answer": {
+    "calls": 30,
+    "usd": 0.001523709,
+    "tin": 4323,
+    "tout": 1094
+   },
+   "match_answer": {
+    "calls": 30,
+    "usd": 0.0013959494999999996,
+    "tin": 2610,
+    "tout": 1346
+   },
+   "desk_more": {
+    "calls": 36,
+    "usd": 0.00189189,
+    "tin": 5169,
+    "tout": 1746
+   },
+   "desk_reply": {
+    "calls": 30,
+    "usd": 0.0019177792425,
+    "tin": 11504,
+    "tout": 696
+   },
+   "desk_args_add": {
+    "calls": 4,
+    "usd": 0.00018849600000000002,
+    "tin": 795,
+    "tout": 164
+   },
+   "desk_args_new_work": {
+    "calls": 2,
+    "usd": 0.00039585149999999997,
+    "tin": 1047,
+    "tout": 358
+   },
+   "route_item": {
+    "calls": 2,
+    "usd": 0.0001537965,
+    "tin": 624,
+    "tout": 141
+   }
+  }
+ },
+ "results": [
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 2,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000247797,
+   "tokens_in": 1381,
+   "tokens_out": 192,
+   "ms": 5206,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 6,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000366696,
+   "tokens_in": 1165,
+   "tokens_out": 187,
+   "ms": 5201,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 4,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0002719035,
+   "tokens_in": 1275,
+   "tokens_out": 182,
+   "ms": 5335,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 3,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000267498,
+   "tokens_in": 1279,
+   "tokens_out": 201,
+   "ms": 5637,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 5,
+   "pass": false,
+   "calls": 8,
+   "cost": 0.0006135327,
+   "tokens_in": 2032,
+   "tokens_out": 342,
+   "ms": 7862,
+   "judged": false,
+   "detail": "receipts: added_to_card,answered"
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 1,
+   "pass": false,
+   "calls": 9,
+   "cost": 0.000658845,
+   "tokens_in": 2433,
+   "tokens_out": 418,
+   "ms": 8320,
+   "judged": false,
+   "detail": "receipts: added_to_card,answered"
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 7,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0002409165,
+   "tokens_in": 1383,
+   "tokens_out": 182,
+   "ms": 4119,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 9,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.000397782,
+   "tokens_in": 1697,
+   "tokens_out": 254,
+   "ms": 4542,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 8,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000416394,
+   "tokens_in": 1167,
+   "tokens_out": 206,
+   "ms": 5564,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 10,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0003898323,
+   "tokens_in": 1694,
+   "tokens_out": 243,
+   "ms": 5513,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 12,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0002809125,
+   "tokens_in": 1159,
+   "tokens_out": 187,
+   "ms": 3307,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 11,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.000353826,
+   "tokens_in": 1795,
+   "tokens_out": 252,
+   "ms": 4448,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 14,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0003762,
+   "tokens_in": 1688,
+   "tokens_out": 263,
+   "ms": 4540,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 15,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.000292644,
+   "tokens_in": 1791,
+   "tokens_out": 231,
+   "ms": 5272,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 17,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.00037572479999999997,
+   "tokens_in": 1692,
+   "tokens_out": 248,
+   "ms": 3990,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 16,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.000425467845,
+   "tokens_in": 1686,
+   "tokens_out": 245,
+   "ms": 6225,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 18,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0003305115,
+   "tokens_in": 1802,
+   "tokens_out": 246,
+   "ms": 5626,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 19,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.00026947799999999997,
+   "tokens_in": 1280,
+   "tokens_out": 183,
+   "ms": 4538,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 21,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000314226,
+   "tokens_in": 1159,
+   "tokens_out": 203,
+   "ms": 3235,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 13,
+   "pass": false,
+   "calls": 10,
+   "cost": 0.0007387875,
+   "tokens_in": 3511,
+   "tokens_out": 629,
+   "ms": 11551,
+   "judged": false,
+   "detail": "receipts: answered,card_created"
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 22,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.000337095,
+   "tokens_in": 1807,
+   "tokens_out": 244,
+   "ms": 4728,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 24,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000310662,
+   "tokens_in": 1163,
+   "tokens_out": 192,
+   "ms": 4935,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 20,
+   "pass": false,
+   "calls": 8,
+   "cost": 0.0005193243,
+   "tokens_in": 2217,
+   "tokens_out": 333,
+   "ms": 7924,
+   "judged": false,
+   "detail": "receipts: added_to_card,answered"
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 25,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0003258585,
+   "tokens_in": 1804,
+   "tokens_out": 227,
+   "ms": 6134,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 28,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.00035743950000000004,
+   "tokens_in": 1167,
+   "tokens_out": 199,
+   "ms": 2386,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 26,
+   "pass": false,
+   "calls": 8,
+   "cost": 0.0005040585,
+   "tokens_in": 1915,
+   "tokens_out": 339,
+   "ms": 5846,
+   "judged": false,
+   "detail": "receipts: added_to_card,answered"
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 29,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000272547,
+   "tokens_in": 1167,
+   "tokens_out": 208,
+   "ms": 2921,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 27,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0003249231975,
+   "tokens_in": 1273,
+   "tokens_out": 198,
+   "ms": 5012,
+   "judged": false
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 23,
+   "pass": false,
+   "calls": 10,
+   "cost": 0.0008458065,
+   "tokens_in": 3244,
+   "tokens_out": 587,
+   "ms": 11320,
+   "judged": false,
+   "detail": "receipts: answered,card_created"
+  },
+  {
+   "id": "desk/conversation-answers-question",
+   "group": "desk",
+   "run": 30,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0003099294,
+   "tokens_in": 1169,
+   "tokens_out": 193,
+   "ms": 4569,
+   "judged": false
+  }
+ ]
+}
