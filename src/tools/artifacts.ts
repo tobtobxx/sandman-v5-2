@@ -4,6 +4,7 @@ import { db, nowIso, Row } from "../db.ts";
 import { newId } from "../ids.ts";
 import { config } from "../config.ts";
 import { emit } from "../events.ts";
+import { contentBlock } from "./web.ts";
 
 export function saveArtifact(a: { card_id: string | null; name: string; content: string; origin: string; summary?: string; mime?: string }): Row {
   const row = {
@@ -26,7 +27,7 @@ export function getArtifact(id: string): Row | undefined {
   return db().get(`SELECT * FROM artifacts WHERE id=?`, id);
 }
 
-/** Position header comes FIRST so truncation can never remove it (§11). */
+/** Position header comes FIRST so truncation can never remove it (§11). The text itself is data (§12). */
 export function page(art: Row, from: number, source: string): string {
   const w = config.tool_result_window;
   const text = art.content as string;
@@ -34,7 +35,8 @@ export function page(art: Row, from: number, source: string): string {
   const b = Math.min(text.length, a + w);
   const more = b < text.length ? ` Continue with read_artifact("${art.id}", ${b}) if you need more.` : " This is the end.";
   const footer = b < text.length ? `\n[The text continues. Read the rest with read_artifact("${art.id}", ${b}).]` : "";
-  return `[characters ${a}–${b} of ${text.length} from ${source}.${more}]\n${text.slice(a, b)}${footer}`;
+  const attrs: Record<string, string> = art.origin === "tool_result" ? { url: source } : { file: source };
+  return `[characters ${a}–${b} of ${text.length} from ${source}.${more}]\n${contentBlock(attrs, text.slice(a, b))}${footer}`;
 }
 
 export const wordCount = (s: string) => (s.match(/\S+/g) ?? []).length;
