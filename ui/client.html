@@ -557,6 +557,25 @@ async function viewMemory() {
       ${n.claims.map((c) => `<div class="fact"><span${c.pending ? ` style="color:var(--muted)"` : ""}>${esc(c.text)}${c.stale ? ` <i style="color:var(--muted)">(may be outdated)</i>` : ""}</span><span style="color:var(--muted);font-size:12px">${String(c.observed_at).slice(0, 10)} · ${c.volatility}</span>${c.pending ? "" : `<button class="btn" data-retract="${c.id}">Retract</button>`}</div>`).join("")}</div>`).join("") || `<div class="empty">${memq ? "Nothing matches." : "Memory is empty."}</div>`}</div></div>`;
 }
 
+// ---------------------------------------------------------------- question drafts
+// Live updates replace the whole view, so answers typed into a question card are kept here
+// (keyed by question id) and put back, with focus and caret, after each render.
+const qDrafts = new Map();
+const qInput = (el) => el?.matches?.(".qform input") ? el.closest("[data-q]") : null;
+document.addEventListener("input", (e) => { const q = qInput(e.target); if (q) qDrafts.set(q.dataset.q, e.target.value); });
+function qFocus() {
+  const el = document.activeElement, q = qInput(el);
+  return q ? { id: q.dataset.q, start: el.selectionStart, end: el.selectionEnd } : null;
+}
+function restoreQDrafts(focus) {
+  for (const q of document.querySelectorAll("#main [data-q]")) {
+    const input = $(".qform input", q);
+    if (!input) continue;
+    if (qDrafts.has(q.dataset.q)) input.value = qDrafts.get(q.dataset.q);
+    if (focus?.id === q.dataset.q) { input.focus(); input.setSelectionRange(focus.start, focus.end); }
+  }
+}
+
 // ---------------------------------------------------------------- render
 let rendering = null;
 async function render(navigated = false, keepFocus = false) {
@@ -566,16 +585,19 @@ async function render(navigated = false, keepFocus = false) {
     const r = route();
     const home = await sidebar();
     const main = $("#main");
+    // Swaps in a view's html, keeping answers typed into question cards (and their focus).
+    const swap = (html) => { const qf = navigated ? null : qFocus(); main.innerHTML = html; restoreQDrafts(qf); };
     if (r.view === "home") { if (navigated || !$("#prompt")) { main.innerHTML = viewHome(home); bindHome(); } }
-    else if (r.view === "send") main.innerHTML = await viewSend(r.id);
+    else if (r.view === "send") swap(await viewSend(r.id));
     else if (r.view === "topic") {
+      const html = await viewTopic(r.id);
       const focused = keepFocus || (document.activeElement && document.activeElement.id === "chatIn");
-      main.innerHTML = await viewTopic(r.id); bindTopic(r.id, focused || navigated);
+      swap(html); bindTopic(r.id, focused || navigated);
     }
-    else if (r.view === "needs") main.innerHTML = await viewNeeds();
-    else if (r.view === "review") main.innerHTML = await viewReview();
-    else if (r.view === "board") main.innerHTML = await viewBoard();
-    else if (r.view === "memory") main.innerHTML = await viewMemory();
+    else if (r.view === "needs") swap(await viewNeeds());
+    else if (r.view === "review") swap(await viewReview());
+    else if (r.view === "board") swap(await viewBoard());
+    else if (r.view === "memory") swap(await viewMemory());
     else { location.hash = "home"; }
     if (cardOpen) await refreshCard();
     if (navigated) api("/presence", { mode: $("#mode").value, topic_id: r.view === "topic" ? r.id : null }).catch(() => {});
@@ -603,7 +625,7 @@ document.addEventListener("click", async (e) => {
     if (d.card) openCard(d.card);
     else if (d.close !== undefined) $("#cardDlg").close();
     else if (d.undo) { const r = await api(`/receipts/${d.undo}/undo`, {}); toast(r.note ?? "Undone"); render(); }
-    else if (d.opt !== undefined) { const q = t.closest("[data-q]").dataset.q; await api(`/questions/${q}/answer`, { option: Number(d.opt) }); render(); }
+    else if (d.opt !== undefined) { const q = t.closest("[data-q]").dataset.q; await api(`/questions/${q}/answer`, { option: Number(d.opt) }); qDrafts.delete(q); render(); }
     else if (d.moveOpen !== undefined) {
       const box = t.closest("[data-mover]");
       box.innerHTML = `<label for="mv-${box.dataset.mover}">Move to</label><select id="mv-${box.dataset.mover}">${topicsCache.filter((x) => x.kind !== "conversation").map((x) => `<option value="${x.id}">${esc(x.title)}</option>`).join("")}<option value="new">A new topic</option></select><button class="linkbtn" data-move-go>Move</button><button class="linkbtn" data-move-cancel>Cancel</button>`;
@@ -628,7 +650,7 @@ document.addEventListener("submit", async (e) => {
   if (q && e.target.classList.contains("qform")) {
     e.preventDefault();
     const text = e.target.querySelector("input").value.trim();
-    if (text) { try { await api(`/questions/${q.dataset.q}/answer`, { text }); } catch (err) { toast(err.message); } render(); }
+    if (text) { try { await api(`/questions/${q.dataset.q}/answer`, { text }); qDrafts.delete(q.dataset.q); } catch (err) { toast(err.message); } render(); }
   }
   if (e.target.id === "cardComment") {
     e.preventDefault();
