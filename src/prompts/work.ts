@@ -27,7 +27,7 @@ export const ROLE_LINES: Record<string, string> = {
 // ---------------------------------------------------------------- triage
 export function triage(c: { title: string; goal: string; done_when: string[]; steps: number; tools: string[]; recipes: string[]; owner?: string }): P {
   return {
-    version: "triage/v6",
+    version: "triage/v7",
     maxTokens: 150,
     schema: obj({ analysis: str(300), compare_count: { type: "integer" }, fits: oneOf(["yes", "no"]), missing_info: nstr(200) }),
     prompt: `You decide whether a task can be done in ONE work session.
@@ -40,7 +40,7 @@ ${lines(c.recipes)}
 
 Examples:
 - "Find the opening hours of the Zurich botanical garden" → fits: yes, missing_info: null
-- "Compare 4 health insurers on price and coverage and recommend one" → compare_count: 4, fits: no, missing_info: null (the work can choose the insurers)
+- "Compare 4 health insurers on price and coverage and recommend one" → compare_count: 4, fits: no, missing_info: null (the work can choose the insurers and recommend one in general)
 - "Book a table for my birthday" (no date or place given) → missing_info: "Which date and which restaurant or area?"
 ${c.owner ? `\nAbout the owner:\n${c.owner}\n` : ""}
 Task: ${c.title}
@@ -49,12 +49,12 @@ Done when:
 ${lines(c.done_when)}
 
 Reply with:
-- analysis: one or two sentences
+- analysis: one or two sentences: does it fit one session, and does the result need anything only the owner knows?
 - compare_count: how many different things the task asks to look up and compare (0 if it is not a comparison)
 - fits: yes or no
-- missing_info: null in most cases. A short question ONLY if the work can't even start without a fact that
-  only the owner knows (a date, a person, their own details). If the work can choose it, find it or make a
-  sensible assumption, use null.`,
+- missing_info: null in most cases. A short question ONLY if the result needs a fact that only the owner
+  knows (a date, a person, their own details or situation) and neither the task nor "About the owner" gives it.
+  Preferences, choices and anything the work can find: use null.`,
   };
 }
 

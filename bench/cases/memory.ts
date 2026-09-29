@@ -8,8 +8,8 @@ import { enqueueFacts } from "../../src/memory/facts.ts";
 import { extractFacts } from "../../src/conversation/pages.ts";
 import { postMessage } from "../../src/conversation/messages.ts";
 
-function fact(subject: string, text: string, volatility = "slow", source: Record<string, any> = { type: "url", ref: "https://www.gardena-shop.ch/micro-drip-starter-set" }) {
-  const f = { id: newId("fct"), subject, text, source: JSON.stringify(source), volatility, status: "pending", created_at: nowIso() };
+function fact(subject: string, text: string, volatility = "slow", source: Record<string, any> = { type: "url", ref: "https://www.gardena-shop.ch/micro-drip-starter-set" }, card_id?: string) {
+  const f = { id: newId("fct"), subject, text, source: JSON.stringify(source), volatility, status: "pending", created_at: nowIso(), card_id };
   db().insert("facts", f);
   return f;
 }
@@ -46,10 +46,11 @@ function subject(name: string, setup: () => void, subj: string, claim: string, w
   };
 }
 
-function rel(name: string, subj: string, claim: string, keep: boolean, source = "https://www.velostation-nord.ch/about"): Case {
+// Real facts always come from a card; its title is part of the rubric prompt.
+function rel(name: string, card: string, subj: string, claim: string, keep: boolean, source = "https://www.velostation-nord.ch/about"): Case {
   return {
     id: `memory/relevance-${name}`,
-    run: () => relevant(fact(subj, claim, "slow", { type: "url", ref: source })),
+    run: () => relevant(fact(subj, claim, "slow", { type: "url", ref: source }, cardWithResult({ title: card, state: "done" }).id)),
     check: (o) => ({ pass: o.keep === keep, detail: `keep=${o.keep}: ${JSON.stringify(o.rubric)}` }),
   };
 }
@@ -58,9 +59,9 @@ export const cases: Case[] = [
   subject("same-thing-other-words", gardena, "Gardena drip starter kit", "One set has 20 drippers.", "Gardena Micro-Drip starter set"),
   subject("same-kind-different-thing", gardena, "Gardena Micro-Drip extension set", "The extension set adds 10 drippers.", null),
   subject("different-brand", gardena, "Hozelock Easy Drip kit", "The Hozelock kit covers about 10 m².", null),
-  rel("task-mechanics", "Velostation Nord", "The page was found with a web search and read in two parts.", false),
-  rel("trivial", "Switzerland", "The capital of Switzerland is Bern.", false, "https://www.admin.ch/gov/en/start.html"),
-  rel("reusable-price", "Velostation Nord", "An e-bike service at Velostation Nord costs CHF 149.", true),
+  rel("task-mechanics", "E-bike repair at Velostation Nord", "Velostation Nord", "The page was found with a web search and read in two parts.", false),
+  rel("trivial", "Swiss public holidays in 2026", "Switzerland", "The capital of Switzerland is Bern.", false, "https://www.admin.ch/gov/en/start.html"),
+  rel("reusable-price", "E-bike repair at Velostation Nord", "Velostation Nord", "An e-bike service at Velostation Nord costs CHF 149.", true),
   decide("duplicate", gardena, () => fact("Gardena Micro-Drip starter set", "One Gardena Micro-Drip starter set waters about 15 square metres.", "slow"), "duplicate"),
   decide("update-price", gardena, () => fact("Gardena Micro-Drip starter set", "The Gardena Micro-Drip starter set costs CHF 89.90.", "volatile"), "update"),
   decide("unrelated-detail-not-update", () => note("Velostation Nord", [
