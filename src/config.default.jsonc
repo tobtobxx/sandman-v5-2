@@ -2,34 +2,31 @@
 // Keys left out fall back to the defaults shown here.
 {
   // Your name as the model sees it, and the time zone reminders and "today" are computed in.
-  "owner": { "name": "Alex", "timezone": "Europe/Zurich" },
-
+  "owner": {
+    "name": "Human",
+    "timezone": "Europe/Zurich"
+  },
   // SQLite database. The benchmark always writes its traces to data/bench.db;
   // set this to "data/bench.db" to look at them in the observer.
   "db_path": "data/sandman.db",
   // Files of the "code" role (not implemented in this prototype yet).
   "workspace": "data/workspace",
-
   "api": {
     "port": 8700,
     // Optional shared secret. When set, API calls need "Authorization: Bearer <token>" or ?token=<token>.
     // The UIs at / and /observer are always served.
     "token": ""
   },
-
   "web": {
     // "live" searches the web; "corpus" serves the offline pages in bench/corpus/ (the benchmark forces it).
     "backend": "live",
     // SearXNG base URL (e.g. "https://searx.example.org") for live search. Empty: DuckDuckGo HTML, best effort.
     "searxng": ""
   },
-
   // Stop making model calls once this many USD are spent in one process. 0: no limit.
   "budget_usd": 0,
-
   // API key used by every model below that has no "api_key" of its own (an OpenRouter key by default).
   "api_key": "",
-
   // Which model does what. The role names are fixed by the code; the values are slugs from "models".
   // null: not set up. What that means is given per role.
   "roles": {
@@ -42,11 +39,10 @@
     // Grades benchmark answers; unused by serve. null: the benchmark stops with an error.
     "judge": "mimo-openrouter"
   },
-
   // Model endpoints, keyed by a slug of your choice. Any OpenAI-compatible server works (llama.cpp too).
-  // A model can serve several roles; they then share its slots. Models no role names are only used by
-  // `probe <slug>`. Keys left out: api_key "", reasoning_effort "none", reasoning_tokens 0, slots 1,
-  // temperature null, idle_timeout_s 60, quirks [].
+  // A model can serve several roles; they then share its slots.
+  // Defaults: api_key: "", reasoning_effort: "none", reasoning_tokens: 0, slots: 1, temperature: null,
+  // idle_timeout_s: 60, quirks: [].
   "models": {
     "qwen36-openrouter": {
       "base_url": "https://openrouter.ai/api/v1",
@@ -64,11 +60,22 @@
       // Abort a streaming call after this many seconds without a token.
       "idle_timeout_s": 60,
       // Engine quirks the gateway works around. `deno task probe <slug>` reports which apply to a model.
-      "quirks": ["keys_alphabetical", "unbounded_whitespace", "ignores_maxLength"]
+      "quirks": [
+        "keys_alphabetical",
+        "unbounded_whitespace",
+        "ignores_maxLength"
+      ]
     },
-    // A local llama.cpp server, e.g. for "main" with "qwen36-openrouter" as "interactive":
-    //   "qwen36-local": { "base_url": "http://localhost:8080/v1", "model": "qwen3.6-35b-a3b", "slots": 1,
-    //                     "temperature": 0.3, "quirks": ["keys_alphabetical", "unbounded_whitespace"] },
+    "qwen36-local": {
+      "base_url": "https://llm.tobtobxx.net/v1",
+      "model": "Qwen3.6-35B-A3B:MXFP4_MOE ",
+      "reasoning_effort": "none",
+      "reasoning_tokens": 0,
+      "slots": 1,
+      "temperature": null,
+      "idle_timeout_s": 120,
+      "quirks": []
+    },
     "mimo-openrouter": {
       "base_url": "https://openrouter.ai/api/v1",
       "model": "xiaomi/mimo-v2.6-pro",
@@ -80,10 +87,6 @@
       "idle_timeout_s": 90,
       "quirks": []
     },
-    // Embedding models are called at POST {base_url}/embeddings. Memory search ranks by meaning and by words together.
-    // Local llama.cpp (llama-server --embedding --pooling last) with jina-embeddings-v5-text-small-retrieval:
-    //   "jina-v5-local": { "base_url": "http://localhost:8080/v1", "model": "jina-embeddings-v5-small-retrieval:Q8_0",
-    //                      "query_prefix": "Query: ", "document_prefix": "Document: ", "min_similarity": 0.35 },
     "pplx-embed-openrouter": {
       "base_url": "https://openrouter.ai/api/v1",
       "model": "perplexity/pplx-embed-v1-0.6b",
@@ -95,6 +98,15 @@
       // score about 0.0–0.25 with pplx-embed-v1, related ones 0.3 and up.
       "min_similarity": 0.3,
       "slots": 2,
+      "idle_timeout_s": 30
+    },
+    "jina-embeddings-local": {
+      "base_url": "https://llm.tobtobxx.net/v1",
+      "model": "jina-embeddings-v5-small-retrieval:Q8_0",
+      "query_prefix": "Query: ",
+      "document_prefix": "Document: ",
+      "min_similarity": 0.3,
+      "slots": 4,
       "idle_timeout_s": 30
     }
   }
