@@ -11,8 +11,7 @@ export function segmentCapture(c: { transcript: string }): P {
     prompt: `The owner recorded a voice memo or wrote a quick note. It may contain several unrelated requests or
 remarks, and may contain transcription errors.
 
-Split it into separate items. An item is one subject: one thing the owner wants done, wants
-remembered, or asks, together with everything that belongs to it.
+Split it into separate items. An item is one thing the owner wants done, wants remembered, or asks.
 For each item, copy its words EXACTLY from the text (quote). Don't rephrase and don't combine two
 unrelated subjects into one item. Leave out filler ("uh", "oh and").
 
@@ -27,10 +26,6 @@ Examples:
 → items: [{quote: "Remind me to call the plumber tomorrow"}, {quote: "what was the name of that tile shop"}]
 "find out if the bike shop repairs e-bikes and what a service costs"
 → items: [{quote: "find out if the bike shop repairs e-bikes and what a service costs"}] (one subject, one item)
-"Look up when the museum opened and send me a summary of it on Monday"
-→ items: [{quote: "Look up when the museum opened and send me a summary of it on Monday"}] (the summary is about the research)
-"The library changed its opening hours. Find out the new ones."
-→ items: [{quote: "The library changed its opening hours. Find out the new ones."}] (background and request)
 
 Text:
 "${c.transcript}"
