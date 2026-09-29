@@ -8,7 +8,7 @@ written criteria about text quality and honesty.
 
 `deno task bench [filter…] [--full] [--repeat N] [--label name] [--min-pass PCT]`. A plain run takes the
 `HARD` cases in `bench/run.ts` (20 cases, about $0.007); `--full` runs all 144 cases (about $0.04 per repeat).
-CI runs the hard set once on every PR (see the end). Traces go to `data/bench.db`: set `"db_path"` to it
+The bench is not part of CI (see the end). Traces go to `data/bench.db`: set `"db_path"` to it
 and open `/observer`.
 
 **Setup.** Each case gets a fresh in-memory database, a fixed clock (Tue 29 Sep 2026, 08:14 Zurich), an
@@ -119,9 +119,7 @@ the 41 cases that exercise them, × 2, one call at a time; the code for it was r
 
 ## CI
 
-`.github/workflows/bench.yml` runs the hard set once per PR with `--min-pass 90`: a PR fails if more
-than 2 of 20 cases fail. Since #71 the hard set is exactly the cases that failed at least once in 20
-full runs, so it is flaky on purpose: about 2 failures per run on unchanged code. By those per-case
-rates the chance of a red run without any regression is 32% at `--min-pass 90`, 12% at 85, 3% at 80.
-A red run is a prompt to look, not proof of a regression: re-run the failing cases with `--repeat 5`.
-The workflow needs the `OPENROUTER_API_KEY` repository secret.
+The bench is not part of CI (#71). The hard set is flaky on purpose, about 2 failures per run on
+unchanged code, so a one-run gate would raise false alarms: an estimated 32% of runs at `--min-pass 90`. CI
+(`.github/workflows/check.yml`) runs only the type check and the prompt-schema lint. Run the bench
+locally before merging a prompt change; `--min-pass PCT` still makes a run exit with 1 below PCT %.

@@ -3,7 +3,7 @@
 // Runs each case in a fresh in-memory database, with the offline corpus and a fixed clock.
 // Writes bench/results/<stamp>-<label>.json + bench/results/latest.md, and copies all traces into
 // data/bench.db (set db_path to it in config.jsonc and open /observer).
-// --min-pass exits with 1 when fewer than PCT % of case runs pass (CI; see docs/BENCH.md).
+// --min-pass exits with 1 when fewer than PCT % of case runs pass.
 
 import { DB, withCtx } from "../src/db.ts";
 import { config, modelFor, modelSlug } from "../src/config.ts";
@@ -23,7 +23,7 @@ const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "
 // Episodes are not in this list: they cost most of a full run. Instead, the stage each one failed at
 // is here as a unit case (issue #27); the episodes run with --full.
 // planner/generate-trip is left out: it fails 18/20 until sequential recipes exist (#77), so it
-// can't show a regression and would fail the CI gate on its own.
+// can't show a regression.
 const HARD = [
   "desk/conversation-one-sentence", // 1
   "desk/status-from-context", // 1

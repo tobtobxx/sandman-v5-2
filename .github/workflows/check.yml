@@ -1,0 +1,23 @@
+# Type check and prompt-schema lint on every PR. No model calls: the bench runs locally (docs/BENCH.md).
+name: check
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno task check
+      - name: Prompt schemas (reasoning key sorts first)
+        run: deno run -A src/main.ts lint
