@@ -70,9 +70,9 @@ stopped. References like "that kit" across items are not resolved now; the topic
 (summary, cards, recent messages) covers most of them.
 
 **Desk later passes are gated (§6.6, row 16).** Instead of offering `done` among the actions on
-passes 2–3, a `desk_more` call asks "is a separate request still not handled? yes/no", and only
-on yes are the (remaining) actions offered. An intent already executed in the turn is not offered
-again.
+passes 2–3, a `desk_more` call asks whether another request is left (`nothing` /
+`another_request`; a yes/no version flipped its answer, issue #24), and only on `another_request`
+are the (remaining) actions offered. An intent already executed in the turn is not offered again.
 
 **`cancel_card` desk intent (P4, row 4).** Missing from §6.6; without it the desk claimed
 cancellations it couldn't do. Its receipt's undo re-creates the card from its contract (cancelled
