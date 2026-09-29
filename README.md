@@ -22,21 +22,9 @@ deno run -A src/main.ts lint    # every prompt schema: reasoning key sorts first
 With Nix: `nix run` starts the server, `nix run .#bench` runs the benchmark.
 
 Configuration lives in `config.jsonc` in the working directory (`--config path` for another file).
-If it is missing, sandman writes the default (`src/config.default.jsonc`, a comment on every setting) and exits. Keys left
-out fall back to the defaults. The main ones:
-
-| key | default | |
-|---|---|---|
-| `api_key` | — | used by every profile without its own `api_key` (OpenRouter by default) |
-| `profiles.small` | qwen3.6-35b-a3b / OpenRouter | `base_url`, `model`, `slots`, `quirks`, …; any OpenAI-compatible server (llama.cpp works) |
-| `profiles.judge` | xiaomi/mimo-v2.6-pro | bench judge only |
-| `db_path` | `data/sandman.db` | `serve --db path` overrides it; `data/bench.db` holds the last bench run's traces |
-| `web.backend` | `live` | `corpus` = offline pages from `bench/corpus/` |
-| `web.searxng` | — | search backend for `live`; otherwise DuckDuckGo HTML (best effort) |
-| `owner.name`, `owner.timezone` | Alex, Europe/Zurich | |
-| `api.port`, `api.token`, `budget_usd` | 8700, —, — | |
-
-Environment variables and `.env` are no longer read.
+If it is missing, sandman writes the default and exits. Every setting is explained in
+[src/config.default.jsonc](src/config.default.jsonc); keys left out of `config.jsonc` fall back to it.
+Environment variables and `.env` are not read.
 
 ## The two UIs
 

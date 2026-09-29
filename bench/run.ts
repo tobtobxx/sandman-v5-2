@@ -2,7 +2,7 @@
 // Runs the hard cases (HARD below), or every case with --full; filters narrow either set.
 // Runs each case in a fresh in-memory database, with the offline corpus and a fixed clock.
 // Writes bench/results/<stamp>-<label>.json + bench/results/latest.md, and copies all traces into
-// data/bench.db (open it with deno task serve --db data/bench.db → /observer).
+// data/bench.db (set db_path to it in config.jsonc and open /observer).
 
 import { DB, withCtx } from "../src/db.ts";
 import { config } from "../src/config.ts";

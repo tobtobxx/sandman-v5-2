@@ -4,8 +4,8 @@
   // Your name as the model sees it, and the time zone reminders and "today" are computed in.
   "owner": { "name": "Alex", "timezone": "Europe/Zurich" },
 
-  // SQLite database. The benchmark writes its traces to data/bench.db instead;
-  // view them with: deno task serve --db data/bench.db
+  // SQLite database. The benchmark always writes its traces to data/bench.db;
+  // set this to "data/bench.db" to look at them in the observer.
   "db_path": "data/sandman.db",
   // Files of the "code" role (not implemented in this prototype yet).
   "workspace": "data/workspace",
@@ -31,6 +31,8 @@
   "api_key": "",
 
   // Model endpoints. Any OpenAI-compatible server works (llama.cpp too).
+  // The profile names are fixed by the code: every model call uses "small" unless it names another
+  // profile, and only the benchmark's grader names "judge". Other names are only used by `probe <name>`.
   "profiles": {
     // The model that does all the work.
     "small": {

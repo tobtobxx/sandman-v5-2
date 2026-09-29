@@ -1,5 +1,5 @@
 // sandman <command> [--config path]   (default ./config.jsonc; written with defaults on first run)
-//   serve [--db path]  run API, dispatcher and both web UIs
+//   serve            run API, dispatcher and both web UIs
 //   bench [--full] [filter]   run the benchmark (see bench/README.md)
 //   probe [profile]  report engine quirks
 //   lint             check all prompt schemas (reasoning key first)
@@ -24,7 +24,6 @@ if (cmd === "serve" || cmd === "bench" || cmd === "probe") loadConfig(configPath
 
 switch (cmd) {
   case "serve": {
-    config.db_path = flag("--db") ?? config.db_path;
     setDefaultDb(new DB(config.db_path));
     const { serve } = await import("./server.ts");
     await serve();
@@ -49,5 +48,5 @@ switch (cmd) {
     break;
   }
   default:
-    console.log("usage: sandman serve [--db path] | bench [--full] [filter] | probe [profile] | lint   [--config path]");
+    console.log("usage: sandman serve | bench [--full] [filter] | probe [profile] | lint   [--config path]");
 }
