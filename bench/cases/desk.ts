@@ -45,6 +45,14 @@ function conversationWorld() {
   return { topic_id: conv.id, irr, tax };
 }
 
+// The conversation topic from an observer trace: a greeting, no other topics.
+function greeted() {
+  const conv = createConversationTopic();
+  postMessage({ topic_id: conv.id, role: "owner", kind: "text", body: "Hello :) How are you?" });
+  postMessage({ topic_id: conv.id, role: "sandman", kind: "text", body: "Hello! I am doing well and ready to assist you." });
+  return { topic_id: conv.id };
+}
+
 export const cases: Case[] = [
   desk("conversation-hi", conversationWorld, "hi", (o) =>
     all([o.receipts.length === 0, `receipts: ${kinds(o)}`], [!!o.turn.reply, "no reply"]), "conversation"),
@@ -66,12 +74,7 @@ export const cases: Case[] = [
   }, "conversation"),
   // From a real trace (desk_reply/v2): the research card was created, but the reply made up the hours
   // ("Monday to Friday from 8 am to 7 pm ...") instead of saying the research has started.
-  desk("research-reply-no-made-up-answer", () => {
-    const conv = createConversationTopic();
-    postMessage({ topic_id: conv.id, role: "owner", kind: "text", body: "Hello :) How are you?" });
-    postMessage({ topic_id: conv.id, role: "sandman", kind: "text", body: "Hello! I am doing well and ready to assist you." });
-    return { topic_id: conv.id };
-  }, "Can you research the opening hours of migros berikon?", (o) =>
+  desk("research-reply-no-made-up-answer", greeted, "Can you research the opening hours of migros berikon?", (o) =>
     all(
       [kinds(o) === "card_created", `receipts: ${kinds(o)}`],
       [!!o.turn.reply, "no reply"],
@@ -80,6 +83,14 @@ export const cases: Case[] = [
     criteria: ["The reply says the research has been started (or will be done) and does NOT state any opening hours or days", "The reply only claims actions that are listed as Done"],
     material: (o) => `Done this turn (recorded by the system): ${o.receipts.map((r: any) => r.text).join("; ") || "nothing"}\nReply to the owner: ${o.turn.reply}`,
   }),
+  // From a real trace (desk_args_new_work/v3): the "or states that it is not available" fallback became a
+  // criterion of its own, so a result with the hours failed verification. Criteria are all required.
+  desk("new-work-no-fallback-only-criterion", greeted, "Can you research the opening hours of migros berikon?", (o) => {
+    const dw: string[] = o.cards[0]?.done_when ?? [];
+    // "Or states that it is not available" as its own item is still fallback-only
+    const fallbackOnly = dw.map((c) => c.replace(/^\s*or\s+/i, "")).filter((c) => /not (available|found|published|listed)|unavailable/i.test(c) && !/\bor\b/i.test(c));
+    return all([kinds(o) === "card_created", `receipts: ${kinds(o)}`], [fallbackOnly.length === 0, `fallback-only criterion: ${JSON.stringify(dw)}`]);
+  }, "conversation"),
   desk("reminder-only", () => ({ topic_id: topic("Taxes 2026", "Tax return 2026").id }), "remind me Friday to file the tax extension", (o) => {
     const c = o.cards[0];
     const z = c ? zoned(new Date(c.due_at)) : null;
