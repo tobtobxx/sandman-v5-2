@@ -433,7 +433,16 @@ async function viewNeeds() {
       ${qDetails(q.details)}
       ${q.options?.length ? `<div class="opts">${q.options.map((o, i) => `<button class="opt" data-opt="${i}">${i + 1} · ${esc(o)}</button>`).join("")}</div>` : ""}
       <form class="qform"><input aria-label="Answer in your own words" placeholder="…or answer in your own words"><button class="btn">Answer</button></form></div>`).join("") || `<div class="empty">Nothing needs you right now.</div>`}
-    <div><button class="btn" id="brief">Brief me (scripted, for voice)</button></div><div id="briefing"></div></div></div>`;
+    ${briefing ? briefingHtml() : `<div><button class="btn" id="brief">Brief me (scripted, for voice)</button></div>`}</div></div>`;
+}
+// The running briefing lives here, not in the DOM: live updates (the briefing itself emits events)
+// re-render the view, and the transcript and the reply being typed have to survive that.
+let briefing = null; // { id, log: [{ said?, text }], ended, draft }
+function briefingHtml() {
+  const b = briefing;
+  return `<div id="briefing"><div class="panel" id="bl">${b.log.map((l) => `${l.said !== undefined ? `<div style="color:var(--muted);font-size:13px">› ${esc(l.said)}</div>` : ""}<div>${esc(l.text)}</div>`).join("")}</div>
+    ${b.ended ? `<div style="margin-top:8px"><button class="btn" id="brief">Brief me again</button></div>`
+      : `<form id="bf" class="qform" style="margin-top:8px"><input aria-label="Reply" placeholder="one / two / skip / repeat / stop" value="${esc(b.draft)}" autocomplete="off"><button class="btn">Reply</button></form>`}</div>`;
 }
 function reviewCard(r) {
   const acts = { filing_check: [["ok", "Looks right"]], unfiled_text: [["file", "File"], ["ignore", "Ignore"]], topic_merge: [["merge", "Merge"], ["keep", "Keep separate"]], topic_archived: [["undo", "Undo"], ["ok", "OK"]] }[r.kind] ?? [["ok", "OK"]];
@@ -634,7 +643,13 @@ async function render(navigated = false, keepFocus = false) {
       const focused = keepFocus || (document.activeElement && document.activeElement.id === "chatIn");
       swap(html); bindTopic(r.id, focused || navigated);
     }
-    else if (r.view === "needs") swap(await viewNeeds());
+    else if (r.view === "needs") {
+      const html = await viewNeeds();
+      const el = document.activeElement, inBf = !!el?.closest?.("#bf"), bf = el?.matches?.("#bf input") ? [el.selectionStart, el.selectionEnd] : null;
+      swap(html);
+      const input = $("#bf input");
+      if (input && (inBf || navigated || keepFocus)) { input.focus(); input.setSelectionRange(...(bf ?? [input.value.length, input.value.length])); }
+    }
     else if (r.view === "review") swap(await viewReview());
     else if (r.view === "board") swap(await viewBoard());
     else if (r.view === "memory") swap(await viewMemory());
@@ -704,19 +719,32 @@ document.addEventListener("submit", async (e) => {
     if (!text || !cardOpen) return;
     try { await api(`/cards/${cardOpen}/comment`, { text }); input.value = ""; await refreshCard(); } catch (err) { toast(err.message); }
   }
+  if (e.target.id === "bf") {
+    e.preventDefault();
+    const text = e.target.querySelector("input").value.trim();
+    if (text && briefing && !briefing.ended) briefReply(text);
+  }
   if (e.target.id === "memq") { e.preventDefault(); memq = e.target.querySelector("input").value; render(); }
 });
 async function briefStart() {
   const b = await api("/briefings", {});
-  $("#briefing").innerHTML = `<div class="panel" id="bl"><div>${esc(b.prompt.text)}</div></div><form id="bf" class="qform" style="margin-top:8px"><input aria-label="Reply" placeholder="one / two / skip / repeat / stop"><button class="btn">Reply</button></form>`;
-  $("#bf").onsubmit = async (e) => {
-    e.preventDefault();
-    const i = e.target.querySelector("input"); const t = i.value; i.value = "";
-    const r = await api(`/briefings/${b.id}/reply`, { text: t });
-    $("#bl").insertAdjacentHTML("beforeend", `<div style="color:var(--muted);font-size:13px">› ${esc(t)}</div><div>${esc(r.text)}</div>`);
-    if (r.ended) e.target.remove();
-  };
+  // A briefing with nothing to ask runs straight through to its closing line.
+  briefing = { id: b.id, log: [{ text: b.prompt.text }], ended: b.prompt.text.endsWith("That's all."), draft: "" };
+  render(false, true);
 }
+async function briefReply(text) {
+  const b = briefing;
+  b.draft = "";
+  b.log.push({ said: text, text: "…" });
+  render();
+  const line = b.log.at(-1);
+  try {
+    const r = await api(`/briefings/${b.id}/reply`, { text });
+    line.text = r.text; if (r.ended) b.ended = true;
+  } catch (err) { b.log.pop(); b.draft = text; toast(err.message); }
+  if (briefing === b) render();
+}
+document.addEventListener("input", (e) => { if (briefing && e.target.closest?.("#bf")) briefing.draft = e.target.value; });
 
 // ---------------------------------------------------------------- live updates
 let pending = null;

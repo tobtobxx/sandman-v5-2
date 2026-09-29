@@ -2,7 +2,8 @@
 // - JSON calls run under a JSON schema; output is validated and repaired locally.
 // - Every call sets max_tokens. Streaming with an idle timeout; no resend after a timeout.
 // - Guards: whitespace watchdog, repetition detection. One retry on parse/repetition errors.
-// - Every call is logged to llm_calls, linked to its session, card, topic and step.
+// - Every call is logged to llm_calls, linked to its session, card, topic and step, with the model's
+//   reasoning trace (if the engine streams one) kept apart from its output, also for failed calls.
 
 import { config, Profile } from "../config.ts";
 import { ctx, db, nowIso } from "../db.ts";
@@ -123,10 +124,10 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
   if (tags) row.eval_label = JSON.stringify({ tags });
   const s = slotsFor(profileName, p);
   await s.acquire(opts.priority ?? "normal");
-  let raw = "";
+  const out: StreamOut = { text: "", reasoning: "" };
   try {
-    const res = await stream(p, prompt, schema, opts);
-    raw = res.text;
+    const res = await stream(p, prompt, schema, opts, out);
+    const raw = res.text;
     Object.assign(row, { provider: res.provider, tokens_in: res.tin, tokens_out: res.tout, cost: res.cost });
     spend.usd += res.cost;
     spend.calls++;
@@ -167,7 +168,8 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
     const kind = String(row.error ?? "").split(":")[0];
     if (kind === "transport" || kind === "timeout") reportHealth(false, new LLMFailure(kind, String(row.error).slice(kind.length + 2)));
     else reportHealth(true);
-    row.raw_output = raw;
+    row.raw_output = out.text;
+    if (out.reasoning) row.reasoning = out.reasoning;
     row.ms = Date.now() - started;
     try {
       db().insert("llm_calls", row);
@@ -202,6 +204,18 @@ export function isRepetitive(text: string): boolean {
   return repeated / Math.max(1, w.length - 7) > 0.5;
 }
 
+/** Filled while streaming, so a failed call still leaves what the model produced. */
+interface StreamOut {
+  text: string;
+  reasoning: string;
+}
+
+/** Engines without a reasoning parser put the trace inline, as a leading <think> block. */
+export function splitThink(text: string): { text: string; reasoning: string } {
+  const m = text.match(/^\s*<think>([\s\S]*?)(?:<\/think>|$)/);
+  return m ? { text: text.slice(m[0].length), reasoning: m[1].trim() } : { text, reasoning: "" };
+}
+
 interface StreamResult {
   text: string;
   provider: string;
@@ -210,7 +224,7 @@ interface StreamResult {
   cost: number;
 }
 
-async function stream(p: Profile, prompt: string, schema: Schema | null, opts: CallOpts): Promise<StreamResult> {
+async function stream(p: Profile, prompt: string, schema: Schema | null, opts: CallOpts, out: StreamOut): Promise<StreamResult> {
   const body: Record<string, any> = {
     model: p.model,
     messages: [{ role: "user", content: prompt }],
@@ -251,7 +265,7 @@ async function stream(p: Profile, prompt: string, schema: Schema | null, opts: C
     }
     if (!res!.ok) throw new LLMFailure("transport", `HTTP ${res!.status}: ${(await res!.text()).slice(0, 300)}`);
     const reader = res!.body!.pipeThrough(new TextDecoderStream()).getReader();
-    let buf = "", text = "", provider = "", tin = 0, tout = 0, cost = 0, wsRun = 0;
+    let buf = "", provider = "", tin = 0, tout = 0, cost = 0, wsRun = 0;
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
@@ -272,9 +286,13 @@ async function stream(p: Profile, prompt: string, schema: Schema | null, opts: C
         }
         if (ev.error) throw new LLMFailure("transport", JSON.stringify(ev.error).slice(0, 300));
         provider ||= ev.provider ?? "";
-        const delta = ev.choices?.[0]?.delta?.content ?? "";
+        const d = ev.choices?.[0]?.delta;
+        // reasoning trace: `reasoning` (OpenRouter), `reasoning_content` (llama.cpp / vLLM)
+        const think = d?.reasoning ?? d?.reasoning_content ?? "";
+        if (typeof think === "string") out.reasoning += think;
+        const delta = d?.content ?? "";
         if (delta) {
-          text += delta;
+          out.text += delta;
           // whitespace watchdog: abort on a long run of whitespace
           const m = delta.match(/\s*$/)![0].length;
           wsRun = m === delta.length ? wsRun + m : m;
@@ -290,7 +308,12 @@ async function stream(p: Profile, prompt: string, schema: Schema | null, opts: C
         }
       }
     }
-    return { text, provider, tin, tout, cost };
+    const inline = splitThink(out.text);
+    if (inline.reasoning) {
+      out.text = inline.text;
+      out.reasoning = [out.reasoning, inline.reasoning].filter(Boolean).join("\n\n");
+    }
+    return { text: out.text, provider, tin, tout, cost };
   } catch (e) {
     if (ac.signal.aborted && ac.signal.reason instanceof LLMFailure) throw ac.signal.reason;
     throw e;
