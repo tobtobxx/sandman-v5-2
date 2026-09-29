@@ -601,8 +601,8 @@ function consolidationLine(st) {
 async function viewMemory() {
   const [ns, st] = await Promise.all([api(`/memory/notes${memq ? `?query=${encodeURIComponent(memq)}` : ""}`), api("/memory/status")]);
   return `<div class="scroll"><div class="center page"><h1>Memory</h1>
-    <form id="memq" style="display:flex;gap:6px"><input aria-label="Search notes" value="${esc(memq)}" placeholder="Search notes" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--panel)"><button class="btn">Search</button><button class="btn" type="button" id="consolidate"${st.running ? " disabled" : ""}>${st.running ? "Consolidating…" : "Consolidate now"}</button></form>
-    <div style="color:var(--muted);font-size:12px;margin:6px 0 10px">${esc(consolidationLine(st))}</div>
+    <form id="memq" style="display:flex;gap:6px"><input aria-label="Search memory" value="${esc(memq)}" placeholder="Search memory by meaning or words" style="flex:1;border:1px solid var(--line);border-radius:8px;padding:5px 9px;background:var(--panel)"><button class="btn">Search</button><button class="btn" type="button" id="consolidate"${st.running ? " disabled" : ""}>${st.running ? "Consolidating…" : "Consolidate now"}</button></form>
+    <div style="color:var(--muted);font-size:12px;margin:6px 0 10px">${esc(consolidationLine(st))}${memq ? " · Best matches first: what Sandman itself finds for this text" : ""}</div>
     ${ns.map((n) => `<div class="panel"><div><b>${esc(n.title)}</b> <span style="color:var(--muted);font-size:12px">${n.status === "pending" ? "pending · not consolidated yet" : n.kind}</span></div>
       ${n.claims.map((c) => `<div class="fact"><span${c.pending ? ` style="color:var(--muted)"` : ""}>${esc(c.text)}${c.stale ? ` <i style="color:var(--muted)">(may be outdated)</i>` : ""}</span><span style="color:var(--muted);font-size:12px">${String(c.observed_at).slice(0, 10)} · ${c.volatility}</span>${c.pending ? "" : `<button class="btn" data-retract="${c.id}">Retract</button>`}</div>`).join("")}</div>`).join("") || `<div class="empty">${memq ? "Nothing matches." : "Memory is empty."}</div>`}</div></div>`;
 }

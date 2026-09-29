@@ -15,6 +15,10 @@ export interface Profile {
   temperature: number | null;
   idle_timeout_s: number;
   quirks: string[];
+  // embedding profile only
+  query_prefix?: string;
+  document_prefix?: string;
+  min_similarity?: number;
 }
 
 /** The commented default config.jsonc; also the source of the defaults. */
@@ -125,7 +129,7 @@ export function loadConfig(path = "config.jsonc") {
   const unknown = Object.keys(user).filter((k) => !known.includes(k));
   if (unknown.length) console.warn(`${path}: ignoring unknown keys: ${unknown.join(", ")}`);
   for (const k of unknown) delete user[k];
-  const profileKeys = Object.keys(parseJsonc(DEFAULT_CONFIG_JSONC).profiles.small);
+  const profileKeys = Object.values(parseJsonc(DEFAULT_CONFIG_JSONC).profiles as Record<string, Profile>).flatMap((p) => Object.keys(p));
   for (const [name, p] of Object.entries(isObj(user.profiles) ? user.profiles : {})) {
     const extra = isObj(p) ? Object.keys(p).filter((k) => !profileKeys.includes(k)) : [];
     if (extra.length) console.warn(`${path}: profile ${name}: ignoring unknown keys: ${extra.join(", ")}`);

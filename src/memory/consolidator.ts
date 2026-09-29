@@ -1,11 +1,11 @@
 // Consolidator (DESIGN §7.5): offline merge of candidate facts into notes and claims.
 
-import { db, ftsQuery, j, nowIso, Row } from "../db.ts";
+import { db, j, nowIso, Row } from "../db.ts";
 import { newId } from "../ids.ts";
 import { config } from "../config.ts";
 import { llmJson } from "../llm/gateway.ts";
 import * as M from "../prompts/memory.ts";
-import { indexNote } from "./retriever.ts";
+import { indexNote, rankMemory, syncEmbeddings } from "./retriever.ts";
 import { createQuestion } from "../conversation/questions.ts";
 import { emit } from "../events.ts";
 import { PRICE } from "./facts.ts";
@@ -60,8 +60,7 @@ export async function resolveSubject(f: Row): Promise<{ note: Row; created: bool
     const names = [n.title, ...j<string[]>(n.aliases, [])].map((x) => x.toLowerCase());
     if (names.includes(subj.toLowerCase())) return { note: n, created: false, via: "exact" };
   }
-  const q = ftsQuery(`${subj}`);
-  const cands = q ? db().all(`SELECT n.* FROM notes_fts f JOIN notes n ON n.id=f.id WHERE notes_fts MATCH ? AND n.status='active' AND n.kind=? ORDER BY rank LIMIT 3`, q, kind) : [];
+  const cands = (await rankMemory(subj, { kinds: [kind], k: 3, priority: "background" })).map((id) => db().get(`SELECT * FROM notes WHERE id=?`, id));
   if (cands.length) {
     const p = M.matchSubject({ subject: subj, claim: f.text, notes: cands.map((n) => ({ id: n.id, title: n.title, one_liner: n.one_liner })) });
     const r = await llmJson<{ note_id: string }>("match_subject", p.prompt, p.schema, opts(p));
@@ -199,5 +198,7 @@ async function consolidateRun(limit: number): Promise<Record<string, number>> {
     }
   }
   emit("memory.consolidated", { payload: counts });
+  // embed the new notes and claims now, so the next search does not wait for it
+  syncEmbeddings("background").catch((e) => console.warn("memory embeddings:", (e as Error).message));
   return counts;
 }

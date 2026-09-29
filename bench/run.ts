@@ -12,7 +12,7 @@ import { seedRecipes } from "../src/work/recipes.ts";
 import { installHooks } from "../src/work/dispatcher.ts";
 import { Case, Check, group, judge, NOW, ownerProfile } from "./lib.ts";
 
-const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "verifier", "librarian", "memory", "answers", "episodes"];
+const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "verifier", "librarian", "memory", "search", "answers", "episodes"];
 
 // The cases that still fail now and then: each failed at least once in the last five saved runs
 // (v7, v8, v9, v10-worker, chat-v1). The rest pass reliably and only prove the floor; run them with

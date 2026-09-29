@@ -57,8 +57,8 @@ export function renderInputs(card: Card): string {
   return parts.join("\n\n");
 }
 
-export function memoryFor(card: Card): string {
-  return renderNotes(findNotes(`${card.title} ${card.goal}`));
+export async function memoryFor(card: Card): Promise<string> {
+  return renderNotes(await findNotes(`${card.title} ${card.goal}`));
 }
 
 /** Harness-recorded facts (P12), from tool_calls of all sessions of this card. */
@@ -108,7 +108,7 @@ async function runTool(card: Card, tool: string, args: Row): Promise<ToolResult>
     }
     case "write_artifact": {
       const name = String(args.name ?? "output.md");
-      const p = generateContent({ title: card.title, goal: card.goal, inputs: renderInputs(card), memory: memoryFor(card), name, what: String(args.what ?? ""), owner: `${config.owner.name}\n${profileText()}`.trim(), today: fmtNow() });
+      const p = generateContent({ title: card.title, goal: card.goal, inputs: renderInputs(card), memory: await memoryFor(card), name, what: String(args.what ?? ""), owner: `${config.owner.name}\n${profileText()}`.trim(), today: fmtNow() });
       const text = await llmText("generate_content", p.prompt, { maxTokens: p.maxTokens, version: p.version, card_id: card.id });
       const art = saveArtifact({ card_id: card.id, name, content: text, origin: "write", summary: String(args.what ?? "").slice(0, 200) });
       const preview = text.split("\n").filter((l) => l.trim()).slice(0, 3).join("\n");
@@ -135,7 +135,7 @@ export async function runWorker(card_id: string): Promise<Outcome> {
   const hashes = new Map<string, number>();
   let dupRun = 0;
   const profile = profileText();
-  const memory = memoryFor(card);
+  const memory = await memoryFor(card);
 
   for (let k = 1; k <= n; k++) {
     card = getCard(card.id);

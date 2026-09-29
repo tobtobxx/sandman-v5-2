@@ -20,7 +20,7 @@ import { replyBriefing, startBriefing } from "./conversation/briefing.ts";
 import { listReview } from "./conversation/review.ts";
 import { reviewAction, tidy } from "./conversation/tidy.ts";
 import { consolidate, consolidationRunning, consolidationStatus, rerender } from "./memory/consolidator.ts";
-import { findPendingFacts, noteView } from "./memory/retriever.ts";
+import { findNotes, listPendingFacts, NoteView, noteView, syncEmbeddings } from "./memory/retriever.ts";
 import { recordedFacts } from "./work/worker.ts";
 
 type H = (req: Request, p: Record<string, string>, body: Row, url: URL) => Promise<unknown> | unknown;
@@ -127,16 +127,18 @@ route("POST", "/cards/:id/retry", (_r, p) => {
 route("GET", "/artifacts/:id", (_r, p) => db().get(`SELECT * FROM artifacts WHERE id=?`, p.id));
 
 // ---------------------------------------------------------------- memory
-// Notes by FTS (prefix match on each word), plus candidate facts still waiting for the consolidator,
-// marked status "pending" (kind "fact", grouped by subject) so a search finds what the observer shows.
-route("GET", "/memory/notes", (_r, _p, _b, u) => {
-  const words = (u.searchParams.get("query") ?? "").match(/[\p{L}\p{N}]+/gu) ?? [];
-  const rows = words.length
-    ? db().all(`SELECT n.* FROM notes_fts f JOIN notes n ON n.id=f.id WHERE notes_fts MATCH ? ORDER BY rank LIMIT 50`, words.map((w) => `"${w}"*`).join(" OR "))
-    : db().all(`SELECT * FROM notes ORDER BY created_at DESC LIMIT 100`);
-  const notes = rows.map((n) => ({ ...noteView(n), status: n.status, aliases: j(n.aliases, []) }));
-  const pending = findPendingFacts(u.searchParams.get("query") ?? "", { mode: "browse", limit: 100 });
-  return [...notes, ...pending.map((p) => ({ ...p, kind: "fact", status: "pending", aliases: [] }))];
+// With a query: the same search, and the same results in the same order, that the librarian and workers
+// get for that text (findNotes). Without one: every note, newest first, then every pending fact.
+// Candidate facts still waiting for the consolidator come as status "pending" (kind "fact", grouped by subject).
+route("GET", "/memory/notes", async (_r, _p, _b, u) => {
+  const query = (u.searchParams.get("query") ?? "").trim();
+  const shown = (v: NoteView) => {
+    if (v.pending) return { ...v, kind: "fact", status: "pending", aliases: [] };
+    const n = db().get(`SELECT status, aliases FROM notes WHERE id=?`, v.id);
+    return { ...v, status: n.status, aliases: j(n.aliases, []) };
+  };
+  if (query) return (await findNotes(query, [], config.memory.top_k, "interactive")).map(shown);
+  return [...db().all(`SELECT * FROM notes ORDER BY created_at DESC LIMIT 100`).map(noteView), ...listPendingFacts()].map(shown);
 });
 route("GET", "/memory/notes/:id", (_r, p) => {
   const n = db().get(`SELECT * FROM notes WHERE id=?`, p.id);
@@ -193,7 +195,9 @@ route("GET", "/inspect/tables", () => db().all(`SELECT name FROM sqlite_master W
 route("GET", "/inspect/table/:name", (_r, p, _b, u) => {
   const ok = db().get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, p.name);
   if (!ok) throw new HttpError(404, "no table");
-  return db().all(`SELECT * FROM ${p.name} ORDER BY rowid DESC LIMIT ?`, Number(u.searchParams.get("limit") ?? 200));
+  // vectors are shown by their size, not their bytes
+  const cols = p.name === "embeddings" ? "id, grp, model, text, length(vec) / 4 AS dims" : "*";
+  return db().all(`SELECT ${cols} FROM ${p.name} ORDER BY rowid DESC LIMIT ?`, Number(u.searchParams.get("limit") ?? 200));
 });
 
 // ---------------------------------------------------------------- helpers
@@ -286,6 +290,7 @@ export async function serve() {
   seedRecipes();
   installModelAlerts();
   startDispatcher();
+  bg(syncEmbeddings("background")); // memory written before this version, or with another embedding model
   // captures not yet handled (model was down, server restarted) are retried with backoff (§13)
   setInterval(() => modelBackoff() || retryCaptures(), 5_000);
   retryCaptures();

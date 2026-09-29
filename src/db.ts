@@ -68,6 +68,9 @@ CREATE TABLE IF NOT EXISTS claims (id TEXT PRIMARY KEY, note_id TEXT, text TEXT,
 CREATE TABLE IF NOT EXISTS facts (id TEXT PRIMARY KEY, card_id TEXT, message_id TEXT, topic_id TEXT, subject TEXT,
   text TEXT, source TEXT, volatility TEXT, status TEXT DEFAULT 'pending', decision TEXT, decision_analysis TEXT,
   target_claim_id TEXT, decided_at TEXT, created_at TEXT);
+-- memory search vectors (retriever.ts): id is a note, claim or pending fact; grp the note or pending subject it
+-- counts for; model the embedding model and document prefix; text what was embedded; vec normalized float32
+CREATE TABLE IF NOT EXISTS embeddings (id TEXT PRIMARY KEY, grp TEXT, model TEXT, text TEXT, vec BLOB);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, aliases, one_liner, body);
 CREATE VIRTUAL TABLE IF NOT EXISTS topics_fts USING fts5(id UNINDEXED, title, aliases, summary);
@@ -139,6 +142,7 @@ export class DB {
 function norm(v: any) {
   if (v === undefined) return null;
   if (typeof v === "boolean") return v ? 1 : 0;
+  if (v instanceof Uint8Array) return v;
   if (v !== null && typeof v === "object") return JSON.stringify(v);
   return v;
 }
