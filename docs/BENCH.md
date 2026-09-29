@@ -24,9 +24,10 @@ about ±2 points. Every role works once the harness does its part; calls stay sm
 the engine ignores `maxLength`); no call failed outright.
 
 Still failing: **planner/generate-trip** nearly always. Free-mode plans can't express "hotels in
-the cities from step 1"; the fix is a sequential recipe (§5.6), not more prompt work.
-**memory/relevance-trivial**, **triage/write-missing-info** and **triage/big-trip-plan** fail
-about one run in five, and are borderline calls.
+the cities from step 1"; the fix is a sequential recipe (§5.6, #77), not more prompt work.
+**librarian/negative-note** fails about one run in four (#72; 3/10 on 29 Sep, before and after the
+#72 changes). The rest fail now and then; `triage/big-trip-plan` stopped failing once its check accepted
+`missing` (asking for dates first is defensible).
 
 ## What the bench changed in the harness
 
@@ -54,6 +55,7 @@ Each row was found in a trace, fixed, and confirmed by the next run. DEVIATIONS.
 | 18 | Provider ignores `anyOf`; tool name as action | Quirk repair in the gateway |
 | 19 | Dependent parts split into topics (#19) | `segment_capture/v3`: split only where each part stands alone |
 | 20 | Answer followed by extra card/add (#24) | `desk_more/v2`: named options instead of a negated yes/no |
+| 21 | Triage wrote "a letter about my claim" with placeholders instead of asking (#72) | `triage/v7`: the analysis also asks "does the result need anything only the owner knows?"; no "sensible assumption" clause. 5/20 → 20/20 |
 
 ## Lessons
 
