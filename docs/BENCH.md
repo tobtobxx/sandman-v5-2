@@ -24,7 +24,7 @@ about ±2 points. Every role works once the harness does its part; calls stay sm
 the engine ignores `maxLength`); no call failed outright.
 
 Still failing: **planner/generate-trip** nearly always. Free-mode plans can't express "hotels in
-the cities from step 1"; the fix is a sequential recipe (§5.6), not more prompt work.
+the cities from step 1"; the fix is a sequential recipe (§5.6, #77), not more prompt work.
 **librarian/negative-note** fails about one run in four (#72; 3/10 on 29 Sep, before and after the
 #72 changes). The rest fail now and then; `triage/big-trip-plan` stopped failing once its check accepted
 `missing` (asking for dates first is defensible).
@@ -69,15 +69,6 @@ Each row was found in a trace, fixed, and confirmed by the next run. DEVIATIONS.
 - **Short lists beat examples.** For #19, a three-line list of what stays together (background +
   request, a follow-up on a result, "it"/"why") took segment cases to 70/70; worked examples added
   nothing, and a one-line version got 94–97%.
-- **The analysis decides the later fields.** Triage's analysis only discussed whether the task fits one
-  session, so `missing_info` came out null even when the rule said to ask (#72: 15/20 wrong). Naming both
-  questions in the analysis instruction fixed it (0/20); the same rule wording without it didn't (7/10 wrong).
-  This is a question inside the analysis, not a separate gate, and it still primes a little: 3 extra
-  questions in 160 other triage runs.
-- **Check that a case matches production.** `memory/relevance-trivial` failed 1 in 5 because its fact had
-  no card, so the prompt said `From the task: ""`; with a card title it passes 60/60, unchanged prompt (#72).
-  A title that names the answer ("Visit the Federal Palace in Bern") makes it fail again: the model calls
-  the fact relevant to the task.
 - **Grow cases from live traces.** Rows 1 and 15 and the "hi gets no reply" bug came from the running
   server, not the bench; each became a case.
 - **Test stages, keep episodes for `--full`** (#27). Episodes cost two thirds of a hard run. `HARD`
