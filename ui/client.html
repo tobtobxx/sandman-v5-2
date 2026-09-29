@@ -50,8 +50,6 @@ aside { width: 260px; flex-shrink: 0; background: var(--side); border-right: 1px
 .badge { background: var(--badge); color: #fff; border-radius: 9px; font-size: 11px; padding: 1px 7px; font-weight: 600; flex-shrink: 0; }
 .newtag { font-size: 11px; font-weight: 600; color: var(--ok); flex-shrink: 0; }
 .side-bottom { margin-top: auto; border-top: 1px solid var(--line); padding-top: 10px; }
-.side-foot { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; font-size: 12px; color: var(--muted); }
-.side-foot select { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
 /* main */
 main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .scroll { flex: 1; overflow-y: auto; }
@@ -244,8 +242,6 @@ button.chip { border: 0; font: inherit; cursor: pointer; } button.chip:hover { f
     <div class="meta" style="padding: 0 10px">Topics</div>
     <nav class="navlist" id="topics"></nav>
     <div class="side-bottom navlist" id="secondary"></div>
-    <div class="side-foot"><label for="mode">Mode</label>
-      <select id="mode"><option>active</option><option>driving</option><option>dnd</option></select></div>
   </aside>
   <main id="main"></main>
 </div>
@@ -271,7 +267,6 @@ function route() {
 }
 window.addEventListener("hashchange", () => { $("#side").classList.remove("open"); if ($("#cardDlg").open) $("#cardDlg").close(); render(true); });
 $("#menuBtn").onclick = () => $("#side").classList.toggle("open");
-$("#mode").onchange = (e) => api("/presence", { mode: e.target.value, topic_id: route().view === "topic" ? route().id : null });
 
 // ---------------------------------------------------------------- sidebar
 let topicsCache = [];
@@ -660,7 +655,7 @@ async function render(navigated = false, keepFocus = false) {
     }
     else { location.hash = "home"; }
     if (cardOpen) await refreshCard();
-    if (navigated) api("/presence", { mode: $("#mode").value, topic_id: r.view === "topic" ? r.id : null }).catch(() => {});
+    if (navigated) api("/presence", { topic_id: r.view === "topic" ? r.id : null }).catch(() => {});
   } catch (err) {
     $("#main").innerHTML = `<div class="center page"><h1>Could not load this view</h1><p>${esc(err.message)}</p><a href="#home">Back to home</a></div>`;
   } finally {

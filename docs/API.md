@@ -93,7 +93,7 @@ Returns `{ message_id }`; the desk's receipts and reply arrive as events.
 | `POST /questions/:id/answer` | `{ option: <index> }` or `{ text }` | Answer; the card resumes |
 | `POST /cards/:id/cancel` · `/retry` · `/comment {text}` | | Card actions (board) |
 | `POST /briefings` · `/briefings/:id/reply {text}` | | Scripted briefing (kept for voice) |
-| `POST /presence` | `{ mode, topic_id }` | Notification mode and the topic on screen |
+| `POST /presence` | `{ topic_id }` | The topic on screen (its events are not pushed) |
 
 ## Secondary views (unchanged)
 
