@@ -7,6 +7,7 @@ import { createConversationTopic } from "../../src/conversation/topics.ts";
 import { db, j } from "../../src/db.ts";
 import { getCard } from "../../src/work/board.ts";
 import { zoned } from "../../src/conversation/when.ts";
+import { postMessage } from "../../src/conversation/messages.ts";
 
 type Out = { turn: Awaited<ReturnType<typeof deskTurn>>; ctx: any };
 
@@ -63,6 +64,22 @@ export const cases: Case[] = [
     const q = db().get(`SELECT * FROM questions`);
     return all([kinds(o) === "answered", `receipts: ${kinds(o)}`], [q.answer_option === "Yes", `answer ${q.answer_option}`]);
   }, "conversation"),
+  // From a real trace (desk_reply/v2): the research card was created, but the reply made up the hours
+  // ("Monday to Friday from 8 am to 7 pm ...") instead of saying the research has started.
+  desk("research-reply-no-made-up-answer", () => {
+    const conv = createConversationTopic();
+    postMessage({ topic_id: conv.id, role: "owner", kind: "text", body: "Hello :) How are you?" });
+    postMessage({ topic_id: conv.id, role: "sandman", kind: "text", body: "Hello! I am doing well and ready to assist you." });
+    return { topic_id: conv.id };
+  }, "Can you research the opening hours of migros berikon?", (o) =>
+    all(
+      [kinds(o) === "card_created", `receipts: ${kinds(o)}`],
+      [!!o.turn.reply, "no reply"],
+      [!/\d\s*(am|pm|uhr|h\b)|\d{1,2}[:.]\d{2}|\d\s*[-–]\s*\d|monday|saturday|mon\b|sat\b/i.test(o.turn.reply ?? ""), `reply states hours: ${o.turn.reply}`],
+    ), "conversation", {
+    criteria: ["The reply says the research has been started (or will be done) and does NOT state any opening hours or days", "The reply only claims actions that are listed as Done"],
+    material: (o) => `Done this turn (recorded by the system): ${o.receipts.map((r: any) => r.text).join("; ") || "nothing"}\nReply to the owner: ${o.turn.reply}`,
+  }),
   desk("reminder-only", () => ({ topic_id: topic("Taxes 2026", "Tax return 2026").id }), "remind me Friday to file the tax extension", (o) => {
     const c = o.cards[0];
     const z = c ? zoned(new Date(c.due_at)) : null;

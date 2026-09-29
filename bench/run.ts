@@ -26,6 +26,7 @@ const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "
 // can't show a regression.
 const HARD = [
   "desk/conversation-one-sentence", // 1
+  "desk/research-reply-no-made-up-answer", // observer trace: reply invented opening hours, 7/10
   "desk/status-from-context", // 1
   "librarian/narrow-stale-price", // 10
   "librarian/negative-note", // 3
