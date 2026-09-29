@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS tool_calls (id TEXT PRIMARY KEY, session_id TEXT, llm
 CREATE TABLE IF NOT EXISTS llm_calls (id TEXT PRIMARY KEY, call_type TEXT, prompt_version TEXT, model_profile TEXT,
   model TEXT, provider TEXT, session_id TEXT, card_id TEXT, topic_id TEXT, step INTEGER, attempt INTEGER, input TEXT,
   schema TEXT, raw_output TEXT, parsed TEXT, ok INTEGER, error TEXT, repaired TEXT, tokens_in INTEGER,
-  tokens_out INTEGER, cost REAL, ms INTEGER, at TEXT, eval_label TEXT);
+  tokens_out INTEGER, cost REAL, ms INTEGER, at TEXT, eval_label TEXT, reasoning TEXT);
 
 CREATE TABLE IF NOT EXISTS notes (id TEXT PRIMARY KEY, kind TEXT, title TEXT, aliases TEXT DEFAULT '[]',
   one_liner TEXT DEFAULT '', body_rendered TEXT DEFAULT '', status TEXT DEFAULT 'active', created_at TEXT);
@@ -87,7 +87,7 @@ export class DB {
     this.raw = new DatabaseSync(path);
     this.raw.exec(SCHEMA);
     // columns added after the first release: add them to existing databases
-    for (const [table, col, def] of [["topics", "kind", "TEXT DEFAULT 'subject'"], ["topics", "seen_at", "TEXT"], ["questions", "details", "TEXT"]]) {
+    for (const [table, col, def] of [["topics", "kind", "TEXT DEFAULT 'subject'"], ["topics", "seen_at", "TEXT"], ["questions", "details", "TEXT"], ["llm_calls", "reasoning", "TEXT"]]) {
       const cols = this.raw.prepare(`PRAGMA table_info(${table})`).all() as Row[];
       if (!cols.some((c) => c.name === col)) this.raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
     }

@@ -978,7 +978,7 @@ CREATE TABLE llm_calls      (id TEXT PRIMARY KEY, call_type TEXT, prompt_version
                              step INTEGER, attempt INTEGER, input JSON, raw_output TEXT, parsed JSON,
                              ok INTEGER, error TEXT /*timeout|parse|repetition|...*/, repaired JSON,
                              tokens_in INTEGER, tokens_out INTEGER, cost REAL, ms INTEGER, at TEXT,
-                             eval_label JSON);
+                             eval_label JSON, reasoning TEXT /*the model's thinking trace, if any*/);
 
 -- Memory
 CREATE TABLE notes          (id TEXT PRIMARY KEY, kind TEXT, title TEXT, aliases JSON, one_liner TEXT,

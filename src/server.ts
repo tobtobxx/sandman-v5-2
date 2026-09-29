@@ -169,7 +169,7 @@ route("GET", "/inspect/sessions/:id", (_r, p) => ({
 route("GET", "/inspect/calls", (_r, _p, _b, u) => {
   const t = u.searchParams.get("type"), bad = u.searchParams.get("failed");
   return db().all(
-    `SELECT id, call_type, model, provider, session_id, card_id, topic_id, step, attempt, ok, error, repaired, tokens_in, tokens_out, cost, ms, at, substr(raw_output,1,200) preview, eval_label
+    `SELECT id, call_type, model, provider, session_id, card_id, topic_id, step, attempt, ok, error, repaired, tokens_in, tokens_out, cost, ms, at, substr(raw_output,1,200) preview, length(reasoning) reasoning_chars, eval_label
      FROM llm_calls WHERE 1=1 ${t ? "AND call_type=?" : ""} ${bad ? "AND ok=0" : ""} ORDER BY at DESC, rowid DESC LIMIT 300`,
     ...(t ? [t] : []),
   );
