@@ -40,6 +40,13 @@ export const cases: Case[] = [
   research("paging", "E-bike repair at Velostation Nord", "Find out whether Velostation Nord at the main station repairs e-bikes and what an e-bike service costs.",
     ["States whether they repair e-bikes", "Names the price of an e-bike service, or states that it is not available"],
     (o) => all(finished(o), [has(o.text, "149"), `price 149 not found (it sits past the first page window): ${o.text.slice(0, 300)}`], [tools(o).includes("read_artifact"), `never paged: ${tools(o)}`])),
+  // episode/memory-reuse fails here: the price is in the summary but not in facts, so memory never gets it (#71)
+  research("paging-facts", "E-bike repair at Velostation Nord", "Find out whether Velostation Nord at the main station repairs e-bikes and what an e-bike service costs.",
+    ["States whether they repair e-bikes", "Names the price of an e-bike service, or states that it is not available"],
+    (o) => {
+      const facts: any[] = o.result?.facts ?? [];
+      return all(finished(o), [facts.some((f) => /149/.test(f.claim)), `no price fact: ${JSON.stringify(facts.map((f) => f.claim))}`], [facts.some((f) => /repair/i.test(f.claim) && /e-?bike/i.test(f.claim)), "no e-bike repair fact"]);
+    }),
   research("price-coverage", "Detail Gardena Micro-Drip starter set", "Find price and coverage for the Gardena Micro-Drip starter set.", ["Covers price and coverage, or states which are not available"],
     (o) => all(finished(o), [has(o.text, "89"), "price missing"], [/15 ?m/i.test(o.text), "coverage missing"])),
   research("facts-subject-rule", "Detail Hozelock Easy Drip kit", "Find price and coverage for the Hozelock Easy Drip kit.", ["Covers price and coverage, or states which are not available"],

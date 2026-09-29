@@ -1,4 +1,4 @@
-# Runs the hard bench set once per PR (docs/BENCH.md, "CI"). About $0.0075 per run.
+# Runs the hard bench set once per PR (docs/BENCH.md, "CI"). About $0.007 per run.
 # Needs the repository secret OPENROUTER_API_KEY.
 name: bench
 

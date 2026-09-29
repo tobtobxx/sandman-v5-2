@@ -7,7 +7,7 @@ card states, due dates, quotes, tool calls); otherwise an LLM judge (`xiaomi/mim
 written criteria about text quality and honesty.
 
 `deno task bench [filter…] [--full] [--repeat N] [--label name] [--min-pass PCT]`. A plain run takes the
-`HARD` cases in `bench/run.ts` (about $0.0075); `--full` runs all ~136 cases (about $0.035 per repeat).
+`HARD` cases in `bench/run.ts` (20 cases, about $0.007); `--full` runs all 144 cases (about $0.04 per repeat).
 CI runs the hard set once on every PR (see the end). Traces go to `data/bench.db`: set `"db_path"` to it
 and open `/observer`.
 
@@ -120,8 +120,8 @@ the 41 cases that exercise them, × 2, one call at a time; the code for it was r
 ## CI
 
 `.github/workflows/bench.yml` runs the hard set once per PR with `--min-pass 90`: a PR fails if more
-than 2 of 23 cases fail. The hard set is flaky on purpose, about 2 failures per run (generate-trip nearly
-always one), so this cutoff is strict: in the 7 single runs measured for #27, 1 had more than 2
-failures; by the per-case rates of all saved runs (older, worse versions included) it would be over
-half. A red run is a prompt to look, not proof of a regression: re-run the failing cases with
-`--repeat 5`. The workflow needs the `OPENROUTER_API_KEY` repository secret.
+than 2 of 20 cases fail. Since #71 the hard set is exactly the cases that failed at least once in 20
+full runs, so it is flaky on purpose: about 2 failures per run on unchanged code. By those per-case
+rates the chance of a red run without any regression is 32% at `--min-pass 90`, 12% at 85, 3% at 80.
+A red run is a prompt to look, not proof of a regression: re-run the failing cases with `--repeat 5`.
+The workflow needs the `OPENROUTER_API_KEY` repository secret.
