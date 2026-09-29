@@ -1,6 +1,6 @@
 // web_search / web_fetch backends.
 // - corpus: a fixed offline set of pages (bench/corpus/*.md) so benchmark runs are reproducible (§14.3).
-// - live: SearXNG (SANDMAN_SEARXNG=https://host) if set, else DuckDuckGo's HTML endpoint (best effort).
+// - live: SearXNG (web.searxng in config.jsonc) if set, else DuckDuckGo's HTML endpoint (best effort).
 
 import { config } from "../config.ts";
 
@@ -67,7 +67,7 @@ async function ddgSlot() {
 }
 
 async function liveSearch(query: string): Promise<SearchHit[]> {
-  const searx = Deno.env.get("SANDMAN_SEARXNG");
+  const searx = config.web.searxng;
   if (searx) {
     const r = await fetch(`${searx}/search?format=json&q=${encodeURIComponent(query)}`);
     const d = await r.json();
@@ -89,7 +89,7 @@ async function liveSearch(query: string): Promise<SearchHit[]> {
   });
   const html = await r.text();
   if (r.status === 202 || /anomaly-modal|challenge-form/.test(html)) {
-    throw new Error("DuckDuckGo served a bot challenge (rate limited). Try again later, or set SANDMAN_SEARXNG.");
+    throw new Error("DuckDuckGo served a bot challenge (rate limited). Try again later, or set web.searxng in config.jsonc.");
   }
   if (!r.ok) throw new Error(`DuckDuckGo returned HTTP ${r.status}.`);
   const hits: SearchHit[] = [];
@@ -117,11 +117,11 @@ export function htmlToText(html: string): string {
 }
 
 export async function webSearch(query: string): Promise<SearchHit[]> {
-  return config.web_backend === "corpus" ? corpusSearch(query) : await liveSearch(query);
+  return config.web.backend === "corpus" ? corpusSearch(query) : await liveSearch(query);
 }
 
 export async function webFetch(url: string): Promise<{ title: string; text: string } | null> {
-  if (config.web_backend === "corpus") {
+  if (config.web.backend === "corpus") {
     const norm = (u: string) => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
     const p = loadCorpus().find((p) => norm(p.url) === norm(url));
     return p ? { title: p.title, text: p.text } : null;

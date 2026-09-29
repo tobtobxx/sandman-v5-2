@@ -10,7 +10,7 @@ differs from the design, the reason is below. Bench-driven changes reference doc
 
 **Not implemented (prototype scope).** Speech-to-text and voice capture (the UI has a disabled
 button), text-to-speech, Web Push (the notifier computes levels and the client uses browser
-notifications while open), client tokens (one optional shared `SANDMAN_TOKEN`), capture merging
+notifications while open), client tokens (one optional shared `api.token`), capture merging
 within 10 s, the typing debounce, schedules/cron cards, projects and project briefs, recipe
 promotion and `generalize_recipe`, `render_note`/`render_brief` (note one-liners are rendered in
 code from claims), embeddings, the `code` role and its sandbox, the `large` escalation profile,
@@ -19,7 +19,7 @@ question nagging, quiet hours. `report_mode: desk` is not implemented; results a
 **Artifacts live in the database** (`artifacts.content`), not in `workspace/<card>/` files.
 Simpler to inspect and to isolate per bench case.
 
-**Live web search is best effort.** `SANDMAN_WEB=live` uses SearXNG if `SANDMAN_SEARXNG` is set,
+**Live web search is best effort.** `web.backend: "live"` uses SearXNG if `web.searxng` is set,
 else DuckDuckGo's HTML endpoint (form POST, throttled to one request per 6 s; a bot challenge is
 reported as a tool error, not as "no results"). The bench always uses the offline corpus (§14.3).
 

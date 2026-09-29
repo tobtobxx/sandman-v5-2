@@ -8,7 +8,7 @@ code it is; otherwise an LLM judge (`xiaomi/mimo-v2.6-pro`) checks written crite
 Run it: `deno task bench [filter…] [--full] [--repeat N] [--label name]`. Without `--full` only
 the hard cases run (`HARD` in `bench/run.ts`). Results land in
 `bench/results/`, and every trace goes into `data/bench.db`. Open that in the observer UI with
-`SANDMAN_DB=data/bench.db deno task serve` → `http://localhost:8700/observer`
+`deno task serve --db data/bench.db` → `http://localhost:8700/observer`
 (the *calls* tab shows the bench case of each call).
 
 ## Result

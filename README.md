@@ -12,7 +12,7 @@ See [docs/BENCH.md](docs/BENCH.md) for what the benchmark found and changed, and
 
 ```sh
 nix develop                     # or: install deno ≥ 2.2 yourself
-echo 'OPENROUTER_API_KEY=sk-or-…' > .env
+deno task serve                 # first run writes config.jsonc and exits: put your API key there
 deno task serve                 # http://localhost:8700  (client)  ·  /observer (all internal state)
 deno task bench                 # the hard cases; --full for all; filters: deno task bench desk/ --repeat 3
 deno task probe                 # which engine quirks apply
@@ -21,16 +21,22 @@ deno run -A src/main.ts lint    # every prompt schema: reasoning key sorts first
 
 With Nix: `nix run` starts the server, `nix run .#bench` runs the benchmark.
 
-| env | default | |
+Configuration lives in `config.jsonc` in the working directory (`--config path` for another file).
+If it is missing, sandman writes the default, with a comment on every setting, and exits. Keys left
+out fall back to the defaults. The main ones:
+
+| key | default | |
 |---|---|---|
-| `OPENROUTER_API_KEY` | — | also read from `.env` |
-| `SANDMAN_MODEL` / `SANDMAN_BASE_URL` | qwen3.6-35b-a3b / OpenRouter | any OpenAI-compatible server (llama.cpp works) |
-| `SANDMAN_JUDGE_MODEL` | xiaomi/mimo-v2.6-pro | bench judge only |
-| `SANDMAN_DB` | `data/sandman.db` | `data/bench.db` holds the last bench run's traces |
-| `SANDMAN_WEB` | `live` | `corpus` = offline pages from `bench/corpus/` |
-| `SANDMAN_SEARXNG` | — | search backend for `live`; otherwise DuckDuckGo HTML (best effort) |
-| `SANDMAN_OWNER`, `SANDMAN_TZ` | Alex, Europe/Zurich | |
-| `SANDMAN_PORT`, `SANDMAN_SLOTS`, `SANDMAN_TOKEN`, `SANDMAN_BUDGET_USD` | 8700, 4, —, — | |
+| `api_key` | — | used by every profile without its own `api_key` (OpenRouter by default) |
+| `profiles.small` | qwen3.6-35b-a3b / OpenRouter | `base_url`, `model`, `slots`, `quirks`, …; any OpenAI-compatible server (llama.cpp works) |
+| `profiles.judge` | xiaomi/mimo-v2.6-pro | bench judge only |
+| `db_path` | `data/sandman.db` | `serve --db path` overrides it; `data/bench.db` holds the last bench run's traces |
+| `web.backend` | `live` | `corpus` = offline pages from `bench/corpus/` |
+| `web.searxng` | — | search backend for `live`; otherwise DuckDuckGo HTML (best effort) |
+| `owner.name`, `owner.timezone` | Alex, Europe/Zurich | |
+| `api.port`, `api.token`, `budget_usd` | 8700, —, — | |
+
+Environment variables and `.env` are no longer read.
 
 ## The two UIs
 
