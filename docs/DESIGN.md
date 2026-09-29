@@ -992,7 +992,7 @@ CREATE TABLE facts          (id TEXT PRIMARY KEY, card_id TEXT, message_id TEXT,
 
 -- Search
 CREATE VIRTUAL TABLE notes_fts    USING fts5(title, aliases, one_liner, body_rendered, content='notes');
-CREATE VIRTUAL TABLE topics_fts   USING fts5(title, summary, content='topics');
+CREATE VIRTUAL TABLE topics_fts   USING fts5(title, aliases, summary, content='topics');
 CREATE VIRTUAL TABLE recipes_fts  USING fts5(title, description, content='recipes');
 CREATE VIRTUAL TABLE episodic_fts USING fts5(kind, ref_id, text);
 ```

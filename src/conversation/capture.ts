@@ -99,7 +99,7 @@ export async function routeItem(quote: string, opts: { allowChat?: boolean } = {
   const cands = routeCandidates(quote);
   let choice = "new", confidence: "high" | "low" = "high";
   if (cands.length || allowChat) {
-    const p = C.routeItem({ quote, candidates: cands.map((t) => ({ slug: t.slug, title: t.title, summary: t.summary ?? "", last_active: fmtDate(new Date(t.last_activity_at ?? t.created_at)) })), today: fmtDate(now()), allowChat });
+    const p = C.routeItem({ quote, candidates: cands.map((t) => ({ slug: t.slug, title: t.title, aliases: j<string[]>(t.aliases, []), summary: t.summary ?? "", last_active: fmtDate(new Date(t.last_activity_at ?? t.created_at)) })), today: fmtDate(now()), allowChat });
     const r = await llmJson<{ choice: string; confidence: "high" | "low" }>("route_item", p.prompt, p.schema, { maxTokens: p.maxTokens, version: p.version, priority: "interactive" });
     choice = r.choice;
     confidence = r.confidence;
