@@ -1,7 +1,7 @@
 // Memory retrieval (DESIGN §7.6): exact/alias lookup, FTS and embeddings; staleness computed in code.
 
 import { db, ftsQuery, ftsWords, j, now, Row } from "../db.ts";
-import { config } from "../config.ts";
+import { config, modelFor } from "../config.ts";
 import { embed, LLMFailure, Priority } from "../llm/gateway.ts";
 
 export interface NoteView {
@@ -150,9 +150,9 @@ export function listPendingFacts(): NoteView[] {
 // fact as "<subject>: <text>". A note or pending subject scores as its best-matching text. Vectors are
 // made on demand: a search first embeds whatever is new or changed (syncEmbeddings), and drops the rest.
 
-const embeddingOn = () => !!config.profiles.embedding?.model;
+const embeddingOn = () => config.roles.embedding != null;
 /** Vectors are only comparable within one model and document prefix. */
-const embeddingModel = () => `${config.profiles.embedding.model}|${config.profiles.embedding.document_prefix ?? ""}`;
+const embeddingModel = () => `${modelFor("embedding").model}|${modelFor("embedding").document_prefix ?? ""}`;
 
 function memoryTexts(): { id: string; grp: string; text: string }[] {
   const out = db().all(`SELECT id, title, aliases FROM notes WHERE status='active' AND kind != 'profile'`)
@@ -194,7 +194,7 @@ async function semanticScores(query: string, priority: Priority = "normal"): Pro
     const rows = db().all(`SELECT grp, vec FROM embeddings WHERE model=?`, embeddingModel());
     if (!rows.length) return best;
     const [q] = await embed([query], "query", priority);
-    const min = config.profiles.embedding.min_similarity ?? 0.3;
+    const min = modelFor("embedding").min_similarity ?? 0.3;
     for (const r of rows) {
       const v = new Float32Array((r.vec as Uint8Array).slice().buffer);
       if (v.length !== q.length) continue;

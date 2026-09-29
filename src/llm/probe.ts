@@ -1,12 +1,15 @@
 // Quirk probe (DESIGN §10.2): a few fixed calls that reveal how an engine behaves under a schema.
 
 import { llmJson, llmText } from "./gateway.ts";
+import { isRole, modelSlug } from "../config.ts";
 import { obj, str } from "./schema.ts";
 import { db } from "../db.ts";
 
-export async function probe(profile = "small") {
+/** `name`: a model slug, or a role (its model is probed). */
+export async function probe(name = "main") {
   const found: string[] = [];
-  const opts = { maxTokens: 300, profile };
+  const model = isRole(name) ? modelSlug(name) : name;
+  const opts = { maxTokens: 300, model };
 
   // 1. key order: schema lists zeta before alpha; does output follow schema order or alphabetical?
   const s1 = { type: "object", properties: { zeta: str(), alpha: str() }, required: ["zeta", "alpha"], additionalProperties: false };
@@ -26,7 +29,7 @@ export async function probe(profile = "small") {
   if (!r3.poem.includes("\n")) found.push("drops_newlines_in_strings");
 
   // 4. plain text works
-  const t = await llmText("probe_text", "Say hello in three words.", { maxTokens: 20, profile });
+  const t = await llmText("probe_text", "Say hello in three words.", { maxTokens: 20, model });
   if (!t) found.push("empty_text");
 
   return found;

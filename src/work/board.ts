@@ -165,5 +165,5 @@ function onTerminal(c: Card) {
 }
 
 export function maxSteps(role: string) {
-  return config.roles[role]?.steps ?? 8;
+  return config.worker_roles[role]?.steps ?? 8;
 }

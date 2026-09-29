@@ -75,7 +75,7 @@ Every output the harness parses MUST be produced under a JSON schema or grammar,
 - Every call sets `max_tokens`. The gateway validates locally, **truncates** over-long strings instead of failing, and fills missing optional keys with defaults.
 - **Field order is part of the schema design.** Reasoning comes before the decision it justifies. Because some engines emit keys alphabetically, the reasoning key MUST sort alphabetically before every decision key (convention: `analysis`).
 - **Long free text is produced by a separate plain-text call.** File bodies, reports, emails and replies come from that call; the JSON action only names and describes the content (`write_artifact(name, what)`).
-- Each model profile has a **known-quirks list** (e.g. "keys alphabetical", "needs compact-JSON hint", "unbounded whitespace after `{`") and the benchmark is rerun per engine.
+- Each model has a **known-quirks list** (e.g. "keys alphabetical", "needs compact-JSON hint", "unbounded whitespace after `{`") and the benchmark is rerun per engine.
 
 > **Why:** grammar engines differ. Beyond producing valid JSON, they vary in key order, whitespace handling, enforcement of `maxLength` and required keys, and escaping of newlines inside strings.
 >
@@ -210,7 +210,7 @@ Context packing, toolset shape, tool descriptions and **tool-result wording** ar
 - Python 3.12, asyncio; FastAPI for the API, server-sent events (SSE) for the event stream.
 - SQLite in WAL mode, FTS5; `sqlite-vec` only if embeddings earn their keep (§19).
 - LLM access through an OpenAI-compatible HTTP API; llama.cpp server locally (streaming, JSON schema / GBNF). OpenRouter or similar for benchmarking.
-- Speech-to-text: a local Whisper-class model (e.g. whisper.cpp or faster-whisper) behind the `speech` profile. Text-to-speech is the client's job (OS voices) in v5.
+- Speech-to-text: a local Whisper-class model (e.g. whisper.cpp or faster-whisper) behind the `speech` role. Text-to-speech is the client's job (OS voices) in v5.
 - The web UI and any local app are separate projects that consume the API (Appendix B).
 
 ---
@@ -464,7 +464,7 @@ Each slot has a safety cap (§17). **Measured:** worker steps average ~540 input
 On `fail`, verification failure, or lease expiry:
 
 1. `attempt < max_attempts` (default 2) → `ready`, with the failure reason as a comment.
-2. If a `large` profile is configured → one attempt on it.
+2. If the `large` role is set up → one attempt on it.
 3. Otherwise → `blocked` (`escalation`) with a question to the owner: "*Card X* failed twice: <reason>. Retry / cancel / add guidance?"
 
 `fail(out_of_scope | unclear)` skips step 1.
@@ -472,8 +472,8 @@ On `fail`, verification failure, or lease expiry:
 ### 5.11 Dispatcher, leases and concurrency
 
 - Pick the highest-priority runnable card, acquire a lease, run the appropriate step, apply the outcome **in one transaction**. Renew the lease after each worker step; reclaim expired leases at startup and periodically.
-- The gateway exposes N concurrent **slots** per model profile. Priorities: `interactive` (router, desk) > `high` (synthesis, unblocked cards) > `normal` > `background`.
-- One slot SHOULD be reserved for interactive calls, or a separate small profile SHOULD serve the router and desk. An owner message must never wait behind a long worker session.
+- The gateway exposes N concurrent **slots** per model (roles on the same model share them, §10.2). Priorities: `interactive` (router, desk) > `high` (synthesis, unblocked cards) > `normal` > `background`.
+- One slot SHOULD be reserved for interactive calls, or a separate model SHOULD serve the router and desk (the `interactive` role, §10.2). An owner message must never wait behind a long worker session.
 - Unmeasured so far (§19): behaviour under a single slot on a local model.
 
 ### 5.12 Hard limits (defaults)
@@ -527,7 +527,7 @@ Sandman owns all state; clients (web UI, phone app, CLI) are views of it (Append
 
 `POST /captures {text? | audio?, url?, client_msg_id, source}`, where `source` is `voice`, `text`, `share` or `cli`. This is the single entry point for "just telling the swarm something", from a phone widget, a voice memo button, the share sheet, a watch or a terminal.
 
-**Transcription.** Audio is transcribed on the Sandman host by a local speech model (the `speech` profile, e.g. a Whisper-class model). Its vocabulary prompt is built from active topic titles and entity note titles, capped at ~200 tokens, so names come out right. The transcript is stored on the capture; the audio is kept as an artifact for `capture_audio_days` (default 7). A client MAY transcribe on the device and send text instead.
+**Transcription.** Audio is transcribed on the Sandman host by a local speech model (the `speech` role, e.g. a Whisper-class model). Its vocabulary prompt is built from active topic titles and entity note titles, capped at ~200 tokens, so names come out right. The transcript is stored on the capture; the audio is kept as an artifact for `capture_audio_days` (default 7). A client MAY transcribe on the device and send text instead.
 
 **Merging.** Captures from the same client within `capture_merge_seconds` (default 10) are merged before segmentation, so "…oh, and one more thing" in a second memo belongs to the same capture.
 
@@ -828,7 +828,7 @@ For each pending candidate:
 - `evergreen`, or different source types → both claims `disputed`, and a `memory_conflict` question in the needs-you list (§6.9), phrased for voice: "Two notes disagree on *X*: A or B? 1: A, 2: B, 3: keep both." Such questions block no work and therefore rank last.
 - Owner-sourced claims about the owner always win over web-sourced ones.
 
-The consolidator is the best place to spend a stronger model if one is available intermittently (`consolidator_profile`).
+The consolidator is the best place to spend a stronger model if one is available intermittently (the `large` role).
 
 ### 7.6 Librarian (pre-flight)
 
@@ -1003,7 +1003,7 @@ CREATE VIRTUAL TABLE episodic_fts USING fts5(kind, ref_id, text);
 
 ### 10.1 Gateway responsibilities
 
-- One entry point: `call(call_type, inputs, *, profile=None, allowed=None) -> Parsed | Text`.
+- One entry point: `call(call_type, inputs, *, role=None, allowed=None) -> Parsed | Text`.
 - Loads the versioned prompt template and schema (`prompts/<call_type>/v<N>.md`, `.schema.json`, `examples.jsonl`). Tool-result templates live in `prompts/tool_results/`.
 - Applies **dynamic restrictions**: enum narrowing (`allowed`) and removal of options.
 - **Output handling:**
@@ -1012,30 +1012,37 @@ CREATE VIRTUAL TABLE episodic_fts USING fts5(kind, ref_id, text);
   - Profile quirk handling (§10.2).
 - **Model-failure guards** (§11): streaming with an idle timeout, no resend after a timeout, repetition detection.
 - **Retry policy:** one retry on a parse or repetition error, with the same input and lower temperature. No retry on timeout (§11). Then `LLMFailure`, which the caller maps to a state transition, never an unhandled exception.
-- Concurrency slots and priorities per profile (§5.11).
+- Concurrency slots and priorities per model (§5.11).
 - Logs every call to `llm_calls`, linked to its session, card, topic and step.
 
-### 10.2 Model profiles and quirks
+### 10.2 Models, roles and quirks
+
+Models are endpoints under a slug the owner chooses; roles are fixed by the code and name the model they run on. A role set to `null` is not set up: it falls back to another role, stops Sandman at startup, or fails when used, depending on the role. A model can serve several roles; they then share its slots.
 
 ```yaml
-profiles:
-  small:
+roles:
+  main: qwen-local             # all work; required
+  interactive: qwen-openrouter # calls the owner waits on (router, desk); null → main
+  embedding: jina-local        # memory search; required
+  judge: null                  # benchmark grader; null → the benchmark stops
+  large: null                  # planned: escalation and consolidation
+  speech: whisper-local        # planned
+models:
+  qwen-local:
     base_url: http://localhost:8080/v1
     model: qwen-q4
     slots: 2
-    reserve_interactive: 1
+    reserve_interactive: 1     # planned
     thinking: off
     stream: true
     idle_timeout_s: 60
     quirks: [keys_alphabetical, unbounded_whitespace]   # discovered by the quirk probe
-  bench:
+  qwen-openrouter:
     base_url: https://openrouter.ai/api/v1
     model: qwen/qwen3.6-35b-a3b
     thinking: off
     quirks: [keys_alphabetical, drops_newlines_in_strings, ignores_maxLength]
-  large: null      # optional, for escalation and consolidation
-  embed: null      # optional; see §19
-  speech:
+  whisper-local:
     base_url: http://localhost:8090/v1   # OpenAI-compatible /audio/transcriptions (whisper.cpp server or similar)
     model: whisper-small
     vocabulary_tokens: 200              # topic titles + entity note titles as the initial prompt
@@ -1051,7 +1058,7 @@ Known quirks and the gateway's response:
 | `drops_required_keys` | Parse error → one retry. |
 | `drops_newlines_in_strings` | Irrelevant by design: no long text inside JSON. |
 
-A **quirk probe** script (`sandman probe <profile>`) runs a small fixed set of calls and reports which quirks apply. Run it for every new engine or quantization, followed by the benchmark.
+A **quirk probe** script (`sandman probe <slug or role>`) runs a small fixed set of calls and reports which quirks apply. Run it for every new engine or quantization, followed by the benchmark.
 
 ### 10.3 Call catalog
 
@@ -1089,7 +1096,7 @@ A **quirk probe** script (`sandman probe <profile>`) runs a small fixed set of c
 | `render_brief` / `render_note` | Consolidator | text | markdown | 700 |
 | `generalize_recipe` | Recipes | text | YAML draft (owner reviews) | 500 |
 
-Speech-to-text runs on the `speech` profile and is traced like an LLM call (`call_type = transcribe`).
+Speech-to-text runs on the `speech` role and is traced like an LLM call (`call_type = transcribe`).
 
 ### 10.4 Prompt and schema rules
 
@@ -1264,7 +1271,7 @@ sandman/
 - **Accept:** (1) a question about something researched a week earlier is `answered` with zero worker steps; (2) a stale price is `narrow`ed to a price check; (3) duplicate facts from synthesis become corroborations; (4) an owner preference appears in the profile after the nightly run without manual action.
 
 ### M5 — Voice, briefings and tidy-up
-- Audio captures: `speech` profile, vocabulary prompt from topic and note titles, audio kept as artifacts.
+- Audio captures: `speech` role, vocabulary prompt from topic and note titles, audio kept as artifacts.
 - Briefings: script assembly, the harness dialogue state machine, `skip` / `repeat` / `stop`, `driving` mode start; spoken forms of confirmations and prompts.
 - Nightly tidy-up: merge candidates with `topic_same`, project suggestions, archive notices; `topic_merge` accept path (moves messages, cards and questions; slug alias).
 - **Accept:** (1) a recorded three-item voice memo from the eval set produces the same items and topics as its text version; (2) a briefing with three questions is completed by voice with at most one model call; (3) two topics about the same thing produce a merge suggestion, and accepting it leaves no orphaned cards or questions.
@@ -1297,7 +1304,7 @@ notifier:
   max_push_per_day: 6
 board: {max_children: 5, max_attempts: 2, max_llm_calls_per_tree: 40, lease_seconds: 300}
 triage: {compare_split_threshold: null}      # open question 1
-roles:
+worker_roles:
   research:   {steps: 10, output_tokens: 1500, tools: [web_search, web_fetch, read_artifact]}
   write:      {steps: 6,  output_tokens: 3000, tools: [read_artifact, write_artifact]}
   synthesize: {steps: 6,  output_tokens: 3000, tools: [read_artifact, write_artifact]}
@@ -1308,7 +1315,7 @@ context_caps: {profile: 300, brief: 600, notes: 1200, inputs: 1500, comments: 50
 memory:
   volatility_max_age_days: {volatile: 7, slow: 180, evergreen: null}
   librarian: {skip_roles: [code], top_k: 6}
-  consolidator: {at: "03:00", min_pending: 20, profile: small}
+  consolidator: {at: "03:00", min_pending: 20, role: main}
 ```
 
 ---
@@ -1318,7 +1325,7 @@ memory:
 The owner is driving. Tuesday 08:14.
 
 1. **Capture.** The owner taps the capture button on the phone and says: "Garden: the drip kit also needs to reach the two balcony pots. Uh, and remind me Friday to file the tax extension. Oh, and can you find out if the bike shop near the station repairs e-bikes." The app posts the audio (`POST /captures {audio, source: voice}`); the phone is in `driving` mode.
-2. **Transcribe.** The `speech` profile transcribes it, with topic titles ("Raised bed irrigation", "Taxes 2026", …) and note titles ("Gardena Micro-Drip starter set", …) as vocabulary.
+2. **Transcribe.** The `speech` role transcribes it, with topic titles ("Raised bed irrigation", "Taxes 2026", …) and note titles ("Gardena Micro-Drip starter set", …) as vocabulary.
 3. **Segment.** `segment_capture` returns 3 items, each quoting its span. All 3 quotes match the transcript; the uncovered words ("Uh, and", "Oh, and") are below the unfiled threshold.
 4. **Route.**
    - Item 1: `route_item` sees the explicitly named "Garden" and chooses `irrigation` (high).

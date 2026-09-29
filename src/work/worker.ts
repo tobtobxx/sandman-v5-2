@@ -141,7 +141,7 @@ export async function runWorker(card_id: string): Promise<Outcome> {
     card = getCard(card.id);
     if (card.state !== "running") return endSession(session_id, "interrupted", k - 1), "fail";
     // applicability (P4): read_artifact only when something is saved
-    const tools = config.roles[role].tools.filter((t) => t !== "read_artifact" || cardArtifacts(card).length > 0);
+    const tools = config.worker_roles[role].tools.filter((t) => t !== "read_artifact" || cardArtifacts(card).length > 0);
     const cmts = comments(card.id).map((c) => `${c.author}: ${c.body}`);
     const p = workerStep({
       role, tools, withItems, owner: profile, title: card.title, goal: card.goal, done_when: card.done_when, constraints: card.constraints,

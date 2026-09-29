@@ -5,7 +5,7 @@
 // - Every call is logged to llm_calls, linked to its session, card, topic and step, with the model's
 //   reasoning trace (if the engine streams one) kept apart from its output, also for failed calls.
 
-import { config, Profile } from "../config.ts";
+import { config, ModelConfig, modelFor, ModelRole, modelSlug } from "../config.ts";
 import { ctx, db, nowIso } from "../db.ts";
 import { newId } from "../ids.ts";
 import { Schema, validate, wireSchema } from "./schema.ts";
@@ -14,7 +14,10 @@ export type Priority = "interactive" | "high" | "normal" | "background";
 
 export interface CallOpts {
   maxTokens: number;
-  profile?: string;
+  /** Default: "interactive" for interactive calls, else "main". */
+  role?: ModelRole;
+  /** A model slug from config.models, instead of a role (the quirk probe). */
+  model?: string;
   priority?: Priority;
   session_id?: string;
   card_id?: string;
@@ -52,7 +55,7 @@ function reportHealth(reachable: boolean, e?: LLMFailure) {
 // ---- spend tracking (the benchmark key is budget-limited) ----
 export const spend = { usd: 0, calls: 0, byType: {} as Record<string, { calls: number; usd: number; tin: number; tout: number }> };
 
-// ---- priority slots per profile (§5.11) ----
+// ---- priority slots per model (§5.11); roles on the same model share them ----
 const PRI: Record<Priority, number> = { interactive: 0, high: 1, normal: 2, background: 3 };
 class Slots {
   busy = 0;
@@ -76,7 +79,7 @@ class Slots {
   }
 }
 const slots: Record<string, Slots> = {};
-const slotsFor = (name: string, p: Profile) => (slots[name] ??= new Slots(p.slots));
+const slotsFor = (slug: string, m: ModelConfig) => (slots[slug] ??= new Slots(m.slots));
 
 // ---- public API ----
 export async function llmJson<T = any>(callType: string, prompt: string, schema: Schema, opts: CallOpts): Promise<T> {
@@ -109,19 +112,21 @@ export async function llmText(callType: string, prompt: string, opts: CallOpts):
 }
 
 async function callOnce(callType: string, prompt: string, schema: Schema | null, opts: CallOpts, attempt: number): Promise<any> {
-  const profileName = opts.profile ?? "small";
-  const p = config.profiles[profileName];
+  const role = opts.role ?? (opts.priority === "interactive" ? "interactive" : "main");
+  const slug = opts.model ?? modelSlug(role);
+  const p = config.models[slug];
+  if (!p) throw new Error(`no model "${slug}" in config.models`);
   const budget = config.budget_usd;
   if (budget && spend.usd > budget) throw new LLMFailure("budget", `spend limit ${budget} USD reached`);
   const id = newId("cal");
   const row: Record<string, any> = {
-    id, call_type: callType, prompt_version: opts.version ?? "v1", model_profile: profileName, model: p.model,
+    id, call_type: callType, prompt_version: opts.version ?? "v1", model_profile: opts.model ?? role, model: p.model,
     session_id: opts.session_id, card_id: opts.card_id, topic_id: opts.topic_id, step: opts.step, attempt,
     input: prompt, schema: schema ? JSON.stringify(schema) : null, at: nowIso(),
   };
   const tags = ctx().tags;
   if (tags) row.eval_label = JSON.stringify({ tags });
-  const s = slotsFor(profileName, p);
+  const s = slotsFor(slug, p);
   await s.acquire(opts.priority ?? "normal");
   const started = Date.now(); // ms: the call itself, not the wait for a slot
   const out: StreamOut = { text: "", reasoning: "" };
@@ -179,12 +184,13 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
 }
 
 /**
- * Embed texts with the "embedding" profile (OpenAI /embeddings), adding its query or document prefix.
+ * Embed texts with the "embedding" role's model (OpenAI /embeddings), adding its query or document prefix.
  * Vectors come back normalized, so a dot product is the cosine similarity. Logged to llm_calls like
  * every other call; failures do not count against the chat model's reachability.
  */
 export async function embed(texts: string[], kind: "query" | "document", priority: Priority = "normal"): Promise<Float32Array[]> {
-  const p = config.profiles.embedding;
+  const slug = modelSlug("embedding");
+  const p = modelFor("embedding");
   const budget = config.budget_usd;
   if (budget && spend.usd > budget) throw new LLMFailure("budget", `spend limit ${budget} USD reached`);
   const callType = `embed_${kind}`;
@@ -195,7 +201,7 @@ export async function embed(texts: string[], kind: "query" | "document", priorit
   };
   const tags = ctx().tags;
   if (tags) row.eval_label = JSON.stringify({ tags });
-  const s = slotsFor("embedding", p);
+  const s = slotsFor(slug, p);
   await s.acquire(priority);
   const started = Date.now();
   try {
@@ -304,7 +310,7 @@ const PROCESS_SESSION = newId("proc");
 
 const REASONING_BUDGET_MESSAGE = "\n\nThinking time is up, I'll answer now.\n";
 
-async function stream(p: Profile, prompt: string, schema: Schema | null, opts: CallOpts, out: StreamOut): Promise<StreamResult> {
+async function stream(p: ModelConfig, prompt: string, schema: Schema | null, opts: CallOpts, out: StreamOut): Promise<StreamResult> {
   const thinking = p.reasoning_effort !== "none";
   const body: Record<string, any> = {
     model: p.model,
