@@ -63,7 +63,10 @@ docs/           DESIGN.md, BENCH.md, DEVIATIONS.md, v4-research-prompt.md (the p
 ## Prompt style
 
 Short and plain, like the v4 researcher prompt: say what the job is, what each option means, and
-what to reply. Example (`worker_step`, research role, first lines):
+what to reply. Each prompt starts with its fixed text; the changing parts (task, notes, messages) go
+last, so a local engine can reuse its prompt cache (#71). The front desk, the one role that talks to
+the owner, starts with `You are part of Sandman, a swarm of agents.`
+Example (`worker_step`, research role, first lines):
 
 ```
 Your role is the researcher.

@@ -51,7 +51,7 @@ export const RECIPES: Recipe[] = [
   {
     id: "rcp_research_write",
     title: "Research the facts, then write the text",
-    description: "For writing ONE text (an email or a letter) that needs a few facts looked up first.",
+    description: "For writing ONE short text (an email or a letter) that needs a few facts looked up first.",
     params: {
       document: "the text to write, e.g. 'an email to the landlord'",
       topics: "the facts that must be looked up, quoted from the request",

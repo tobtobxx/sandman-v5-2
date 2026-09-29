@@ -3,7 +3,7 @@
 // Runs each case in a fresh in-memory database, with the offline corpus and a fixed clock.
 // Writes bench/results/<stamp>-<label>.json + bench/results/latest.md, and copies all traces into
 // data/bench.db (set db_path to it in config.jsonc and open /observer).
-// --min-pass exits with 1 when fewer than PCT % of case runs pass (CI; see docs/BENCH.md).
+// --min-pass exits with 1 when fewer than PCT % of case runs pass.
 
 import { DB, withCtx } from "../src/db.ts";
 import { config, modelFor, modelSlug } from "../src/config.ts";
@@ -16,35 +16,35 @@ import { Case, Check, group, judge, NOW, ownerProfile } from "./lib.ts";
 
 const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "verifier", "librarian", "memory", "search", "answers", "episodes"];
 
-// The cases that still fail now and then: each failed at least once in the last five saved runs
-// (v7, v8, v9, v10-worker, chat-v1). The rest pass reliably and only prove the floor; run them with
-// --full before a release or after a change that touches every role.
-// Episodes are not in this list: they cost two thirds of a hard run. Instead, the stage each one failed
-// at is here as a unit case (issue #27); the episodes run with --full.
+// The cases that fail now and then: each failed at least once in 20 full runs (bench/results
+// *-i71-ab-base-x10 and *-i71-ab-tree-x10, 29 Sep 2026); the numbers are failures in those 20.
+// The rest passed all 20 and only prove the floor; run them with --full before a release or after a
+// change that touches every role.
+// Episodes are not in this list: they cost most of a full run. Instead, the stage each one failed at
+// is here as a unit case (issue #27); the episodes run with --full.
+// planner/generate-trip is left out: it fails 18/20 until sequential recipes exist (#77), so it
+// can't show a regression.
 const HARD = [
-  "answers/model-free-text",
-  "desk/answer-one-of-two",
-  "desk/conversation-answers-question",
-  "desk/conversation-work-goes-to-topic",
-  "desk/episode-balcony-add", // episode/capture-three-items
-  "desk/status-from-context",
-  "librarian/answered-rephrased", // episode/memory-reuse
-  "librarian/negative-note",
-  "memory/duplicate",
-  "memory/new-claim",
-  "memory/relevance-trivial",
-  "planner/generate-trip",
-  "segment/background-then-request",
-  "segment/no-cross-talk-memo", // episode/capture-no-cross-talk
-  "segment/one-long-subject",
-  "segment/research-then-message-about-it",
-  "triage/big-trip-plan",
-  "triage/compare-three-named", // episode/compare-card
-  "triage/write-missing-info",
-  "verifier/file-claimed-not-written",
-  "verifier/not-available-ok",
-  "worker/research-gather-open", // episode/recipe-tree, episode/compare-card
-  "worker/research-not-available-honest",
+  "desk/conversation-one-sentence", // 1
+  "desk/status-from-context", // 1
+  "librarian/narrow-stale-price", // 10
+  "librarian/negative-note", // 3
+  "memory/relevance-trivial", // 1
+  "memory/subject-same-kind-different-thing", // 3
+  "planner/fill-choose-among", // 1
+  "planner/pick-none", // 4
+  "route/new-subject", // 1
+  "segment/find-then-book-it", // 1
+  "segment/no-cross-talk-memo", // 1; also episode/capture-no-cross-talk
+  "segment/one-long-subject", // 2
+  "triage/compare-three-named", // episode/compare-card (triage asked the owner)
+  "triage/simple-lookup", // 1
+  "triage/write-enough-info", // 1
+  "triage/write-missing-info", // 3
+  "worker/research-gather-named", // 2
+  "worker/research-not-available-honest", // 1
+  "worker/research-paging", // episode/research-card (never read past the first page)
+  "worker/research-paging-facts", // episode/memory-reuse, 4 (the price not in facts)
 ];
 
 async function loadCases(): Promise<Case[]> {

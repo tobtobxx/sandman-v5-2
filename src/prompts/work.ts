@@ -27,21 +27,17 @@ export const ROLE_LINES: Record<string, string> = {
 // ---------------------------------------------------------------- triage
 export function triage(c: { title: string; goal: string; done_when: string[]; steps: number; tools: string[]; recipes: string[]; owner?: string }): P {
   return {
-    version: "triage/v7",
+    version: "triage/v8",
     maxTokens: 150,
     schema: obj({ analysis: str(300), compare_count: { type: "integer" }, fits: oneOf(["yes", "no"]), missing_info: nstr(200) }),
-    prompt: `You decide whether a task can be done in ONE work session.
-
-A session has at most ${c.steps} steps and these tools:
-${lines(c.tools.map((t) => TOOL_LINES[t]))}
-
-For context, these multi-step plans exist (you are NOT choosing one now):
-${lines(c.recipes)}
+    prompt: `Does a task fit ONE work session? Bigger tasks are split up later.
 
 Examples:
 - "Find the opening hours of the Zurich botanical garden" → fits: yes, missing_info: null
-- "Compare 4 health insurers on price and coverage and recommend one" → compare_count: 4, fits: no, missing_info: null (the work can choose the insurers and recommend one in general)
+- "Compare 4 health insurers on price and coverage and recommend one" → compare_count: 4, fits: no, missing_info: null (the work can choose the insurers)
 - "Book a table for my birthday" (no date or place given) → missing_info: "Which date and which restaurant or area?"
+
+A session has at most ${c.steps} steps and these tools: ${c.tools.join(", ")}.
 ${c.owner ? `\nAbout the owner:\n${c.owner}\n` : ""}
 Task: ${c.title}
 Goal: ${c.goal}
@@ -50,25 +46,25 @@ ${lines(c.done_when)}
 
 Reply with:
 - analysis: one or two sentences: does it fit one session, and does the result need anything only the owner knows?
-- compare_count: how many different things the task asks to look up and compare (0 if it is not a comparison)
+- compare_count: how many things it asks to look up and compare (0 if none)
 - fits: yes or no
-- missing_info: null in most cases. A short question ONLY if the result needs a fact that only the owner
-  knows (a date, a person, their own details or situation) and neither the task nor "About the owner" gives it.
-  Preferences, choices and anything the work can find: use null.`,
+- missing_info: null in most cases. A short question ONLY if the result needs a fact only the owner knows (a
+  date, a person, their own details or situation) and neither the task nor "About the owner" gives it.
+  Preferences, choices and anything the work can find: null.`,
   };
 }
 
 // ---------------------------------------------------------------- planner
 export function pickRecipe(c: { title: string; goal: string; recipes: { id: string; title: string; description: string }[] }): P {
   return {
-    version: "pick_recipe/v1",
+    version: "pick_recipe/v2",
     maxTokens: 120,
     schema: obj({ analysis: str(300), recipe_id: oneOf([...c.recipes.map((r) => r.id), "none"]) }),
     prompt: `This task is too big for one work session. Choose a plan for it.
 
 Plans:
 ${lines(c.recipes.map((r) => `${r.id}: ${r.title}. ${r.description}`))}
-- none: no plan fits; the task will be split another way
+- none: no plan fits, e.g. the task needs several different kinds of research; it will be split another way
 
 Task: ${c.title}
 Goal: ${c.goal}
@@ -82,50 +78,40 @@ export function planFill(c: { request: string; goal: string; params: Record<stri
   const props: Record<string, Schema> = { analysis: str(300) };
   for (const k of keys) props[k] = k === "max_items" ? { type: "integer" } : str(200);
   return {
-    version: "plan_fill/v2",
+    version: "plan_fill/v3",
     maxTokens: 250,
     schema: obj(props),
-    prompt: `Fill in the parameters of a plan for the owner's request.
+    prompt: `Fill in a plan's parameters for the owner's request. Criteria: quote or closely paraphrase EVERY wish the owner
+states (e.g. quiet, under 400 francs, good with pets); never invent any. Reply with analysis (one sentence), then the parameters.
 
 Parameters:
 ${lines(keys.map((k) => `${k}: ${c.params[k]}`))}
 
-Criteria must be quoted or closely paraphrased from the owner's request, and include EVERY wish the owner
-states (e.g. quiet, under 400 francs, good with pets). Never invent criteria.
-
-Owner's request: "${c.request}"
-Goal: ${c.goal}
-
-Reply with analysis (one sentence), then the parameters.`,
+Request: "${c.request}"
+Goal: ${c.goal}`,
   };
 }
 
 export function planGenerate(c: { title: string; goal: string; done_when: string[] }): P {
   return {
-    version: "plan_generate/v4",
+    version: "plan_generate/v5",
     maxTokens: 600,
     schema: obj({
       analysis: str(300),
       subtasks: arr(obj({ done_when: arr(str(200), 3, 1), goal: str(400), title: str(80) }), 5, 2),
     }),
-    prompt: `Split a task into 2 to 5 subtasks. They run at the same time, so none may use another's result.
-Afterwards, one final step combines their results into the answer. Do not add a subtask that plans,
-combines, summarizes or builds on the others; that is the final step's job.
-
-Each subtask is research: finding facts on the web. The final step does any writing.
-
+    prompt: `Split a task into 2-5 research subtasks (finding facts on the web). They run at the same time, so none may use
+another's result. A final step combines the results and does any writing, so no subtask plans, combines or
+builds on others.
 Example: "Plan a week in Rome" → "Top sights in Rome", "Central hotels in Rome under 200 euros", "Getting around
 Rome by public transport". Not: "Make a day plan from the sights found".
-
-For each subtask give title, goal and done_when. done_when is 1-3 checks of what the result contains,
-e.g. "Names the price, or states that it is not available".
+Reply with analysis (one sentence), then subtasks: title, goal, and done_when: 1-3 checks of what the result
+contains, e.g. "Names the price, or states that it is not available".
 
 Task: ${c.title}
 Goal: ${c.goal}
 Done when:
-${lines(c.done_when)}
-
-Reply with analysis (one sentence), then subtasks.`,
+${lines(c.done_when)}`,
   };
 }
 
@@ -252,18 +238,14 @@ Step ${c.step} of ${c.maxSteps}. Choose exactly one action.${last ? " This is yo
 
 export function generateContent(c: { title: string; goal: string; inputs: string; memory: string; name: string; what: string; owner?: string; today?: string }): P {
   return {
-    version: "generate_content/v2",
+    version: "generate_content/v3",
     maxTokens: 2500,
     schema: {},
-    prompt: `Write the file "${c.name}".
-
-What to write: ${c.what}
-
-It is part of this task: ${c.title}. ${c.goal}
-${c.memory.trim() ? `\nKnown from memory:\n${c.memory.trim()}\n` : ""}${c.inputs.trim() ? `\nMaterial:\n${c.inputs.trim()}\n` : ""}
-${c.owner ? `\nAbout the owner:\n${c.owner}\n` : ""}${c.today ? `Today: ${c.today}\n` : ""}
-Don't use placeholders like [Date] or [Your Name]: use what you know, or leave it out.
-Reply with the file content only, nothing before or after it.`,
+    prompt: `Write a file. Reply with its content only. No placeholders like [Date] or [Your Name]: use what you know, or leave it out.
+${c.owner ? `\nAbout the owner:\n${c.owner}\n` : ""}${c.memory.trim() ? `\nKnown from memory:\n${c.memory.trim()}\n` : ""}${c.inputs.trim() ? `\nMaterial:\n${c.inputs.trim()}\n` : ""}
+Task: ${c.title}. ${c.goal}
+${c.today ? `Today: ${c.today}\n` : ""}File: "${c.name}"
+What to write: ${c.what}`,
   };
 }
 
@@ -292,15 +274,13 @@ Reply with analysis (at most 40 words), then verdict: pass or fail.`,
 // ---------------------------------------------------------------- librarian
 export function extractEntities(c: { title: string; goal: string }): P {
   return {
-    version: "extract_entities/v1",
+    version: "extract_entities/v2",
     maxTokens: 80,
     schema: obj({ entities: arr(str(60), 6) }),
-    prompt: `List the named things in this task: products, places, organizations, people, concepts. Short names only.
+    prompt: `List up to 6 named things in a task (products, places, organizations, people, concepts), short names only.
 
 Task: ${c.title}
-Goal: ${c.goal}
-
-Reply with entities (at most 6).`,
+Goal: ${c.goal}`,
   };
 }
 
@@ -336,16 +316,14 @@ Reply with analysis (one or two sentences), then answer_note_ids, narrowed_goal 
 
 export function renderAnswer(c: { goal: string; notes: string }): P {
   return {
-    version: "render_answer/v1",
+    version: "render_answer/v2",
     maxTokens: 400,
     schema: obj({ summary: str(1500) }),
-    prompt: `Answer the task from these notes only.
+    prompt: `Answer a task from these notes only. Reply with summary: a few sentences, naming the notes' facts.
 
 Task goal: ${c.goal}
 
 Notes:
-${c.notes}
-
-Reply with summary: the answer in a few sentences, naming the notes' facts.`,
+${c.notes}`,
   };
 }
