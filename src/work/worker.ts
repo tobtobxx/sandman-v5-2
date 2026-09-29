@@ -155,7 +155,7 @@ export async function runWorker(card_id: string): Promise<Outcome> {
         repair: (v) => tools.includes(v?.action) ? { value: { action: "tool", tool: v.action, tool_args: v.tool_args ?? {} }, note: "$.action: tool name → tool action" } : { value: v },
       });
     } catch (e) {
-      if (!(e instanceof LLMFailure) || e.kind === "budget") throw e;
+      if (!(e instanceof LLMFailure)) throw e;
       steps.push(`Step ${k}: (your output was invalid and was ignored)`);
       continue;
     }

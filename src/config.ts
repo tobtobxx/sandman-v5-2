@@ -80,8 +80,7 @@ interface Settings {
   db_path: string;
   workspace: string;
   api: { port: number; token: string };
-  web: { backend: "live" | "corpus"; searxng: string };
-  budget_usd: number;
+  web: { searxng: string };
   api_key: string;
   roles: Record<ModelRole, string | null>;
   models: Record<string, ModelConfig>;

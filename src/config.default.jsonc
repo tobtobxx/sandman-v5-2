@@ -18,13 +18,9 @@
     "token": ""
   },
   "web": {
-    // "live" searches the web; "corpus" serves the offline pages in bench/corpus/ (the benchmark forces it).
-    "backend": "live",
     // SearXNG base URL (e.g. "https://searx.example.org") for live search. Empty: DuckDuckGo HTML, best effort.
     "searxng": ""
   },
-  // Stop making model calls once this many USD are spent in one process. 0: no limit.
-  "budget_usd": 0,
   // API key used by every model below that has no "api_key" of its own (an OpenRouter key by default).
   "api_key": "",
   // Which model does what. The role names are fixed by the code; the values are slugs from "models".

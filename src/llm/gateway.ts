@@ -52,7 +52,7 @@ function reportHealth(reachable: boolean, e?: LLMFailure) {
   }
 }
 
-// ---- spend tracking (the benchmark key is budget-limited) ----
+// ---- spend tracking (shown in the observer and the bench summary) ----
 export const spend = { usd: 0, calls: 0, byType: {} as Record<string, { calls: number; usd: number; tin: number; tout: number }> };
 
 // ---- priority slots per model (§5.11); roles on the same model share them ----
@@ -116,8 +116,6 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
   const slug = opts.model ?? modelSlug(role);
   const p = config.models[slug];
   if (!p) throw new Error(`no model "${slug}" in config.models`);
-  const budget = config.budget_usd;
-  if (budget && spend.usd > budget) throw new LLMFailure("budget", `spend limit ${budget} USD reached`);
   const id = newId("cal");
   const row: Record<string, any> = {
     id, call_type: callType, prompt_version: opts.version ?? "v1", model_profile: opts.model ?? role, model: p.model,
@@ -191,8 +189,6 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
 export async function embed(texts: string[], kind: "query" | "document", priority: Priority = "normal"): Promise<Float32Array[]> {
   const slug = modelSlug("embedding");
   const p = modelFor("embedding");
-  const budget = config.budget_usd;
-  if (budget && spend.usd > budget) throw new LLMFailure("budget", `spend limit ${budget} USD reached`);
   const callType = `embed_${kind}`;
   const input = texts.map((t) => `${(kind === "query" ? p.query_prefix : p.document_prefix) ?? ""}${t}`);
   const row: Record<string, any> = {
