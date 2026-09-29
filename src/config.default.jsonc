@@ -23,20 +23,19 @@
   },
   // API key used by every model below that has no "api_key" of its own (an OpenRouter key by default).
   "api_key": "",
-  // Which model does what. The role names are fixed by the code; the values are slugs from "models".
-  // null: not set up. What that means is given per role.
+  // Which model the different roles use. Use the slugs from the "models" section.
   "roles": {
-    // Does all the work: cards, workers, memory, and whatever "interactive" leaves to it. null: error at startup.
+    // Main model. Does all the work not done by any other model. Required.
     "main": "qwen36-openrouter",
-    // Calls the owner waits on: segmenting and routing a send, the desk turn and its reply. null: uses "main".
+    // Model for directly user-facing calls. Specifying a model here gives the interactive calls a separate queue.
+    // Specifying no model (null) makes it use the same as "main".
     "interactive": null,
-    // Embeds notes, claims and pending facts for memory search. null: error at startup.
+    // Embeds notes, claims and pending facts for memory search. Required.
     "embedding": "pplx-embed-openrouter",
-    // Grades benchmark answers; unused by serve. null: the benchmark stops with an error.
+    // Grades benchmark answers. Only required for bench.
     "judge": "mimo-openrouter"
   },
   // Model endpoints, keyed by a slug of your choice. Any OpenAI-compatible server works (llama.cpp too).
-  // A model can serve several roles; each gets its own "slots" (a null role shares its fallback's).
   // Defaults: api_key: "", reasoning_effort: "none", reasoning_tokens: 0, slots: 1, temperature: null,
   // idle_timeout_s: 60, quirks: [].
   "models": {
@@ -75,7 +74,6 @@
     "mimo-openrouter": {
       "base_url": "https://openrouter.ai/api/v1",
       "model": "xiaomi/mimo-v2.6-pro",
-      "api_key": "",
       "reasoning_effort": "none",
       "reasoning_tokens": 0,
       "slots": 4,
@@ -86,7 +84,6 @@
     "pplx-embed-openrouter": {
       "base_url": "https://openrouter.ai/api/v1",
       "model": "perplexity/pplx-embed-v1-0.6b",
-      "api_key": "",
       // Put before each search text and each stored text. Some models need them (jina: "Query: ", "Document: ").
       "query_prefix": "",
       "document_prefix": "",
