@@ -53,9 +53,9 @@ src/
   conversation/ capture (segment, quotes, route), desk, receipts/undo, questions/needs-you,
                 briefing, pages, topics, review, tidy, when (reminder times)
   memory/       facts, consolidator, retriever
-  tools/        web (live + offline corpus), artifacts (paging)
+  tools/        web (SearXNG / DuckDuckGo), artifacts (paging)
   server.ts     unified API + SSE + static UIs
-bench/          lib (fixtures, judge), run, cases/*.ts, corpus/*.md, results/
+bench/          lib (fixtures, judge), run, corpus (offline web), cases/*.ts, corpus/*.md, results/
 ui/             client.html, observer.html (no build step)
 docs/           DESIGN.md, BENCH.md, DEVIATIONS.md, v4-research-prompt.md (the prompt style reference)
 ```

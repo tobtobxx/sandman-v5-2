@@ -306,6 +306,6 @@ export async function serve() {
       bg(consolidate().then(() => tidy()));
     }
   }, 60_000);
-  console.log(`Sandman on http://localhost:${config.api.port}  (observer: /observer)  model: ${modelFor("main").model}${config.roles.interactive ? `, interactive: ${modelFor("interactive").model}` : ""}  web: ${config.web.backend}`);
+  console.log(`Sandman on http://localhost:${config.api.port}  (observer: /observer)  model: ${modelFor("main").model}${config.roles.interactive ? `, interactive: ${modelFor("interactive").model}` : ""}  web: ${config.web.searxng || "DuckDuckGo"}`);
   await Deno.serve({ port: config.api.port, onListen: () => {} }, handle).finished;
 }

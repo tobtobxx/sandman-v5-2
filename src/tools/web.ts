@@ -1,6 +1,5 @@
-// web_search / web_fetch backends.
-// - corpus: a fixed offline set of pages (bench/corpus/*.md) so benchmark runs are reproducible (§14.3).
-// - live: SearXNG (web.searxng in config.jsonc) if set, else DuckDuckGo's HTML endpoint (best effort).
+// web_search / web_fetch: SearXNG (web.searxng in config.jsonc) if set, else DuckDuckGo's HTML endpoint
+// (best effort). The benchmark swaps in its offline corpus (bench/corpus.ts).
 
 import { config } from "../config.ts";
 
@@ -10,53 +9,6 @@ export interface SearchHit {
   snippet: string;
 }
 
-// ---- corpus ----
-interface Page {
-  url: string;
-  title: string;
-  text: string;
-  keywords: string; // stands in for a real engine's synonym/language matching; not shown to the model
-}
-let corpus: Page[] | null = null;
-export function loadCorpus(dir = new URL("../../bench/corpus/", import.meta.url).pathname): Page[] {
-  if (corpus) return corpus;
-  corpus = [];
-  for (const e of Deno.readDirSync(dir)) {
-    if (!e.name.endsWith(".md")) continue;
-    const raw = Deno.readTextFileSync(dir + e.name);
-    const m = raw.match(/^url:\s*(.+)\ntitle:\s*(.+)\n(?:keywords:\s*(.+)\n)?\n([\s\S]*)$/);
-    if (m) corpus.push({ url: m[1].trim(), title: m[2].trim(), keywords: (m[3] ?? "").trim(), text: m[4].trim() });
-  }
-  return corpus;
-}
-
-const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").match(/[\p{L}\p{N}]+/gu) ?? [];
-
-function corpusSearch(query: string): SearchHit[] {
-  const q = [...new Set(words(query).filter((w) => w.length > 2))];
-  const scored = loadCorpus().map((p) => {
-    const tw = new Set([...words(p.title), ...words(p.keywords)]);
-    const bw = words(p.text);
-    const bset = new Set(bw);
-    let s = 0;
-    for (const w of q) s += (tw.has(w) ? 3 : 0) + (bset.has(w) ? 1 : 0);
-    return { p, s };
-  }).filter((x) => x.s >= Math.max(2, q.length * 0.5)).sort((a, b) => b.s - a.s).slice(0, 5);
-  return scored.map(({ p }) => ({ title: p.title, url: p.url, snippet: snippet(p.text, q) }));
-}
-
-function snippet(text: string, q: string[]): string {
-  const sentences = text.replace(/\n+/g, " ").split(/(?<=[.!?])\s+/);
-  let best = sentences[0] ?? "", bs = -1;
-  for (const s of sentences.slice(0, 12)) { // snippets come from the top of the page, like real engines
-    const sw = new Set(words(s));
-    const sc = q.filter((w) => sw.has(w)).length;
-    if (sc > bs) (bs = sc), (best = s);
-  }
-  return best.slice(0, 200);
-}
-
-// ---- live ----
 // DDG challenges bursts (about the third request within a few seconds); one request per 6 s passes.
 const DDG_GAP_MS = 6000;
 let ddgNext = 0;
@@ -123,16 +75,7 @@ export function contentBlock(attrs: Record<string, string>, text: string): strin
   return `<content${a}>\n${text.replace(/<(\/?)(content)/gi, "‹$1$2")}\n</content>`;
 }
 
-export async function webSearch(query: string): Promise<SearchHit[]> {
-  return config.web.backend === "corpus" ? corpusSearch(query) : await liveSearch(query);
-}
-
-export async function webFetch(url: string): Promise<{ title: string; text: string } | null> {
-  if (config.web.backend === "corpus") {
-    const norm = (u: string) => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
-    const p = loadCorpus().find((p) => norm(p.url) === norm(url));
-    return p ? { title: p.title, text: p.text } : null;
-  }
+async function liveFetch(url: string): Promise<{ title: string; text: string } | null> {
   try {
     const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 sandman" }, signal: AbortSignal.timeout(20000) });
     if (!r.ok) return null;
@@ -143,3 +86,5 @@ export async function webFetch(url: string): Promise<{ title: string; text: stri
     return null;
   }
 }
+
+export const web = { search: liveSearch, fetch: liveFetch };

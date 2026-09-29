@@ -57,7 +57,7 @@ export async function stepCard(card_id: string): Promise<string> {
         return await verifyCard(card.id);
     }
   } catch (e) {
-    if (e instanceof LLMFailure && e.kind !== "budget") {
+    if (e instanceof LLMFailure) {
       // model trouble: put the card back and let the retry policy decide next time
       const c = getCard(card.id);
       emit("system.llm_failure", { ref_id: card.id, payload: { error: e.message, state: c.state } });
