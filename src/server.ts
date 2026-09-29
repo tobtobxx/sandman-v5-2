@@ -11,7 +11,7 @@ import { startDispatcher } from "./work/dispatcher.ts";
 import { addComment, cancelCard, createCard, getCard, transition } from "./work/board.ts";
 import { fileCapture, handleCapture, moveItem, processCapture, receiveCapture } from "./conversation/capture.ts";
 import { undoReceipt } from "./conversation/receipts.ts";
-import { listTopics, updateTopic } from "./conversation/topics.ts";
+import { listTopics, unarchiveTopic, updateTopic } from "./conversation/topics.ts";
 import { ownerMessage } from "./conversation/pages.ts";
 import { homeView, sendView, topicView } from "./conversation/views.ts";
 import { answerQuestion, needsYou } from "./conversation/questions.ts";
@@ -61,6 +61,7 @@ route("POST", "/receipts/:id/undo", (_r, p) => undoReceipt(p.id));
 // ---------------------------------------------------------------- topics & messages
 route("GET", "/topics", (_r, _p, _b, u) => listTopics(u.searchParams.get("status") ?? "active"));
 route("PATCH", "/topics/:id", (_r, p, b) => (updateTopic(p.id, pick(b, ["title", "status", "summary"])), { ok: true }));
+route("POST", "/topics/:id/unarchive", (_r, p) => (unarchiveTopic(p.id), { ok: true }));
 route("GET", "/topics/:id", (_r, p) => topicView(p.id));
 // A message typed in a topic goes straight to that topic (no splitting, no routing).
 route("POST", "/topics/:id/messages", (_r, p, b) => {

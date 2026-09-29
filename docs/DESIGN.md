@@ -707,7 +707,7 @@ A briefing is a short, harness-driven exchange for clearing the needs-you list a
 **Tidy-up job** (nightly, after consolidation, as a `system` card at background priority):
 - **Merge:** code finds candidate pairs (FTS similarity of titles and summaries above a threshold). For each pair, `topic_same` → `{analysis, same: yes | no}`; "yes" creates a `topic_merge` item. Accepting moves messages, cards and questions into the kept topic, and the other slug becomes an alias.
 - **Project:** a code rule. A topic with ≥ `project_card_threshold` (default 6) cards and no project gets a `topic_project` item. Accepting creates a project and its brief (§7.7).
-- **Archive:** a code rule. A topic with no messages for `archive_after_days` (default 14) and no open cards or questions is archived, and a `topic_archived` notice with Undo is created. Archived topics are not in the router's recency candidates but can still be matched by FTS, and routing to one reactivates it.
+- **Archive:** a code rule. A topic with no messages for `archive_after_days` (default 7) and no open cards or questions is archived, and a `topic_archived` notice with Undo is created. Unarchiving (Undo, or the button in the client's All topics view) restarts the quiet period. Archived topics are not in the router's recency candidates but can still be matched by FTS, and routing to one reactivates it.
 - **Split:** not in v5 (§19).
 
 Topics therefore have only two states: `active` and `archived`.
@@ -1290,7 +1290,7 @@ desk: {max_actions: 3, history_messages: 8, report_mode: structured, summary_reb
 undo: {window_hours: 24}                      # or until the effect is consumed
 needs_you: {max_question_words: 25, max_options: 4, max_option_words: 6, nag_hours: 24}
 briefing: {at: "07:30", start_on_driving: true}
-tidy: {at: "after_consolidation", merge_similarity: 0.6, project_card_threshold: 6, archive_after_days: 14}
+tidy: {at: "after_consolidation", merge_similarity: 0.6, project_card_threshold: 6, archive_after_days: 7}
 notifier:
   levels: {question: push, approval: push, reminder: push, card_result: badge, desk_reply: badge,
            receipt: silent, review: silent}

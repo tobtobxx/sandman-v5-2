@@ -216,6 +216,17 @@ button.chip { border: 0; font: inherit; cursor: pointer; } button.chip:hover { f
 .cd .when { font-size: 12px; color: var(--muted); white-space: nowrap; }
 .cd .hist { font-size: 13px; }
 .cd .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+/* all topics */
+.search { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--panel); font-size: 15px; width: 100%; }
+.trow { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); }
+.trow:hover { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.trow .tt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.trow .tt a { color: var(--ink); font-weight: 500; overflow-wrap: anywhere; }
+.trow.archived .tt a { color: var(--muted); }
+.trow .tm { font-size: 12px; color: var(--muted); }
+.trow .ts { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trow .btn { flex-shrink: 0; }
+.trow[hidden] { display: none; }
 .fact { display: flex; gap: 8px; align-items: baseline; font-size: 14px; flex-wrap: wrap; }
 .fact span:first-child { flex: 1; min-width: 200px; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 16px; border-radius: 8px; font-size: 14px; z-index: 20; }
@@ -272,7 +283,7 @@ async function sidebar() {
   $("#topics").innerHTML = ts.map((t) => `<a href="#topic/${t.id}" class="${t.kind === "conversation" ? "conv" : ""} ${r.view === "topic" && r.id === t.id ? "on" : ""}">
       <span>${esc(t.title)}</span>${t.open_questions ? `<span class="badge">${t.open_questions}</span>` : t.is_new ? `<span class="newtag">NEW</span>` : ""}</a>`).join("")
     || `<div class="empty" style="border:0;padding:4px 10px">No topics yet.</div>`;
-  const sec = [["needs", "Needs you", home.needs_you_count, true], ["review", "Review", home.review_count, false], ["board", "Board"], ["memory", "Memory"]];
+  const sec = [["needs", "Needs you", home.needs_you_count, true], ["review", "Review", home.review_count, false], ["board", "Board"], ["memory", "Memory"], ["all", "All topics"]];
   $("#secondary").innerHTML = sec.map(([k, l, n, hot]) => `<a href="#${k}" class="${r.view === k ? "on" : ""}"><span>${l}</span>${n ? (hot ? `<span class="badge">${n}</span>` : `<span style="color:var(--muted);font-size:12px">${n}</span>`) : ""}</a>`).join("");
   return home;
 }
@@ -433,6 +444,34 @@ async function viewReview() {
   const rs = await api("/review");
   return `<div class="scroll"><div class="center page"><h1>Review</h1>${rs.map(reviewCard).join("") || `<div class="empty">Nothing to review.</div>`}</div></div>`;
 }
+// All topics, archived ones included. The search filters the rendered rows in place, so typing
+// needs no refetch; the query is kept in allq across live re-renders.
+let allq = "";
+async function viewAll() {
+  const ts = (await api("/topics?status=all")).filter((t) => !t.is_system);
+  const archived = ts.filter((t) => t.status === "archived").length;
+  const row = (t) => `<div class="trow ${t.status}" data-go="topic/${t.id}" data-text="${esc(`${t.title} ${t.summary ?? ""}`.toLowerCase())}">
+      <div class="tt"><a href="#topic/${t.id}">${esc(t.title)}</a>
+        <span class="tm">${t.kind === "conversation" ? "Conversation" : "Topic"}${t.status === "archived" ? " · archived" : ""} · active ${ago(t.last_activity_at ?? t.created_at)}${t.open_cards ? ` · ${t.open_cards} open card${t.open_cards > 1 ? "s" : ""}` : ""}</span>
+        ${t.summary ? `<span class="ts">${esc(String(t.summary).split("\n")[0])}</span>` : ""}</div>
+      ${t.status === "archived" ? `<button class="btn" data-unarchive="${t.id}">Unarchive</button>` : ""}</div>`;
+  return `<div class="scroll"><div class="center page"><h1>All topics</h1>
+    <input id="allq" class="search" type="search" aria-label="Search topics" placeholder="Search titles and summaries" value="${esc(allq)}" autocomplete="off">
+    <div class="meta">${ts.length} topics · ${archived} archived</div>
+    <div id="allList">${ts.map(row).join("")}</div>
+    <div class="empty" id="allNone" hidden>Nothing matches.</div></div></div>`;
+}
+function filterAll() {
+  const words = allq.toLowerCase().split(/\s+/).filter(Boolean);
+  let shown = 0;
+  for (const r of document.querySelectorAll("#allList .trow")) {
+    r.hidden = !words.every((w) => r.dataset.text.includes(w));
+    if (!r.hidden) shown++;
+  }
+  const none = $("#allNone");
+  if (none) none.hidden = shown > 0;
+}
+document.addEventListener("input", (e) => { if (e.target.id === "allq") { allq = e.target.value; filterAll(); } });
 const LANES = [
   ["queued", "Queued", ["new", "ready"]],
   ["active", "In progress", ["running", "verifying"]],
@@ -598,6 +637,11 @@ async function render(navigated = false, keepFocus = false) {
     else if (r.view === "review") swap(await viewReview());
     else if (r.view === "board") swap(await viewBoard());
     else if (r.view === "memory") swap(await viewMemory());
+    else if (r.view === "all") {
+      const el = document.activeElement, caret = el?.id === "allq" ? [el.selectionStart, el.selectionEnd] : null;
+      swap(await viewAll()); filterAll();
+      if (caret || navigated) { const q = $("#allq"); q.focus(); q.setSelectionRange(...(caret ?? [q.value.length, q.value.length])); }
+    }
     else { location.hash = "home"; }
     if (cardOpen) await refreshCard();
     if (navigated) api("/presence", { mode: $("#mode").value, topic_id: r.view === "topic" ? r.id : null }).catch(() => {});
@@ -639,6 +683,7 @@ document.addEventListener("click", async (e) => {
     else if (d.art) { const a = await api(`/artifacts/${d.art}`); const w = window.open("", "_blank"); if (w) w.document.body.innerHTML = `<pre style="white-space:pre-wrap;font:14px system-ui">${esc(a.content)}</pre>`; }
     else if (d.cancel) { await api(`/cards/${d.cancel}/cancel`, {}); render(); }
     else if (d.retry) { await api(`/cards/${d.retry}/retry`, {}); render(); }
+    else if (d.unarchive) { await api(`/topics/${d.unarchive}/unarchive`, {}); toast("Unarchived"); render(); }
     else if (d.retract) { await api("/memory/retract", { claim_id: d.retract }); render(); }
     else if (d.act) { const id = t.closest("[data-rev]").dataset.rev; await api(`/review/${id}/${d.act}`, {}); render(); }
     else if (t.id === "consolidate") { t.disabled = true; const s = await api("/memory/consolidate", {}); if (!s.started) toast("Already consolidating"); render(); }
