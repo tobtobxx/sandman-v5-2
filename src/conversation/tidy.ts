@@ -4,7 +4,7 @@ import { db, ftsQuery, j, now, nowIso, Row } from "../db.ts";
 import { llmJson } from "../llm/gateway.ts";
 import { topicSame } from "../prompts/conversation.ts";
 import { createReview, resolveReview } from "./review.ts";
-import { getTopic, unarchiveTopic, updateTopic } from "./topics.ts";
+import { getTopic, indexTopic, unarchiveTopic, updateTopic } from "./topics.ts";
 import { emit } from "../events.ts";
 
 export async function tidy(opts: { archive_after_days?: number } = {}) {
@@ -45,9 +45,10 @@ export function mergeTopics(keep: string, drop: string) {
     db().run(`UPDATE receipts SET topic_id=? WHERE topic_id=?`, keep, drop);
     db().run(`UPDATE capture_items SET topic_id=? WHERE topic_id=?`, keep, drop);
     db().run(`UPDATE claims SET topic_id=? WHERE topic_id=?`, keep, drop);
-    const aliases = [...j<string[]>(k.aliases, []), d.slug, ...j<string[]>(d.aliases, [])];
+    const aliases = [...new Set([...j<string[]>(k.aliases, []), d.slug, ...j<string[]>(d.aliases, [])])].filter((a) => a !== k.slug);
     db().update("topics", keep, { aliases });
     db().update("topics", drop, { status: "archived", merged_into: keep, archived_at: nowIso() });
+    indexTopic(keep);
   });
   emit("topic.merged", { topic_id: keep, ref_id: drop, payload: { keep, drop } });
 }

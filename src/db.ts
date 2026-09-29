@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS facts (id TEXT PRIMARY KEY, card_id TEXT, message_id 
   target_claim_id TEXT, decided_at TEXT, created_at TEXT);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, aliases, one_liner, body);
-CREATE VIRTUAL TABLE IF NOT EXISTS topics_fts USING fts5(id UNINDEXED, title, summary);
+CREATE VIRTUAL TABLE IF NOT EXISTS topics_fts USING fts5(id UNINDEXED, title, aliases, summary);
 CREATE VIRTUAL TABLE IF NOT EXISTS recipes_fts USING fts5(id UNINDEXED, title, description);
 `;
 
@@ -90,6 +90,13 @@ export class DB {
     for (const [table, col, def] of [["topics", "kind", "TEXT DEFAULT 'subject'"], ["topics", "seen_at", "TEXT"], ["questions", "details", "TEXT"], ["llm_calls", "reasoning", "TEXT"]]) {
       const cols = this.raw.prepare(`PRAGMA table_info(${table})`).all() as Row[];
       if (!cols.some((c) => c.name === col)) this.raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+    }
+    // topics_fts gained an aliases column (merged slugs, DESIGN §6.11): rebuild it from topics
+    const ftsCols = this.raw.prepare(`PRAGMA table_info(topics_fts)`).all() as Row[];
+    if (!ftsCols.some((c) => c.name === "aliases")) {
+      this.raw.exec(`DROP TABLE topics_fts; CREATE VIRTUAL TABLE topics_fts USING fts5(id UNINDEXED, title, aliases, summary);
+        INSERT INTO topics_fts (id, title, aliases, summary) SELECT id, title,
+          (SELECT coalesce(group_concat(value, ' '), '') FROM json_each(coalesce(aliases, '[]'))), coalesce(summary, '') FROM topics;`);
     }
   }
   all(sql: string, ...params: any[]): Row[] {

@@ -1,6 +1,6 @@
 // Topics (DESIGN §4, §6.4, §6.11).
 
-import { db, now, nowIso, Row } from "../db.ts";
+import { db, j, now, nowIso, Row } from "../db.ts";
 import { config } from "../config.ts";
 import { newId } from "../ids.ts";
 import { emit } from "../events.ts";
@@ -24,7 +24,7 @@ export function createTopic(title: string, summary = "", kind: "subject" | "conv
 export function indexTopic(id: string) {
   const t = db().get(`SELECT * FROM topics WHERE id=?`, id);
   db().run(`DELETE FROM topics_fts WHERE id=?`, id);
-  if (t) db().run(`INSERT INTO topics_fts (id, title, summary) VALUES (?,?,?)`, id, t.title, t.summary ?? "");
+  if (t) db().run(`INSERT INTO topics_fts (id, title, aliases, summary) VALUES (?,?,?,?)`, id, t.title, j<string[]>(t.aliases, []).join(" "), t.summary ?? "");
 }
 
 export function getTopic(id: string): Row {
