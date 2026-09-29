@@ -22,7 +22,7 @@ deno run -A src/main.ts lint    # every prompt schema: reasoning key sorts first
 With Nix: `nix run` starts the server, `nix run .#bench` runs the benchmark.
 
 Configuration lives in `config.jsonc` in the working directory (`--config path` for another file).
-If it is missing, sandman writes the default, with a comment on every setting, and exits. Keys left
+If it is missing, sandman writes the default (`src/config.default.jsonc`, a comment on every setting) and exits. Keys left
 out fall back to the defaults. The main ones:
 
 | key | default | |

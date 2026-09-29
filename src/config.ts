@@ -1,5 +1,6 @@
-// Configuration (DESIGN §17). Settings a deployment changes live in config.jsonc; the rest are
-// tuning defaults below. Without a config.jsonc, `loadConfig` writes the commented default and exits.
+// Configuration (DESIGN §17). Settings a deployment changes live in config.jsonc, with defaults in
+// config.default.jsonc; the rest are tuning defaults below. Without a config.jsonc, `loadConfig`
+// writes the commented default and exits.
 
 export interface Profile {
   base_url: string;
@@ -14,71 +15,8 @@ export interface Profile {
   provider?: Record<string, unknown>;
 }
 
-export const DEFAULT_CONFIG_JSONC = `// Sandman configuration. JSON with comments; trailing commas are allowed.
-// Keys left out fall back to the defaults shown here.
-{
-  // Your name as the model sees it, and the time zone reminders and "today" are computed in.
-  "owner": { "name": "Alex", "timezone": "Europe/Zurich" },
-
-  // SQLite database. The benchmark writes its traces to data/bench.db instead;
-  // view them with: deno task serve --db data/bench.db
-  "db_path": "data/sandman.db",
-  // Files of the "code" role (not implemented in this prototype yet).
-  "workspace": "data/workspace",
-
-  "api": {
-    "port": 8700,
-    // Optional shared secret. When set, API calls need "Authorization: Bearer <token>" or ?token=<token>.
-    // The UIs at / and /observer are always served.
-    "token": ""
-  },
-
-  "web": {
-    // "live" searches the web; "corpus" serves the offline pages in bench/corpus/ (the benchmark forces it).
-    "backend": "live",
-    // SearXNG base URL (e.g. "https://searx.example.org") for live search. Empty: DuckDuckGo HTML, best effort.
-    "searxng": ""
-  },
-
-  // Stop making model calls once this many USD are spent in one process. 0: no limit.
-  "budget_usd": 0,
-
-  // API key used by every profile below that has no "api_key" of its own (an OpenRouter key by default).
-  "api_key": "",
-
-  // Model endpoints. Any OpenAI-compatible server works (llama.cpp too).
-  "profiles": {
-    // The model that does all the work.
-    "small": {
-      "base_url": "https://openrouter.ai/api/v1",
-      "model": "qwen/qwen3.6-35b-a3b",
-      "api_key": "",
-      "thinking": false,
-      // Concurrent calls; also the number of cards worked on at once.
-      "slots": 4,
-      "temperature": 0.3,
-      // Abort a streaming call after this many seconds without a token.
-      "idle_timeout_s": 60,
-      // Engine quirks the gateway works around. \`deno task probe\` reports which apply to a model.
-      "quirks": ["keys_alphabetical", "unbounded_whitespace", "ignores_maxLength"],
-      // OpenRouter only: provider routing preferences.
-      "provider": { "require_parameters": true }
-    },
-    // Grades benchmark answers; unused by serve.
-    "judge": {
-      "base_url": "https://openrouter.ai/api/v1",
-      "model": "xiaomi/mimo-v2.6-pro",
-      "api_key": "",
-      "thinking": false,
-      "slots": 4,
-      "temperature": 0,
-      "idle_timeout_s": 90,
-      "quirks": [],
-      "provider": { "require_parameters": true }
-    }
-  }
-}
-`;
+/** The commented default config.jsonc; also the source of the defaults. */
+export const DEFAULT_CONFIG_JSONC = Deno.readTextFileSync(new URL("./config.default.jsonc", import.meta.url));
 
 /** Parse JSON with // and /* comments and trailing commas. */
 export function parseJsonc(text: string): any {
