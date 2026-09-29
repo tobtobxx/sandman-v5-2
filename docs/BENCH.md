@@ -56,8 +56,18 @@ Each row was found in a trace, fixed, and confirmed by the next run. DEVIATIONS.
 | 19 | Dependent parts split into topics (#19) | `segment_capture/v3`: split only where each part stands alone |
 | 20 | Answer followed by extra card/add (#24) | `desk_more/v2`: named options instead of a negated yes/no |
 | 21 | Triage wrote "a letter about my claim" with placeholders instead of asking (#72) | `triage/v7`: the analysis also asks "does the result need anything only the owner knows?"; no "sensible assumption" clause. 5/20 → 20/20 |
+| 22 | Prompts were long and put changing text early, so local engines re-read them on every call (#71) | Identity line first (gateway), fixed text next, changing parts last; wording trimmed. Fixed prefix per call type e.g. triage 19 → 125 tokens, match_subject 44 → 174; not-cached tokens per bench run −9 to −12%, total −3.5 to −5.6%. Full ×3: 97.2–98.4% (before: 98.8%) |
 
 ## Lessons
+
+- **Trimming has a floor with this model** (#71). Every cut was A/B-tested against the old prompt
+  (the same cases ×6–10). What broke: the word "autonomous" in the identity line (librarian ignored
+  "may be outdated" in 12/20 vs 5/20 without it, pick_recipe chose a plan for everything); "the owner"
+  instead of the owner's name in desk_reply (ignored "one sentence"); "answers an open question"
+  without "the owner" (read as "answer the owner's question"); dropping "the new fact replaces it"
+  from `update`; the explicit `- none:` option line in match_subject; any reword of the verifier or
+  relevance rubric; field rules above the task instead of after it (triage asked for owner facts
+  5/6). The verifier and relevance rubric are back to their old text.
 
 - **Code rules beat wording** for anything countable (rows 9–13): the model is shown the rule but
   code enforces it.

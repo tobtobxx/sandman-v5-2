@@ -35,8 +35,8 @@ export function page(art: Row, from: number, source: string): string {
   const b = Math.min(text.length, a + w);
   const more = b < text.length ? ` Continue with read_artifact("${art.id}", ${b}) if you need more.` : " This is the end.";
   const footer = b < text.length ? `\n[The text continues. Read the rest with read_artifact("${art.id}", ${b}).]` : "";
-  const attrs: Record<string, string> = art.origin === "tool_result" ? { url: source } : { file: source };
-  return `[characters ${a}–${b} of ${text.length} from ${source}.${more}]\n${contentBlock(attrs, text.slice(a, b))}${footer}`;
+  // the header names the source, so the block needs no attributes (#71)
+  return `[characters ${a}–${b} of ${text.length} from ${source}.${more}]\n${contentBlock({}, text.slice(a, b))}${footer}`;
 }
 
 export const wordCount = (s: string) => (s.match(/\S+/g) ?? []).length;

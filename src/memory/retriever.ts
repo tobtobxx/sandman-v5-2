@@ -209,12 +209,13 @@ async function semanticScores(query: string, priority: Priority = "normal"): Pro
   return best;
 }
 
-export function renderNotes(notes: NoteView[]): string {
+/** sources: false leaves out where claims came from (callers that attach the sources in code). */
+export function renderNotes(notes: NoteView[], sources = true): string {
   return notes
     .map((n) => {
       const cl = n.claims.map((c) => {
         const date = String(c.observed_at).slice(0, 10);
-        const src = claimSource(c);
+        const src = sources ? claimSource(c) : "";
         const from = src ? `; source: ${src}` : "";
         return `  - ${c.text}${c.stale ? ` [as of ${date}, may be outdated${from}]` : ` (${date}${from})`}`;
       });

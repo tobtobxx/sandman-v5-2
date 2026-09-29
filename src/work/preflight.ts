@@ -40,7 +40,7 @@ export async function runLibrarian(card: Card): Promise<"answered" | "narrow" | 
   const ids = (r.answer_note_ids ?? []).filter((id: string) => answerable.includes(id));
   if (r.verdict === "answered" && ids.length) {
     const used = notes.filter((n) => ids.includes(n.id));
-    const a = await ask<{ summary: string }>("render_answer", W.renderAnswer({ goal: card.goal, notes: renderNotes(used) }), card, session_id);
+    const a = await ask<{ summary: string }>("render_answer", W.renderAnswer({ goal: card.goal, notes: renderNotes(used, false) }), card, session_id);
     endSession(session_id, "answered");
     transition(card.id, "verifying", "librarian_answered", "librarian", { result: { summary: a.summary, facts: [], sources: noteUrls(used), source: "memory", notes: ids }, result_source: "memory" });
     return "answered";

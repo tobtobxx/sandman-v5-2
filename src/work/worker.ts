@@ -90,14 +90,14 @@ async function runTool(card: Card, tool: string, args: Row): Promise<ToolResult>
     case "web_search": {
       const hits = await web.search(String(args.query ?? ""));
       if (!hits.length) return { ok: true, text: "No results. Try different words." };
-      return { ok: true, text: contentBlock({ search: String(args.query ?? "") }, hits.map((h, i) => `${i + 1}. ${h.title}\n   ${h.url}\n   ${h.snippet}`).join("\n")) };
+      return { ok: true, text: contentBlock({}, hits.map((h, i) => `${i + 1}. ${h.title}\n   ${h.url}\n   ${h.snippet}`).join("\n")) };
     }
     case "web_fetch": {
       const url = String(args.url ?? "");
       const p = await web.fetch(url);
       if (!p) return { ok: false, text: `Could not load ${url}. Try another page.` };
       const content = `${p.title}\n\n${p.text}`;
-      if (content.length <= config.tool_result_window) return { ok: true, text: `[${content.length} characters from ${url}.]\n${contentBlock({ url }, content)}` };
+      if (content.length <= config.tool_result_window) return { ok: true, text: `[${content.length} characters from ${url}.]\n${contentBlock({}, content)}` };
       const art = saveArtifact({ card_id: card.id, name: url, content, origin: "tool_result", summary: p.title });
       return { ok: true, text: page(art, 0, url), artifact_id: art.id };
     }
