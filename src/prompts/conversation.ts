@@ -5,7 +5,7 @@ import { lines, P, ROLE_LINES } from "./work.ts";
 
 export function segmentCapture(c: { transcript: string }): P {
   return {
-    version: "segment_capture/v2",
+    version: "segment_capture/v3",
     maxTokens: 500,
     schema: obj({ analysis: str(300), items: arr(obj({ quote: str(1000) }), 8, 1) }),
     prompt: `The owner recorded a voice memo or wrote a quick note. It may contain several unrelated requests or
@@ -13,7 +13,13 @@ remarks, and may contain transcription errors.
 
 Split it into separate items. An item is one thing the owner wants done, wants remembered, or asks.
 For each item, copy its words EXACTLY from the text (quote). Don't rephrase and don't combine two
-subjects into one item. Leave out filler ("uh", "oh and").
+unrelated subjects into one item. Leave out filler ("uh", "oh and").
+
+Keep parts together when one needs the other to make sense. Split only where each part would still
+be clear on its own. Keep in the same item:
+- background followed by a request about it ("There was X. Research why.")
+- a follow-up step on the result of another ("find out X and message me about it", "if it's open, book it")
+- a part that points back with "it", "that", "there", "why" or "the reasons"
 
 Examples:
 "Remind me to call the plumber tomorrow and also what was the name of that tile shop"
