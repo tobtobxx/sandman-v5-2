@@ -5,7 +5,8 @@ The benchmark exists to improve the harness, not to pick a model. It runs the ta
 isolated tasks for every role, and on a few whole pipelines. Where a result can be checked in
 code it is; otherwise an LLM judge (`xiaomi/mimo-v2.6-pro`) checks written criteria.
 
-Run it: `deno task bench [filter…] [--repeat N] [--label name]`. Results land in
+Run it: `deno task bench [filter…] [--full] [--repeat N] [--label name]`. Without `--full` only
+the hard cases run (`HARD` in `bench/run.ts`). Results land in
 `bench/results/`, and every trace goes into `data/bench.db`. Open that in the observer UI with
 `SANDMAN_DB=data/bench.db deno task serve` → `http://localhost:8700/observer`
 (the *calls* tab shows the bench case of each call).
