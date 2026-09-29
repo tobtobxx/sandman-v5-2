@@ -188,13 +188,17 @@ function checkRoles(): string[] {
   return out;
 }
 
-/** The model slug a role runs on, after fallback. Throws if the role (and its fallback) is not set up. */
-export function modelSlug(role: ModelRole): string {
+/** The role a role runs as: itself, or the role it falls back to. Throws if neither is set up. */
+export function modelRole(role: ModelRole): ModelRole {
   for (let r: string = role; isRole(r); r = WHEN_NULL[r]) {
-    const slug = config.roles[r];
-    if (slug != null) return slug;
+    if (config.roles[r] != null) return r;
   }
   throw new Error(`no model for role "${role}": set roles.${role} in config.jsonc`);
+}
+
+/** The model slug a role runs on, after fallback. Throws if the role (and its fallback) is not set up. */
+export function modelSlug(role: ModelRole): string {
+  return config.roles[modelRole(role)]!;
 }
 
 /** The model a role runs on, after fallback. Throws if the role is not set up. */

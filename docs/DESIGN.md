@@ -472,7 +472,7 @@ On `fail`, verification failure, or lease expiry:
 ### 5.11 Dispatcher, leases and concurrency
 
 - Pick the highest-priority runnable card, acquire a lease, run the appropriate step, apply the outcome **in one transaction**. Renew the lease after each worker step; reclaim expired leases at startup and periodically.
-- The gateway exposes N concurrent **slots** per model (roles on the same model share them, §10.2). Priorities: `interactive` (router, desk) > `high` (synthesis, unblocked cards) > `normal` > `background`.
+- The gateway exposes N concurrent **slots** per role (each role set up gets the model's `slots`, also when two roles name the same model; a `null` role shares its fallback's, §10.2). Priorities: `interactive` (router, desk) > `high` (synthesis, unblocked cards) > `normal` > `background`.
 - One slot SHOULD be reserved for interactive calls, or a separate model SHOULD serve the router and desk (the `interactive` role, §10.2). An owner message must never wait behind a long worker session.
 - Unmeasured so far (§19): behaviour under a single slot on a local model.
 
@@ -1017,7 +1017,7 @@ CREATE VIRTUAL TABLE episodic_fts USING fts5(kind, ref_id, text);
 
 ### 10.2 Models, roles and quirks
 
-Models are endpoints under a slug the owner chooses; roles are fixed by the code and name the model they run on. A role set to `null` is not set up: it falls back to another role, stops Sandman at startup, or fails when used, depending on the role. A model can serve several roles; they then share its slots.
+Models are endpoints under a slug the owner chooses; roles are fixed by the code and name the model they run on. A role set to `null` is not set up: it falls back to another role, stops Sandman at startup, or fails when used, depending on the role. A model can serve several roles; each gets its own `slots`.
 
 ```yaml
 roles:

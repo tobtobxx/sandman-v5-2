@@ -5,7 +5,7 @@
 // - Every call is logged to llm_calls, linked to its session, card, topic and step, with the model's
 //   reasoning trace (if the engine streams one) kept apart from its output, also for failed calls.
 
-import { config, ModelConfig, modelFor, ModelRole, modelSlug } from "../config.ts";
+import { config, ModelConfig, modelFor, ModelRole, modelRole, modelSlug } from "../config.ts";
 import { ctx, db, nowIso } from "../db.ts";
 import { newId } from "../ids.ts";
 import { Schema, validate, wireSchema } from "./schema.ts";
@@ -55,7 +55,8 @@ function reportHealth(reachable: boolean, e?: LLMFailure) {
 // ---- spend tracking (shown in the observer and the bench summary) ----
 export const spend = { usd: 0, calls: 0, byType: {} as Record<string, { calls: number; usd: number; tin: number; tout: number }> };
 
-// ---- priority slots per model (§5.11); roles on the same model share them ----
+// ---- priority slots per role (§5.11): each role set up in config.roles gets its own model.slots;
+// a role set to null shares the slots of the role it falls back to ----
 const PRI: Record<Priority, number> = { interactive: 0, high: 1, normal: 2, background: 3 };
 class Slots {
   busy = 0;
@@ -79,7 +80,7 @@ class Slots {
   }
 }
 const slots: Record<string, Slots> = {};
-const slotsFor = (slug: string, m: ModelConfig) => (slots[slug] ??= new Slots(m.slots));
+const slotsFor = (key: string, m: ModelConfig) => (slots[key] ??= new Slots(m.slots));
 
 // ---- public API ----
 export async function llmJson<T = any>(callType: string, prompt: string, schema: Schema, opts: CallOpts): Promise<T> {
@@ -124,7 +125,7 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
   };
   const tags = ctx().tags;
   if (tags) row.eval_label = JSON.stringify({ tags });
-  const s = slotsFor(slug, p);
+  const s = slotsFor(opts.model ? `model:${slug}` : modelRole(role), p);
   await s.acquire(opts.priority ?? "normal");
   const started = Date.now(); // ms: the call itself, not the wait for a slot
   const out: StreamOut = { text: "", reasoning: "" };
@@ -187,7 +188,6 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
  * every other call; failures do not count against the chat model's reachability.
  */
 export async function embed(texts: string[], kind: "query" | "document", priority: Priority = "normal"): Promise<Float32Array[]> {
-  const slug = modelSlug("embedding");
   const p = modelFor("embedding");
   const callType = `embed_${kind}`;
   const input = texts.map((t) => `${(kind === "query" ? p.query_prefix : p.document_prefix) ?? ""}${t}`);
@@ -197,7 +197,7 @@ export async function embed(texts: string[], kind: "query" | "document", priorit
   };
   const tags = ctx().tags;
   if (tags) row.eval_label = JSON.stringify({ tags });
-  const s = slotsFor(slug, p);
+  const s = slotsFor(modelRole("embedding"), p);
   await s.acquire(priority);
   const started = Date.now();
   try {
