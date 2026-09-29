@@ -66,6 +66,40 @@ interface Result {
   judged: boolean;
 }
 
+/** One model call, for the timing table. */
+interface CallTime {
+  profile: string;
+  call_type: string;
+  ok: boolean;
+  ms: number;
+  tokens_out: number;
+}
+
+interface TimingRow {
+  profile: string;
+  call_type: string;
+  calls: number;
+  ok: number;
+  p50_ms: number;
+  p90_ms: number;
+  avg_tokens_out: number;
+}
+
+/** Per profile and call type: calls, successes, median and 90th-percentile time, output tokens. */
+function timing(calls: CallTime[]): TimingRow[] {
+  const by = new Map<string, CallTime[]>();
+  for (const c of calls) by.set(`${c.profile}\t${c.call_type}`, [...(by.get(`${c.profile}\t${c.call_type}`) ?? []), c]);
+  const pct = (xs: number[], p: number) => xs[Math.min(xs.length - 1, Math.floor(p * xs.length))];
+  return [...by.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, cs]) => {
+    const [profile, call_type] = k.split("\t");
+    const ms = cs.map((c) => c.ms).sort((a, b) => a - b);
+    return {
+      profile, call_type, calls: cs.length, ok: cs.filter((c) => c.ok).length, p50_ms: pct(ms, 0.5), p90_ms: pct(ms, 0.9),
+      avg_tokens_out: Math.round(cs.reduce((a, c) => a + c.tokens_out, 0) / cs.length),
+    };
+  });
+}
+
 const TRACE_TABLES = ["topics", "captures", "capture_items", "messages", "receipts", "questions", "review_items", "desk_turns", "cards", "card_deps", "card_events", "comments", "artifacts", "sessions", "tool_calls", "llm_calls", "notes", "claims", "facts", "events"];
 
 function exportTraces(from: DB, to: DB, caseId: string, run: number) {
@@ -109,9 +143,18 @@ export async function runBench(args: string[]) {
   const traceDb = save ? new DB("data/bench.db") : null;
   if (traceDb) for (const t of TRACE_TABLES) traceDb.run(`DELETE FROM ${t}`);
   const results: Result[] = [];
+  const callTimes: CallTime[] = [];
   const queue: [Case, number][] = [];
   for (let r = 1; r <= repeat; r++) for (const c of cases) queue.push([c, r]);
   const t0 = Date.now();
+  const runs = queue.length;
+  /** "(11/45, 3 failed, ~4m left)": the estimate is elapsed time per finished case × cases left. */
+  const progress = () => {
+    const done = results.length, failed = results.filter((r) => !r.pass).length;
+    const left = ((Date.now() - t0) / done) * (runs - done) / 1000;
+    const eta = done === runs ? "" : `, ~${left >= 90 ? `${Math.round(left / 60)}m` : `${Math.round(left)}s`} left`;
+    return `(${String(done).padStart(String(runs).length)}/${runs}${failed ? `, ${failed} failed` : ""}${eta})`;
+  };
 
   async function one(c: Case, run: number) {
     const cdb = new DB(":memory:");
@@ -139,11 +182,14 @@ export async function runBench(args: string[]) {
       }
       const s = cdb.get(`SELECT count(*) n, coalesce(sum(cost),0) cost, coalesce(sum(tokens_in),0) tin, coalesce(sum(tokens_out),0) tout FROM llm_calls WHERE model_profile != 'judge'`)!;
       Object.assign(res, { calls: s.n, cost: s.cost, tokens_in: s.tin, tokens_out: s.tout, ms: Date.now() - t });
+      for (const r of cdb.all(`SELECT model_profile, call_type, ok, ms, tokens_out FROM llm_calls WHERE model_profile != 'judge'`)) {
+        callTimes.push({ profile: r.model_profile, call_type: r.call_type, ok: r.ok === 1, ms: r.ms ?? 0, tokens_out: r.tokens_out ?? 0 });
+      }
     });
     if (traceDb) exportTraces(cdb, traceDb, c.id, run);
     results.push(res);
     const mark = res.error ? "ERR " : res.pass ? "pass" : "FAIL";
-    console.log(`${mark} ${c.id}${repeat > 1 ? ` #${run}` : ""}  (${res.calls} calls, ${(res.ms / 1000).toFixed(1)}s)${res.error ? "  " + res.error : res.detail && !res.pass ? "  " + res.detail.slice(0, 300) : ""}`);
+    console.log(`${progress()} ${mark} ${c.id}${repeat > 1 ? ` #${run}` : ""}  (${res.calls} calls, ${(res.ms / 1000).toFixed(1)}s)${res.error ? "  " + res.error : res.detail && !res.pass ? "  " + res.detail.slice(0, 300) : ""}`);
   }
 
   const workers = Array.from({ length: concurrency }, async () => {
@@ -162,15 +208,24 @@ export async function runBench(args: string[]) {
     return { group: g, cases: rs.length, pass: p, rate: p / rs.length, calls: rs.reduce((a, r) => a + r.calls, 0), cost: rs.reduce((a, r) => a + r.cost, 0) };
   });
   const total = results.filter((r) => r.pass).length;
+  const times = timing(callTimes);
   const lines = [
     `# Bench ${label} — ${new Date().toISOString()}`,
     ``,
-    `Model: ${config.profiles.small.model} (thinking off). Judge: ${config.profiles.judge.model}. Set: ${set} (${cases.length} of ${allCases.length} cases). Repeats: ${repeat}.`,
+    `Model: ${config.profiles.small.model} (reasoning ${config.profiles.small.reasoning_effort}). Judge: ${config.profiles.judge.model}. Set: ${set} (${cases.length} of ${allCases.length} cases). Repeats: ${repeat}.`,
     `**${total}/${results.length} passed (${((100 * total) / results.length).toFixed(1)}%)** — ${results.reduce((a, r) => a + r.calls, 0)} target calls, $${spend.usd.toFixed(4)} total incl. judge, ${((Date.now() - t0) / 1000).toFixed(0)}s`,
     ``,
     `| group | pass | rate | calls | cost $ |`,
     `|---|---|---|---|---|`,
     ...rows.map((r) => `| ${r.group} | ${r.pass}/${r.cases} | ${(100 * r.rate).toFixed(0)}% | ${r.calls} | ${r.cost.toFixed(4)} |`),
+    ``,
+    `## Time per call`,
+    ``,
+    `Measured from getting a slot to the end of the stream (queueing excluded); output tokens include reasoning where the server reports it.`,
+    ``,
+    `| profile | call type | calls | ok | p50 s | p90 s | tokens out |`,
+    `|---|---|---|---|---|---|---|`,
+    ...times.map((t) => `| ${t.profile} | ${t.call_type} | ${t.calls} | ${t.ok} | ${(t.p50_ms / 1000).toFixed(1)} | ${(t.p90_ms / 1000).toFixed(1)} | ${t.avg_tokens_out} |`),
     ``,
     `## Failures`,
     ``,
@@ -180,7 +235,7 @@ export async function runBench(args: string[]) {
   if (save) {
     Deno.mkdirSync("bench/results", { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: config.profiles.small.model, set, repeat, spend, results }, null, 1));
+    Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: config.profiles.small.model, set, repeat, spend, timing: times, results }, null, 1));
     Deno.writeTextFileSync(`bench/results/latest.md`, lines.join("\n") + "\n");
   }
   const summary = Deno.env.get("GITHUB_STEP_SUMMARY");
