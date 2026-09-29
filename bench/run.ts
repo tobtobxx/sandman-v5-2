@@ -10,8 +10,8 @@ import { config, modelFor, modelSlug } from "../src/config.ts";
 import { spend } from "../src/llm/gateway.ts";
 import { seedRecipes } from "../src/work/recipes.ts";
 import { installHooks } from "../src/work/dispatcher.ts";
-import { setWebBackend } from "../src/tools/web.ts";
-import { corpusBackend } from "./corpus.ts";
+import { web } from "../src/tools/web.ts";
+import * as corpus from "./corpus.ts";
 import { Case, Check, group, judge, NOW, ownerProfile } from "./lib.ts";
 
 const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "verifier", "librarian", "memory", "search", "answers", "episodes"];
@@ -118,7 +118,7 @@ function exportTraces(from: DB, to: DB, caseId: string, run: number) {
 }
 
 export async function runBench(args: string[]) {
-  setWebBackend(corpusBackend);
+  Object.assign(web, corpus);
   try {
     modelSlug("judge");
   } catch {

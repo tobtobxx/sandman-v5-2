@@ -7,7 +7,7 @@ import { config } from "../config.ts";
 import { llmJson, llmText, LLMFailure } from "../llm/gateway.ts";
 import { generateContent, workerStep } from "../prompts/work.ts";
 import { addComment, Card, children, comments, getCard, maxSteps, transition } from "./board.ts";
-import { contentBlock, webFetch, webSearch } from "../tools/web.ts";
+import { contentBlock, web } from "../tools/web.ts";
 import { getArtifact, page, saveArtifact, wordCount } from "../tools/artifacts.ts";
 import { findNotes, profileText, renderNotes } from "../memory/retriever.ts";
 import { endSession, lastLlmCallId, startSession } from "../trace.ts";
@@ -88,13 +88,13 @@ interface ToolResult {
 async function runTool(card: Card, tool: string, args: Row): Promise<ToolResult> {
   switch (tool) {
     case "web_search": {
-      const hits = await webSearch(String(args.query ?? ""));
+      const hits = await web.search(String(args.query ?? ""));
       if (!hits.length) return { ok: true, text: "No results. Try different words." };
       return { ok: true, text: contentBlock({ search: String(args.query ?? "") }, hits.map((h, i) => `${i + 1}. ${h.title}\n   ${h.url}\n   ${h.snippet}`).join("\n")) };
     }
     case "web_fetch": {
       const url = String(args.url ?? "");
-      const p = await webFetch(url);
+      const p = await web.fetch(url);
       if (!p) return { ok: false, text: `Could not load ${url}. Try another page.` };
       const content = `${p.title}\n\n${p.text}`;
       if (content.length <= config.tool_result_window) return { ok: true, text: `[${content.length} characters from ${url}.]\n${contentBlock({ url }, content)}` };

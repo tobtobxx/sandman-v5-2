@@ -1,6 +1,6 @@
 // The offline web for the benchmark: a fixed set of pages (bench/corpus/*.md), so runs are reproducible (§14.3).
 
-import { FetchedPage, SearchHit, WebBackend } from "../src/tools/web.ts";
+import { SearchHit } from "../src/tools/web.ts";
 
 interface Page {
   url: string;
@@ -24,7 +24,7 @@ function loadCorpus(): Page[] {
 
 const words = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").match(/[\p{L}\p{N}]+/gu) ?? [];
 
-function search(query: string): SearchHit[] {
+export async function search(query: string): Promise<SearchHit[]> {
   const q = [...new Set(words(query).filter((w) => w.length > 2))];
   const scored = loadCorpus().map((p) => {
     const tw = new Set([...words(p.title), ...words(p.keywords)]);
@@ -48,10 +48,8 @@ function snippet(text: string, q: string[]): string {
   return best.slice(0, 200);
 }
 
-function fetch(url: string): FetchedPage | null {
+export async function fetch(url: string): Promise<{ title: string; text: string } | null> {
   const norm = (u: string) => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
   const p = loadCorpus().find((p) => norm(p.url) === norm(url));
   return p ? { title: p.title, text: p.text } : null;
 }
-
-export const corpusBackend: WebBackend = { search, fetch };

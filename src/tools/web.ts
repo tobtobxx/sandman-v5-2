@@ -1,5 +1,5 @@
 // web_search / web_fetch: SearXNG (web.searxng in config.jsonc) if set, else DuckDuckGo's HTML endpoint
-// (best effort). The benchmark swaps in its offline corpus with setWebBackend (bench/corpus.ts).
+// (best effort). The benchmark swaps in its offline corpus (bench/corpus.ts).
 
 import { config } from "../config.ts";
 
@@ -7,14 +7,6 @@ export interface SearchHit {
   title: string;
   url: string;
   snippet: string;
-}
-export interface FetchedPage {
-  title: string;
-  text: string;
-}
-export interface WebBackend {
-  search(query: string): SearchHit[] | Promise<SearchHit[]>;
-  fetch(url: string): FetchedPage | null | Promise<FetchedPage | null>;
 }
 
 // DDG challenges bursts (about the third request within a few seconds); one request per 6 s passes.
@@ -83,7 +75,7 @@ export function contentBlock(attrs: Record<string, string>, text: string): strin
   return `<content${a}>\n${text.replace(/<(\/?)(content)/gi, "‹$1$2")}\n</content>`;
 }
 
-async function liveFetch(url: string): Promise<FetchedPage | null> {
+async function liveFetch(url: string): Promise<{ title: string; text: string } | null> {
   try {
     const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 sandman" }, signal: AbortSignal.timeout(20000) });
     if (!r.ok) return null;
@@ -95,15 +87,4 @@ async function liveFetch(url: string): Promise<FetchedPage | null> {
   }
 }
 
-let backend: WebBackend = { search: liveSearch, fetch: liveFetch };
-export function setWebBackend(b: WebBackend) {
-  backend = b;
-}
-
-export async function webSearch(query: string): Promise<SearchHit[]> {
-  return await backend.search(query);
-}
-
-export async function webFetch(url: string): Promise<FetchedPage | null> {
-  return await backend.fetch(url);
-}
+export const web = { search: liveSearch, fetch: liveFetch };
