@@ -334,7 +334,7 @@ function bindHome() {
       const r = await api("/send", { text, client_msg_id: cmid() });
       draft = ""; try { localStorage.removeItem("sandman.draft"); } catch {}
       freshItems = new Set(r.items.map((i) => i.item_id));
-      location.hash = r.items.length === 1 ? `topic/${r.items[0].topic_id}` : `send/${r.send_id}`;
+      location.hash = r.items.length === 1 ? `topic/${r.items[0].topic_id}` : `send/${r.send_id}`; // pending: no items yet
     } catch (err) {
       $("#sendBtn").disabled = false;
       $("#homeHint").textContent = `Could not send: ${err.message}. Your text is kept; try again.`;
@@ -355,8 +355,9 @@ async function viewSend(id) {
     </article>`;
   return `<div class="scroll"><div class="center sendview" style="max-width:980px">
     <div class="me" style="align-self:flex-start;max-width:100%"><div class="sub">You · from home</div><div class="b" style="border-radius:16px 16px 16px 4px">${esc(s.text)}</div></div>
-    <div><h1 style="margin:0;font-size:25px;font-weight:600">Filed as ${s.items.length} items. Where do you want to continue?</h1>
-    <p style="margin:6px 0 0;color:var(--muted);font-size:15px">Each part went to its own topic and was acted on. Every action can be undone, and every filing can be moved.</p></div>
+    ${s.state === "pending" ? `<div><h1 style="margin:0;font-size:25px;font-weight:600">Saved, not filed yet</h1>
+    <p style="margin:6px 0 0;color:var(--muted);font-size:15px">Sandman can't reach its model right now. Your message is kept and filed as soon as it can; this page updates then.</p></div>` : `<div><h1 style="margin:0;font-size:25px;font-weight:600">Filed as ${s.items.length} items. Where do you want to continue?</h1>
+    <p style="margin:6px 0 0;color:var(--muted);font-size:15px">Each part went to its own topic and was acted on. Every action can be undone, and every filing can be moved.</p></div>`}
     <div class="cards">${s.items.map(card).join("")}</div>
     <a href="#home" style="font-size:14px">Back to home</a>
   </div></div>`;

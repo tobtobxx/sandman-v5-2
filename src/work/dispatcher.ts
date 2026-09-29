@@ -12,6 +12,7 @@ import { postMessage } from "../conversation/messages.ts";
 import { enqueueFacts } from "../memory/facts.ts";
 import { LLMFailure } from "../llm/gateway.ts";
 import { emit } from "../events.ts";
+import { modelBackoff } from "../conversation/alerts.ts";
 
 let hooked = false;
 export function installHooks() {
@@ -79,9 +80,10 @@ function fireReminder(card: Card): string {
 
 const PRIORITY_ORDER = `CASE priority WHEN 'interactive' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END`;
 
-export function runnable(rootId?: string): Card[] {
+/** `tasks: false`: only due reminders (they need no model). */
+export function runnable(rootId?: string, tasks = true): Card[] {
   const rows = db().all(
-    `SELECT * FROM cards WHERE ((kind='task' AND state IN ('new','ready','verifying')) OR (kind='reminder' AND state='ready' AND due_at <= ?))
+    `SELECT * FROM cards WHERE ((${tasks ? "" : "0 AND "}kind='task' AND state IN ('new','ready','verifying')) OR (kind='reminder' AND state='ready' AND due_at <= ?))
      ${rootId ? "AND root_id=?" : ""} ORDER BY ${PRIORITY_ORDER}, phase DESC, created_at`,
     nowIso(), ...(rootId ? [rootId] : []),
   );
@@ -98,9 +100,9 @@ export function reclaimLeases() {
 const globalInflight = new Set<string>();
 
 /** Start up to `max` runnable cards concurrently; returns the promises started. */
-export function tick(max: number, rootId?: string, inflight = globalInflight): Promise<unknown>[] {
+export function tick(max: number, rootId?: string, inflight = globalInflight, tasks = true): Promise<unknown>[] {
   const started: Promise<unknown>[] = [];
-  for (const c of runnable(rootId)) {
+  for (const c of runnable(rootId, tasks)) {
     if (inflight.size >= max) break;
     if (inflight.has(c.id)) continue;
     inflight.add(c.id);
@@ -130,7 +132,8 @@ export function startDispatcher(concurrency = config.profiles.small.slots) {
     if (busy) return;
     busy = true;
     try {
-      tick(concurrency);
+      // while the model can't be reached, task cards stay ready and wait out the backoff (§13)
+      tick(concurrency, undefined, globalInflight, !modelBackoff());
     } finally {
       busy = false;
     }

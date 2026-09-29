@@ -81,7 +81,7 @@ export const config = {
   memory: { volatility_max_age_days: { volatile: 7, slow: 180, evergreen: null as number | null }, top_k: 6 },
   notifier: {
     levels: {
-      question: "push", reminder: "push", card_result: "badge", desk_reply: "badge", receipt: "silent", review: "silent",
+      question: "push", reminder: "push", card_result: "badge", desk_reply: "badge", receipt: "silent", review: "silent", system: "badge",
     } as Record<string, string>,
     max_push_per_day: 6,
   },
