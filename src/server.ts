@@ -9,7 +9,8 @@ import { spend } from "./llm/gateway.ts";
 import { seedRecipes } from "./work/recipes.ts";
 import { startDispatcher } from "./work/dispatcher.ts";
 import { addComment, cancelCard, createCard, getCard, transition } from "./work/board.ts";
-import { fileCapture, handleCapture, moveItem, processCapture, receiveCapture } from "./conversation/capture.ts";
+import { moveItem, receiveCapture, retryCaptures, runCapture } from "./conversation/capture.ts";
+import { installModelAlerts, modelBackoff } from "./conversation/alerts.ts";
 import { undoReceipt } from "./conversation/receipts.ts";
 import { listTopics, unarchiveTopic, updateTopic } from "./conversation/topics.ts";
 import { ownerMessage } from "./conversation/pages.ts";
@@ -36,13 +37,19 @@ route("GET", "/events", (_r, _p, _b, u) => eventsAfter(Number(u.searchParams.get
 
 // ---------------------------------------------------------------- capture
 // Send from home (docs/API.md): split and file now, let the desk work in the background.
+// If filing fails (model down), the capture is kept and retried; the reply says it is pending.
+// A resend with the same client_msg_id joins or restarts the same capture.
 route("POST", "/send", async (_r, _p, b) => {
   const text = String(b.text ?? "").trim();
   if (!text) throw new Error("empty message");
   const cap = receiveCapture({ text, url: b.url, source: b.source ?? "text", client_id: b.client_id, client_msg_id: b.client_msg_id });
-  const fresh = cap.state === "transcribed";
-  const filed = await fileCapture(cap.id);
-  if (fresh) bg(handleCapture(cap.id, filed));
+  const run = runCapture(cap.id);
+  let filed;
+  try {
+    filed = await run.filed;
+  } catch {
+    return { send_id: cap.id, pending: true, items: [] };
+  }
   return {
     send_id: cap.id,
     items: filed.map((f) => {
@@ -92,7 +99,7 @@ route("POST", "/briefings/:id/reply", async (_r, p, b) => await replyBriefing(p.
 route("GET", "/review", () => listReview());
 route("POST", "/review/:id/:action", async (_r, p, b) => {
   const r = reviewAction(p.id, p.action, b.arg);
-  if (r.refile) bg(processCapture(receiveCapture({ text: r.refile, source: "text" }).id));
+  if (r.refile) runCapture(receiveCapture({ text: r.refile, source: "text" }).id).filed.catch(() => {}); // retried on failure
   if (p.action === "move" && b.topic_id) {
     const item = db().get(`SELECT ref_ids FROM review_items WHERE id=?`, p.id);
     moveItem(j<string[]>(item?.ref_ids, [])[0], b.topic_id);
@@ -277,7 +284,11 @@ function sse(after: number): Response {
 
 export async function serve() {
   seedRecipes();
+  installModelAlerts();
   startDispatcher();
+  // captures not yet handled (model was down, server restarted) are retried with backoff (§13)
+  setInterval(() => modelBackoff() || retryCaptures(), 5_000);
+  retryCaptures();
   // opportunistic consolidation (§7.5): when ≥20 facts are pending, and once a night
   let lastNight = "";
   setInterval(() => {

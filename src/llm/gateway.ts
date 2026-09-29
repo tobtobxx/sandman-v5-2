@@ -31,6 +31,23 @@ export class LLMFailure extends Error {
   }
 }
 
+// ---- reachability (§13): transport errors and timeouts mean the server can't be reached; any answer means it can ----
+type HealthListener = (reachable: boolean, e?: LLMFailure) => void;
+const healthListeners = new Set<HealthListener>();
+export function onModelHealth(fn: HealthListener) {
+  healthListeners.add(fn);
+  return () => healthListeners.delete(fn);
+}
+function reportHealth(reachable: boolean, e?: LLMFailure) {
+  for (const l of healthListeners) {
+    try {
+      l(reachable, e);
+    } catch (err) {
+      console.error("model health listener:", err);
+    }
+  }
+}
+
 // ---- spend tracking (the benchmark key is budget-limited) ----
 export const spend = { usd: 0, calls: 0, byType: {} as Record<string, { calls: number; usd: number; tin: number; tout: number }> };
 
@@ -147,6 +164,9 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
     throw new LLMFailure("transport", (e as Error).message);
   } finally {
     s.release();
+    const kind = String(row.error ?? "").split(":")[0];
+    if (kind === "transport" || kind === "timeout") reportHealth(false, new LLMFailure(kind, String(row.error).slice(kind.length + 2)));
+    else reportHealth(true);
     row.raw_output = raw;
     row.ms = Date.now() - started;
     try {

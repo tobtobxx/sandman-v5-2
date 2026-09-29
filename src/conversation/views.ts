@@ -54,7 +54,8 @@ export function sendView(id: string) {
       reply,
     };
   });
-  return { send_id: id, text: cap.transcript, state: cap.state === "handled" ? "handled" : "filed", items };
+  const state = cap.state === "handled" ? "handled" : cap.state === "filed" ? "filed" : "pending";
+  return { send_id: id, text: cap.transcript, state, items };
 }
 
 function cardProgress(card_id: string): Row | null {

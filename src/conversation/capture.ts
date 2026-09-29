@@ -145,22 +145,35 @@ export interface FiledItem {
   route: RouteResult;
 }
 
-/** Step 1 of a send (docs/API.md POST /send): split and file. Fast: segmentation and routing only. */
+const filedItem = (i: Row): FiledItem => ({ item_id: i.id, quote: i.quote, route: j<RouteResult>(i.route_info, {} as RouteResult) });
+
+/** Step 1 of a send (docs/API.md POST /send): split and file. Fast: segmentation and routing only.
+ *  Resumes after a failure: a stored segmentation and the items already routed are kept. */
 export async function fileCapture(capture_id: string): Promise<FiledItem[]> {
   const cap = db().get(`SELECT * FROM captures WHERE id=?`, capture_id)!;
   const existing = db().all(`SELECT * FROM capture_items WHERE capture_id=? ORDER BY seq`, capture_id);
-  if (existing.length) return existing.map((i) => ({ item_id: i.id, quote: i.quote, route: j<RouteResult>(i.route_info, {} as RouteResult) }));
-  const seg = await segment(cap.transcript, capture_id);
-  db().update("captures", capture_id, { state: "segmented" });
-  emit("capture.segmented", { ref_id: capture_id, payload: { items: seg.items, matches: seg.matches, uncovered: seg.uncovered } });
+  if (cap.state === "filed" || cap.state === "handled") return existing.map(filedItem);
+  let seg: { items: string[]; uncovered: string[] };
+  const stored = cap.state === "segmented" ? db().get(`SELECT payload FROM events WHERE type='capture.segmented' AND ref_id=? ORDER BY id DESC LIMIT 1`, capture_id) : null;
+  if (stored) seg = j(stored.payload, { items: [], uncovered: [] });
+  else {
+    const s = await segment(cap.transcript, capture_id);
+    seg = s;
+    db().update("captures", capture_id, { state: "segmented" });
+    emit("capture.segmented", { ref_id: capture_id, payload: { items: s.items, matches: s.matches, uncovered: s.uncovered } });
+  }
   const out: FiledItem[] = [];
-  let seq = 0;
-  for (const quote of seg.items) {
+  for (const [seq, quote] of seg.items.entries()) {
+    const done = existing.find((i) => i.seq === seq);
+    if (done) {
+      out.push(filedItem(done));
+      continue;
+    }
     const item_id = newId("itm");
     const route = await routeItem(quote, { allowChat: true });
     const msg = postMessage({ topic_id: route.topic_id, role: "owner", kind: "capture_item", body: quote, capture_item_id: item_id, payload: { capture_id, provisional: route.confidence === "low" } });
     db().insert("capture_items", {
-      id: item_id, capture_id, seq: seq++, quote, topic_id: route.topic_id, route_confidence: route.confidence, provisional: route.confidence === "low",
+      id: item_id, capture_id, seq, quote, topic_id: route.topic_id, route_confidence: route.confidence, provisional: route.confidence === "low",
       message_id: msg.id, route_info: route,
     });
     emit("item.routed", { topic_id: route.topic_id, ref_id: item_id, payload: { item_id, quote, ...route } });
@@ -173,11 +186,18 @@ export async function fileCapture(capture_id: string): Promise<FiledItem[]> {
   return out;
 }
 
-/** Step 2: the desk handles each filed item. Conversation topics get a conversation-mode turn (a reply). */
+/** Step 2: the desk handles each filed item. Conversation topics get a conversation-mode turn (a reply).
+ *  Resumes after a failure: an item whose desk turn finished, or already acted (left receipts), is not
+ *  handled again; its outcome is read back. */
 export async function handleCapture(capture_id: string, filed: FiledItem[]) {
   const cap = db().get(`SELECT * FROM captures WHERE id=?`, capture_id)!;
   const out: ItemOutcome[] = [];
   for (const it of filed) {
+    const prior = priorDesk(it.item_id);
+    if (prior) {
+      out.push({ ...it, desk: prior });
+      continue;
+    }
     const conv = it.route.kind === "conversation";
     const desk = await deskTurn({ topic_id: it.route.topic_id, mode: conv ? "conversation" : "capture", input: it.quote, transcript: cap.transcript, capture_item_id: it.item_id, url: cap.url });
     db().update("capture_items", it.item_id, { desk_turn_id: desk.turn_id });
@@ -188,6 +208,62 @@ export async function handleCapture(capture_id: string, filed: FiledItem[]) {
   emit("capture.confirmed", { ref_id: capture_id, payload: { capture_id, ...confirmation }, kind: "receipt" });
   emit("send.handled", { ref_id: capture_id, payload: { capture_id } });
   return { items: out, confirmation };
+}
+
+/** The desk outcome of an item handled (or partly handled) by an earlier attempt, or null. */
+function priorDesk(item_id: string): DeskResult | null {
+  const item = db().get(`SELECT desk_turn_id FROM capture_items WHERE id=?`, item_id);
+  const receipts = db().all(`SELECT * FROM receipts WHERE capture_item_id=? ORDER BY created_at, rowid`, item_id);
+  const turn_id = item?.desk_turn_id ?? receipts[0]?.desk_turn_id;
+  if (!turn_id) return null;
+  if (!item?.desk_turn_id) db().update("capture_items", item_id, { desk_turn_id: turn_id });
+  const t = db().get(`SELECT intents, reply_message_id FROM desk_turns WHERE id=?`, turn_id);
+  const reply = t?.reply_message_id ? db().get(`SELECT body FROM messages WHERE id=?`, t.reply_message_id)?.body ?? null : null;
+  return { turn_id, intents: j<string[]>(t?.intents, []), receipts, reply };
+}
+
+// ---------------------------------------------------------------- running and retrying (§13)
+// A send is filed and handled by one run at a time. A run that fails (model down) leaves the capture
+// short of `handled`; the retry loop picks it up again with backoff.
+const running = new Map<string, { filed: Promise<FiledItem[]>; handled: Promise<boolean> }>();
+const retries = new Map<string, { n: number; at: number }>();
+const RETRY_MIN_MS = 30_000, RETRY_MAX_MS = 30 * 60_000;
+/** Captures older than this are left alone (e.g. traces copied from the benchmark). */
+const RETRY_MAX_AGE_MS = 24 * 3600e3;
+
+/** File (unless filed) and handle (unless handled) a capture, or join the run in flight.
+ *  `filed` rejects if filing fails; `handled` never rejects (false: failed, will be retried). */
+export function runCapture(capture_id: string): { filed: Promise<FiledItem[]>; handled: Promise<boolean> } {
+  const cur = running.get(capture_id);
+  if (cur) return cur;
+  const filed = fileCapture(capture_id);
+  const handled = filed
+    .then(async (items) => {
+      if (db().get(`SELECT state FROM captures WHERE id=?`, capture_id)?.state !== "handled") await handleCapture(capture_id, items);
+      retries.delete(capture_id);
+      return true;
+    })
+    .catch((e) => {
+      const n = (retries.get(capture_id)?.n ?? 0) + 1;
+      const wait = Math.min(RETRY_MIN_MS * 2 ** (n - 1), RETRY_MAX_MS);
+      retries.set(capture_id, { n, at: Date.now() + wait });
+      console.warn(`capture ${capture_id} failed (attempt ${n}), retrying in ${Math.round(wait / 1000)}s:`, (e as Error).message);
+      emit("capture.failed", { ref_id: capture_id, payload: { capture_id, attempt: n, error: (e as Error).message, retry_in_s: Math.round(wait / 1000) } });
+      return false;
+    })
+    .finally(() => running.delete(capture_id));
+  const run = { filed, handled };
+  running.set(capture_id, run);
+  return run;
+}
+
+/** Restart captures that are not handled yet and whose backoff has passed. */
+export function retryCaptures() {
+  const since = new Date(Date.now() - RETRY_MAX_AGE_MS).toISOString();
+  for (const c of db().all(`SELECT id FROM captures WHERE state != 'handled' AND created_at > ? ORDER BY created_at`, since)) {
+    if (running.has(c.id) || Date.now() < (retries.get(c.id)?.at ?? 0)) continue;
+    runCapture(c.id);
+  }
 }
 
 /** Both steps, awaited (benchmark, tests). */
