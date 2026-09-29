@@ -16,7 +16,7 @@ export interface CallOpts {
   maxTokens: number;
   /** Default: "interactive" for interactive calls, else "main". */
   role?: ModelRole;
-  /** A model slug from config.models, instead of a role (the quirk probe). */
+  /** A model slug from config.models, instead of a role (the model probe). */
   model?: string;
   priority?: Priority;
   session_id?: string;

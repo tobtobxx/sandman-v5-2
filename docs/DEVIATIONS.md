@@ -98,3 +98,6 @@ filed "hi" into a new topic "General Greeting"). The client is chat-first (API i
 - Topic summaries and owner-fact extraction run every 4 messages, in the background.
 - Needs-you ranking counts the blocked card plus its ancestors (children have no other dependants).
 - Consolidation runs at ≥20 pending facts or around 03:00, plus on demand; tidy-up runs after it.
+- No per-model quirks list (§10.2). Every quirk workaround (schema linter, whitespace watchdog,
+  local truncation, the worker's tool-name repair) runs for every model, so the list configured
+  nothing. `sandman probe` reports latency, tokens, speed, cost and local repairs instead.

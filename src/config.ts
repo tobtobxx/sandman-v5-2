@@ -15,7 +15,6 @@ export interface ModelConfig {
   // null: the provider's default
   temperature: number | null;
   idle_timeout_s: number;
-  quirks: string[];
   // embedding models only
   query_prefix?: string;
   document_prefix?: string;
@@ -24,7 +23,7 @@ export interface ModelConfig {
 
 /** Values for the keys a model entry leaves out. `base_url` and `model` have none. */
 const MODEL_DEFAULTS = {
-  api_key: "", reasoning_effort: "none", reasoning_tokens: 0, slots: 1, temperature: null, idle_timeout_s: 60, quirks: [] as string[],
+  api_key: "", reasoning_effort: "none", reasoning_tokens: 0, slots: 1, temperature: null, idle_timeout_s: 60,
 };
 const MODEL_KEYS = ["base_url", "model", ...Object.keys(MODEL_DEFAULTS), "query_prefix", "document_prefix", "min_similarity"];
 
