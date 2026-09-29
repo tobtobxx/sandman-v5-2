@@ -14,7 +14,7 @@ See [docs/BENCH.md](docs/BENCH.md) for what the benchmark found and changed, and
 nix develop                     # or: install deno ≥ 2.2 yourself
 echo 'OPENROUTER_API_KEY=sk-or-…' > .env
 deno task serve                 # http://localhost:8700  (client)  ·  /observer (all internal state)
-deno task bench                 # the benchmark; filters: deno task bench desk/ episode/ --repeat 3
+deno task bench                 # the hard cases; --full for all; filters: deno task bench desk/ --repeat 3
 deno task probe                 # which engine quirks apply
 deno run -A src/main.ts lint    # every prompt schema: reasoning key sorts first
 ```

@@ -1,5 +1,6 @@
-// sandman bench [filter...] [--repeat N] [--concurrency N] [--label name] [--no-save]
-// Runs every case in a fresh in-memory database, with the offline corpus and a fixed clock.
+// sandman bench [filter...] [--full] [--repeat N] [--concurrency N] [--label name] [--no-save]
+// Runs the hard cases (HARD below), or every case with --full; filters narrow either set.
+// Runs each case in a fresh in-memory database, with the offline corpus and a fixed clock.
 // Writes bench/results/<stamp>-<label>.json + bench/results/latest.md, and copies all traces into
 // data/bench.db (open it with SANDMAN_DB=data/bench.db deno task serve → /observer).
 
@@ -11,6 +12,31 @@ import { installHooks } from "../src/work/dispatcher.ts";
 import { Case, Check, group, judge, NOW, ownerProfile } from "./lib.ts";
 
 const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "verifier", "librarian", "memory", "answers", "episodes"];
+
+// The cases that still fail now and then: each failed at least once in the last five saved runs
+// (v7, v8, v9, v10-worker, chat-v1). The rest pass reliably and only prove the floor; run them with
+// --full before a release or after a change that touches every role.
+const HARD = [
+  "answers/model-free-text",
+  "desk/answer-one-of-two",
+  "desk/conversation-work-goes-to-topic",
+  "desk/status-from-context",
+  "episode/capture-no-cross-talk",
+  "episode/capture-three-items",
+  "episode/compare-card",
+  "episode/memory-reuse",
+  "librarian/negative-note",
+  "memory/duplicate",
+  "memory/new-claim",
+  "memory/relevance-trivial",
+  "planner/generate-trip",
+  "segment/one-long-subject",
+  "triage/big-trip-plan",
+  "triage/compare-three-named",
+  "triage/write-missing-info",
+  "verifier/file-claimed-not-written",
+  "verifier/not-available-ok",
+];
 
 async function loadCases(): Promise<Case[]> {
   const out: Case[] = [];
@@ -62,10 +88,15 @@ export async function runBench(args: string[]) {
   const concurrency = Number(opt("--concurrency", "6"));
   const label = opt("--label", "run");
   const save = !args.includes("--no-save");
+  const full = args.includes("--full");
   const filters = args.filter((a) => !a.startsWith("--"));
-  let cases = await loadCases();
+  const allCases = await loadCases();
+  const missing = HARD.filter((id) => !allCases.some((c) => c.id === id));
+  if (missing.length) console.warn(`HARD lists unknown cases: ${missing.join(", ")}`);
+  let cases = full ? allCases : allCases.filter((c) => HARD.includes(c.id));
   if (filters.length) cases = cases.filter((c) => filters.some((f) => c.id.includes(f)));
-  console.log(`${cases.length} cases × ${repeat}  (model ${config.profiles.small.model}, judge ${config.profiles.judge.model})`);
+  const set = full ? "full" : "hard";
+  console.log(`${cases.length} cases (${set} set) × ${repeat}  (model ${config.profiles.small.model}, judge ${config.profiles.judge.model})`);
 
   const traceDb = save ? new DB("data/bench.db") : null;
   if (traceDb) for (const t of TRACE_TABLES) traceDb.run(`DELETE FROM ${t}`);
@@ -126,7 +157,7 @@ export async function runBench(args: string[]) {
   const lines = [
     `# Bench ${label} — ${new Date().toISOString()}`,
     ``,
-    `Model: ${config.profiles.small.model} (thinking off). Judge: ${config.profiles.judge.model}. Repeats: ${repeat}.`,
+    `Model: ${config.profiles.small.model} (thinking off). Judge: ${config.profiles.judge.model}. Set: ${set} (${cases.length} of ${allCases.length} cases). Repeats: ${repeat}.`,
     `**${total}/${results.length} passed (${((100 * total) / results.length).toFixed(1)}%)** — ${results.reduce((a, r) => a + r.calls, 0)} target calls, $${spend.usd.toFixed(4)} total incl. judge, ${((Date.now() - t0) / 1000).toFixed(0)}s`,
     ``,
     `| group | pass | rate | calls | cost $ |`,
@@ -141,7 +172,7 @@ export async function runBench(args: string[]) {
   if (save) {
     Deno.mkdirSync("bench/results", { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: config.profiles.small.model, repeat, spend, results }, null, 1));
+    Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: config.profiles.small.model, set, repeat, spend, results }, null, 1));
     Deno.writeTextFileSync(`bench/results/latest.md`, lines.join("\n") + "\n");
   }
 }

@@ -1,6 +1,6 @@
 // sandman <command>
 //   serve            run API, dispatcher and both web UIs
-//   bench [filter]   run the benchmark (see bench/README.md)
+//   bench [--full] [filter]   run the benchmark (see bench/README.md)
 //   probe [profile]  report engine quirks
 //   lint             check all prompt schemas (reasoning key first)
 
@@ -35,5 +35,5 @@ switch (cmd) {
     break;
   }
   default:
-    console.log("usage: sandman serve | bench [filter] | probe [profile] | lint");
+    console.log("usage: sandman serve | bench [--full] [filter] | probe [profile] | lint");
 }
