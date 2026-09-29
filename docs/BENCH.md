@@ -77,8 +77,9 @@ Each row was found in a trace, fixed, and confirmed by the next run. DEVIATIONS.
 
 ## CI
 
-`.github/workflows/bench.yml` runs the hard set once per PR with `--min-pass 75`. A PR fails if more
-than 5 of 23 cases fail. The hard set is flaky on purpose: about 2 failures per run on average
-(generate-trip nearly always one of them). Using per-case failure rates from all saved runs, P(>5
-failures) ≈ 5%; at current rates it is lower. It catches a broad regression, not a single case; check
-those with `--repeat 5`. The workflow needs the `OPENROUTER_API_KEY` repository secret.
+`.github/workflows/bench.yml` runs the hard set once per PR with `--min-pass 90`: a PR fails if more
+than 2 of 23 cases fail. The hard set is flaky on purpose, about 2 failures per run (generate-trip nearly
+always one), so this cutoff is strict: in the 7 single runs measured for #27, 1 had more than 2
+failures; by the per-case rates of all saved runs (older, worse versions included) it would be over
+half. A red run is a prompt to look, not proof of a regression: re-run the failing cases with
+`--repeat 5`. The workflow needs the `OPENROUTER_API_KEY` repository secret.
