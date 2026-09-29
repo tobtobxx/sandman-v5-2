@@ -13,7 +13,7 @@ See [docs/BENCH.md](docs/BENCH.md) for what the benchmark found and changed, and
 ```sh
 nix develop                     # or: install deno ≥ 2.2 yourself
 deno task serve                 # first run writes config.jsonc and exits: put your API key there
-deno task serve                 # http://localhost:8700  (client)  ·  /observer (all internal state)
+deno task serve                 # http://[::1]:8700  (client)  ·  /observer (all internal state)
 deno task bench                 # the hard cases; --full for all; filters: deno task bench desk/ --repeat 3
 deno task probe [slug|role]     # test calls: latency, tokens, speed, repairs (default: the "main" model)
 deno run -A src/main.ts lint    # every prompt schema: reasoning key sorts first
