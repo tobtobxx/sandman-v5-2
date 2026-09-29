@@ -16,29 +16,32 @@ const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "
 // The cases that still fail now and then: each failed at least once in the last five saved runs
 // (v7, v8, v9, v10-worker, chat-v1). The rest pass reliably and only prove the floor; run them with
 // --full before a release or after a change that touches every role.
+// Episodes are not in this list: they cost two thirds of a hard run. Instead, the stage each one failed
+// at is here as a unit case (issue #27); the episodes run with --full.
 const HARD = [
   "answers/model-free-text",
   "desk/answer-one-of-two",
   "desk/conversation-answers-question",
   "desk/conversation-work-goes-to-topic",
+  "desk/episode-balcony-add", // episode/capture-three-items
   "desk/status-from-context",
-  "episode/capture-no-cross-talk",
-  "episode/capture-three-items",
-  "episode/compare-card",
-  "episode/memory-reuse",
+  "librarian/answered-rephrased", // episode/memory-reuse
   "librarian/negative-note",
   "memory/duplicate",
   "memory/new-claim",
   "memory/relevance-trivial",
   "planner/generate-trip",
   "segment/background-then-request",
+  "segment/no-cross-talk-memo", // episode/capture-no-cross-talk
   "segment/one-long-subject",
   "segment/research-then-message-about-it",
   "triage/big-trip-plan",
-  "triage/compare-three-named",
+  "triage/compare-three-named", // episode/compare-card
   "triage/write-missing-info",
   "verifier/file-claimed-not-written",
   "verifier/not-available-ok",
+  "worker/research-gather-open", // episode/recipe-tree, episode/compare-card
+  "worker/research-not-available-honest",
 ];
 
 async function loadCases(): Promise<Case[]> {

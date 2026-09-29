@@ -1,9 +1,10 @@
 // Consolidator (§7.5) and owner-fact extraction (§7.4).
 
-import { all, Case, daysAgo, note, topic } from "../lib.ts";
+import { all, Case, cardWithResult, daysAgo, note, topic } from "../lib.ts";
 import { db, nowIso } from "../../src/db.ts";
 import { newId } from "../../src/ids.ts";
-import { consolidateOne, relevant, resolveSubject } from "../../src/memory/consolidator.ts";
+import { consolidate, consolidateOne, relevant, resolveSubject } from "../../src/memory/consolidator.ts";
+import { enqueueFacts } from "../../src/memory/facts.ts";
 import { extractFacts } from "../../src/conversation/pages.ts";
 import { postMessage } from "../../src/conversation/messages.ts";
 
@@ -66,6 +67,30 @@ export const cases: Case[] = [
     { text: "An e-bike service at Velostation Nord costs CHF 149, which includes a software update and a battery check.", days_ago: 0, volatility: "volatile" },
   ]), () => fact("Velostation Nord", "Velostation Nord does not repair batteries themselves but sends them to the manufacturer.", "slow", { type: "url", ref: "https://www.velostation-nord.ch/about" }), "new"),
   decide("new-claim", gardena, () => fact("Gardena Micro-Drip starter set", "Each Gardena Micro-Drip dripper delivers 2 litres per hour.", "slow"), "new"),
+  {
+    // Stage of episode/memory-reuse: the first card's result (from a trace) becomes one note with both claims.
+    id: "memory/consolidate-research-result",
+    run: async () => {
+      const src = "https://www.velostation-nord.ch/about";
+      const card = cardWithResult({
+        title: "E-bike repair at Velostation Nord", state: "done", result: {
+          summary: "Velostation Nord does repair e-bikes. The cost for an e-bike service is CHF 149, which includes a software update of the drive unit and a battery check.",
+          facts: [
+            { claim: "Velostation Nord repairs e-bikes.", source: src, subject: "Velostation Nord", volatility: "slow" },
+            { claim: "An e-bike service at Velostation Nord costs CHF 149.", source: src, subject: "Velostation Nord", volatility: "volatile" },
+          ],
+        },
+      });
+      enqueueFacts(card);
+      const cons = await consolidate();
+      return { cons, claims: db().all(`SELECT n.title, c.text FROM claims c JOIN notes n ON n.id=c.note_id WHERE n.kind != 'profile' AND c.status='active'`) };
+    },
+    check: (o) => all(
+      [new Set(o.claims.map((c: any) => c.title)).size === 1, `notes: ${[...new Set(o.claims.map((c: any) => c.title))].join(", ")}`],
+      [o.claims.some((c: any) => /149/.test(c.text)), `price lost: ${JSON.stringify(o.cons)}`],
+      [o.claims.some((c: any) => /repairs e-bikes/i.test(c.text)), `repair claim lost: ${JSON.stringify(o.cons)}`],
+    ),
+  },
   {
     id: "memory/owner-facts-only-statements",
     run: async () => {

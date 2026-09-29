@@ -13,11 +13,17 @@ function world() {
   topic("Mom's 70th birthday", "Party and present for mom's 70th birthday in November.");
 }
 
-function route(name: string, quote: string, want: string | "new" | "chat", extra?: (o: any) => string | null): Case {
+// The world of the capture episodes: only these two topics exist.
+function episodeWorld() {
+  topic("Raised bed irrigation", "Comparing drip irrigation kits for the three raised beds in the garden.");
+  topic("Taxes 2026", "Tax return 2026: deadlines, accountant, extension.");
+}
+
+function route(name: string, quote: string, want: string | "new" | "chat", extra?: (o: any) => string | null, setup = world): Case {
   return {
     id: `route/${name}`,
     run: async () => {
-      world();
+      setup();
       const r = await routeItem(quote);
       return { ...r, slug: db().get(`SELECT slug, title FROM topics WHERE id=?`, r.topic_id) };
     },
@@ -55,4 +61,8 @@ export const cases: Case[] = [
   route("not-chat-topic-question", "what did the bike shop say about e-bikes again?", "bike-maintenance"),
   route("not-chat-named-overview", "give me an overview of where the kitchen renovation stands", "kitchen-renovation"),
   route("new-not-similar-word", "my ski helmet is broken, find a new one before the season starts", "new", titleOk),
+  // Stages of episode/capture-three-items: each item of the memo against the episode's two topics.
+  route("episode-garden", "garden: the kit must also reach the balcony pots", "raised-bed-irrigation", undefined, episodeWorld),
+  route("episode-tax", "remind me Friday to file the tax extension", "taxes-2026", undefined, episodeWorld),
+  route("episode-bike-new", "find out if the bike shop repairs e-bikes", "new", titleOk, episodeWorld),
 ];

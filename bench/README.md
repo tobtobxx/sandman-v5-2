@@ -16,7 +16,8 @@ A case (`cases/*.ts`) has `run()` calling real harness code, then a mechanical `
 
 The hard cases are the `HARD` list in `run.ts`: those that failed at least once in recent runs.
 The others pass reliably, so a plain run skips them. Move a case in or out of `HARD` when a
-`--full` run shows it started or stopped failing.
+`--full` run shows it started or stopped failing. Episodes stay out of `HARD` (they cost most): when
+one fails, add the failing stage as a unit case from its trace and put that in `HARD` instead.
 
 To add a case from a real trace: find the call in the observer UI, copy its situation into a
 fixture, and assert on receipts or card state rather than on wording.

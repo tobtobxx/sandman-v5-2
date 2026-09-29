@@ -6,7 +6,7 @@ isolated tasks for every role, and on a few whole pipelines. Where a result can 
 code it is; otherwise an LLM judge (`xiaomi/mimo-v2.6-pro`) checks written criteria.
 
 Run it: `deno task bench [filter…] [--full] [--repeat N] [--label name]`. Without `--full` only
-the hard cases run (`HARD` in `bench/run.ts`). Results land in
+the hard cases run (`HARD` in `bench/run.ts`, about $0.007 per run; no episodes, see issue #27 below). Results land in
 `bench/results/`, and every trace goes into `data/bench.db`. Open that in the observer UI with
 `"db_path": "data/bench.db"` in `config.jsonc` and `deno task serve` → `http://localhost:8700/observer`
 (the *calls* tab shows the bench case of each call).
@@ -187,6 +187,34 @@ an answer count as handled. Result: the case 40/40 (master 33/40); desk + episod
 96/96 (master 94/96, one of the two failures the same bug in
 `desk/conversation-work-goes-to-topic`), with 204 desk calls instead of 215. The case is in
 `HARD` now.
+
+## Episodes split into stage cases (issue #27)
+
+A hard run cost about $0.011, and the four episodes in `HARD` were $0.008 of it (213 of 313 target
+calls over 3 repeats). Episodes are now `--full` only; `HARD` holds the stage each one failed at, as a
+unit case built from the episode's own trace (goals, quotes and facts copied from real runs):
+
+| episode | how it failed (saved runs) | stage case in `HARD` |
+|---|---|---|
+| recipe-tree | 7/31: the gather worker blocked ("which third candidate: AquaLine or Claber?") | `worker/research-gather-open` |
+| compare-card | 3/31: tree stuck in waiting/blocked | `worker/research-gather-open`, `triage/compare-three-named` |
+| memory-reuse | 4/32: the second card went to a worker although the note existed | `librarian/answered-rephrased` |
+| capture-no-cross-talk | 3/18: "what a service costs" split off as a fourth item | `segment/no-cross-talk-memo` |
+| capture-three-items | 3/32: the garden item also created a card | `desk/episode-balcony-add` |
+
+`worker/research-not-available-honest` (the detail step on a missing spec) joined `HARD` too: with 6 failures in 41 saved runs it
+fails more often than any other unit case. Other new stage cases are `--full` only: `route/episode-*`,
+`worker/research-gather-named`, `librarian/detail-from-gather-facts` (a detail card answered from the
+gather step's pending facts, which is how the tree fills in details) and
+`memory/consolidate-research-result`.
+
+Measured today: the old hard set $0.0338 for 3 repeats, the new one $0.0223 and $0.0226 in two runs, so **$0.0074 per hard run**
+including the judge (target calls 313 → 165). The episodes themselves passed 49/50 (5 repeats); the one
+failure was the gather block, which the unit case did not reproduce in 30 runs, so it is rare now. The
+stage cases passed 349/350 (10 repeats).
+
+What the stage cases don't cover, and why episodes stay in `--full`: the composition (fan-out, tree
+waiting on children, the confirmation text, move and undo). Those parts are code, not model calls.
 
 ## Cost
 
