@@ -23,6 +23,8 @@ questions (#51), claim editing in the memory browser (#40), `report_mode: desk` 
 - Undoing a "new card" receipt always cancels the card, never deletes it.
 - No `rebuild_memory`, purge or episodic FTS log. Retracted claims stay in the table.
 - No secret redaction in traces: secrets live only in `config.jsonc` and never enter prompts.
+- No client modes (`active | driving | dnd`, §6.12, #63). `POST /presence` only reports the
+  topic on screen, whose events are badged instead of pushed; driving mode never started a briefing.
 
 **Artifacts live in the database** (`artifacts.content`), not in `workspace/<card>/` files, so
 they are easy to inspect and to isolate per bench case. Only the `code` role works in files.

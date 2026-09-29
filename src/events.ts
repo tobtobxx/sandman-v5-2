@@ -11,17 +11,15 @@ export function subscribe(fn: Listener) {
   return () => listeners.delete(fn);
 }
 
-// presence (POST /presence): simplified to one global mode
-export const presence = { mode: "active" as "active" | "driving" | "dnd", topic_id: null as string | null };
+// presence (POST /presence): the topic on screen, whose events are not pushed
+export const presence = { topic_id: null as string | null };
 
 export type Notify = "push" | "badge" | "silent";
 
 function level(kind: string | undefined, topic_id?: string | null): Notify {
   let n = (kind && config.notifier.levels[kind]) as Notify || "silent";
   if (n === "push") {
-    if (presence.mode === "dnd") n = "badge";
-    if (presence.mode === "driving" && kind !== "reminder") n = "badge";
-    if (presence.mode === "active" && presence.topic_id && presence.topic_id === topic_id) n = "badge";
+    if (presence.topic_id && presence.topic_id === topic_id) n = "badge";
     if (n === "push" && kind !== "reminder") {
       const today = nowIso().slice(0, 10);
       const c = db().get(`SELECT count(*) n FROM events WHERE notify='push' AND at >= ? AND type != 'message.created:reminder'`, today)!.n;

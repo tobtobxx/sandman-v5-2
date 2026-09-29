@@ -106,7 +106,7 @@ route("POST", "/review/:id/:action", async (_r, p, b) => {
   }
   return r;
 });
-route("POST", "/presence", (_r, _p, b) => (Object.assign(presence, { mode: b.mode ?? "active", topic_id: b.topic_id ?? null }), presence));
+route("POST", "/presence", (_r, _p, b) => (Object.assign(presence, { topic_id: b.topic_id ?? null }), presence));
 route("POST", "/tidy", async () => (await tidy(), { ok: true }));
 
 // ---------------------------------------------------------------- board
