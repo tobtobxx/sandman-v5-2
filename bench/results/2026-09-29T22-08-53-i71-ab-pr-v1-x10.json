@@ -1,5 +1,5 @@
 {
- "label": "i71-ab-master-x10",
+ "label": "i71-ab-pr-v1-x10",
  "model": "qwen/qwen3.6-35b-a3b",
  "set": "full",
  "repeat": 10,
