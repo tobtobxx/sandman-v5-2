@@ -242,6 +242,17 @@ async function handle(req: Request): Promise<Response> {
     const f = url.pathname === "/" ? "client.html" : "observer.html";
     return new Response(await Deno.readTextFile(new URL(`../ui/${f}`, import.meta.url)), { headers: { "content-type": "text/html; charset=utf-8" } });
   }
+  const font = url.pathname.match(/^\/fonts\/([a-z0-9-]+\.(woff2|css))$/);
+  if (font) {
+    const type = font[2] === "css" ? "text/css; charset=utf-8" : "font/woff2";
+    try {
+      return new Response(await Deno.readFile(new URL(`../ui/fonts/${font[1]}`, import.meta.url)), {
+        headers: { "content-type": type, "cache-control": "public, max-age=86400" },
+      });
+    } catch {
+      return new Response("not found", { status: 404 });
+    }
+  }
   if (token && req.headers.get("authorization") !== `Bearer ${token}` && url.searchParams.get("token") !== token) {
     return new Response("unauthorized", { status: 401 });
   }
