@@ -75,6 +75,37 @@ Each row was found in a trace, fixed, and confirmed by the next run. DEVIATIONS.
   over-splitting (`segment/no-cross-talk-memo`), an extra card (`desk/episode-balcony-add`). Hard
   run $0.0113 → $0.0075. The composition (fan-out, waiting, confirmation, move/undo) is code.
 
+## Small classifier models (#32, not adopted)
+
+Tried: moving the short classification calls (`route_item`, `match_answer`, `pick_recipe`, `topic_same`,
+`topic_title`, `match_subject`, `relevance_rubric`, `consolidate_fact`) to a cheaper model. Measured on
+the 41 cases that exercise them, × 2, one call at a time; the code for it was removed after the test.
+
+| model | pass | time / call (p50) | output tokens |
+|---|---|---|---|
+| Qwen3.6-35B-A3B, OpenRouter, reasoning off | 100% | 1.1 s | 58 |
+| Qwen3.6-35B-A3B, local llama.cpp (MXFP4), reasoning off | 98% | 13–48 s | 60 |
+| LFM2.5-2.6B, OpenRouter (reasoning can't be turned off) | 95% w/o 429s | 13 s | 950 |
+| LFM2.5-8B-A1B, local, reasoning (stopped after 39 runs) | 82% | ~100 s | – |
+| MiniCPM5-1B, local, reasoning (budget 1000) | 50% | 44 s | 818 |
+| MiniCPM5-1B, local, reasoning off | 48% | 3.7 s | 70 |
+
+- **Quality:** the small models fail in the same places:
+  - small talk ("hi", "brief me") routed to a new topic, and a named topic ("Garden: …") ignored;
+  - `pick_recipe` never answers `none`;
+  - paraphrased answers to a question not matched;
+  - memory: a renamed product becomes a new note, and `relevance_rubric` answers contradict their own
+    analysis ("not trivial" → `trivial: true`), so facts are discarded before consolidation.
+
+  Reasoning barely helps (MiniCPM: +2 cases for 12× the time). Without reasoning, MiniCPM also overruns
+  `max_tokens` with long analyses (invalid JSON).
+- **Speed:** reasoning models spend 600–1000 tokens per call, so they are slower than Qwen without
+  reasoning. Local Qwen's time grows with prompt length (~10 s + ~15 prompt tokens/s: `topic_title`
+  13 s, `route_item` 48 s), so the local bottleneck is prompt processing (MoE prefill), not generation.
+  Speed it up there (GPU offload, batch size) rather than with a second model.
+- **Revisit** only with a model that passes these cases at ≥ 95% without reasoning. The lowest-risk calls
+  to try first are `topic_title` (cosmetic) and `topic_same` (only suggests a merge for review).
+
 ## CI
 
 `.github/workflows/bench.yml` runs the hard set once per PR with `--min-pass 90`: a PR fails if more
