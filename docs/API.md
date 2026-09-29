@@ -102,10 +102,13 @@ Returns `{ message_id }`; the desk's receipts and reply arrive as events.
 `POST /memory/consolidate`, `PATCH|DELETE /topics/:id/facts/:claim`.
 
 Memory details:
-- `GET /memory/notes?query=` matches word prefixes. It also returns candidate facts still waiting for
-  the consolidator, grouped by subject, as `{ kind: "fact", status: "pending", claims: [{ pending: true, … }] }`,
-  matched the same way (any word; best matches first) by `findPendingFacts` in `src/memory/retriever.ts`, the
-  function that also puts them into the librarian's, workers' and desk's memory context (stricter there).
+- `GET /memory/notes?query=` runs the memory search the librarian, workers and desk use (`findNotes` in
+  `src/memory/retriever.ts`) and returns exactly what they would get for that text, best first, at most
+  `memory.top_k` (6): active notes, plus candidate facts still waiting for the consolidator, grouped by
+  subject, as `{ kind: "fact", status: "pending", claims: [{ pending: true, … }] }`. The ranking fuses an
+  exact title/alias match, FTS words and, when the `embedding` profile has a model, similarity of meaning
+  (config.default.jsonc). Without `query` it lists every note (retracted and the profile too), newest
+  first, then every pending fact.
 - `POST /memory/consolidate` starts a run in the background and returns at once with
   `{ started, running, started_at, last_completed_at, last_counts, pending }`. Only one run happens at a
   time: while one is in flight, the button, the idle loop and the nightly run join it, and `started` is

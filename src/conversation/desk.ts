@@ -71,7 +71,7 @@ export function overviewText(): string {
   return out.join("\n");
 }
 
-export function buildDeskCtx(d: DeskInput): C.DeskCtx {
+export async function buildDeskCtx(d: DeskInput): Promise<C.DeskCtx> {
   const t = getTopic(d.topic_id);
   if (t.kind === "conversation") return buildConversationCtx(d, t);
   const exclude = new Set(d.message_ids ?? []);
@@ -92,12 +92,12 @@ export function buildDeskCtx(d: DeskInput): C.DeskCtx {
     });
   return {
     owner: config.owner.name, mode: d.mode, topic_title: t.title, topic_summary: t.summary ?? "", profile: profileText(), history, cards, questions,
-    memory: renderNotes(findNotes(d.input, [], 3)), input: d.input, transcript: d.transcript, receipts: [], now: fmtNow(),
+    memory: renderNotes(await findNotes(d.input, [], 3)), input: d.input, transcript: d.transcript, receipts: [], now: fmtNow(),
   };
 }
 
 /** A conversation topic sees every topic: open cards and questions from all of them, plus an overview. */
-function buildConversationCtx(d: DeskInput, t: Row): C.DeskCtx {
+async function buildConversationCtx(d: DeskInput, t: Row): Promise<C.DeskCtx> {
   const exclude = new Set(d.message_ids ?? []);
   const history = db()
     .all(`SELECT * FROM messages WHERE topic_id=? AND kind IN ('text','capture_item') ORDER BY created_at DESC, rowid DESC LIMIT ?`, d.topic_id, config.desk.history_messages + exclude.size)
@@ -115,7 +115,7 @@ function buildConversationCtx(d: DeskInput, t: Row): C.DeskCtx {
     });
   return {
     owner: config.owner.name, mode: d.mode, topic_title: t.title, topic_summary: `General talk with ${config.owner.name}, not about one subject.`,
-    profile: profileText(), history, cards, questions, memory: renderNotes(findNotes(d.input, [], 3)), input: d.input, receipts: [],
+    profile: profileText(), history, cards, questions, memory: renderNotes(await findNotes(d.input, [], 3)), input: d.input, receipts: [],
     now: fmtNow(), overview: overviewText(),
   };
 }
@@ -127,7 +127,7 @@ export async function deskTurn(d: DeskInput): Promise<DeskResult> {
   db().update("desk_turns", turn_id, { session_id });
   workingTopics.set(d.topic_id, (workingTopics.get(d.topic_id) ?? 0) + 1);
   emit("desk.working", { topic_id: d.topic_id, ref_id: turn_id });
-  const ctx = buildDeskCtx(d);
+  const ctx = await buildDeskCtx(d);
   const ask = <T>(name: string, p: P, step: number) =>
     llmJson<T>(name, p.prompt, p.schema, { maxTokens: p.maxTokens, version: p.version, session_id, topic_id: d.topic_id, step, priority: "interactive" });
   const intents: string[] = [];

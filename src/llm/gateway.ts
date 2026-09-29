@@ -178,6 +178,72 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
   }
 }
 
+/**
+ * Embed texts with the "embedding" profile (OpenAI /embeddings), adding its query or document prefix.
+ * Vectors come back normalized, so a dot product is the cosine similarity. Logged to llm_calls like
+ * every other call; failures do not count against the chat model's reachability.
+ */
+export async function embed(texts: string[], kind: "query" | "document", priority: Priority = "normal"): Promise<Float32Array[]> {
+  const p = config.profiles.embedding;
+  const budget = config.budget_usd;
+  if (budget && spend.usd > budget) throw new LLMFailure("budget", `spend limit ${budget} USD reached`);
+  const callType = `embed_${kind}`;
+  const input = texts.map((t) => `${(kind === "query" ? p.query_prefix : p.document_prefix) ?? ""}${t}`);
+  const row: Record<string, any> = {
+    id: newId("cal"), call_type: callType, prompt_version: "v1", model_profile: "embedding", model: p.model, attempt: 1,
+    input: input.join("\n").slice(0, 4000), at: nowIso(),
+  };
+  const tags = ctx().tags;
+  if (tags) row.eval_label = JSON.stringify({ tags });
+  const s = slotsFor("embedding", p);
+  await s.acquire(priority);
+  const started = Date.now();
+  try {
+    let res: Response | null = null;
+    for (let i = 0; i < 3; i++) {
+      res = await fetch(`${p.base_url}/embeddings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.api_key}` },
+        body: JSON.stringify({ model: p.model, input, encoding_format: "float" }),
+        signal: AbortSignal.timeout(p.idle_timeout_s * 1000),
+      });
+      if ((res.status !== 429 && res.status !== 502 && res.status !== 503) || i === 2) break;
+      await res.body?.cancel();
+      await new Promise((r) => setTimeout(r, 1500 * 2 ** i));
+    }
+    if (!res!.ok) throw new LLMFailure("transport", `HTTP ${res!.status}: ${(await res!.text()).slice(0, 300)}`);
+    const d = await res!.json();
+    if (d.error) throw new LLMFailure("transport", JSON.stringify(d.error).slice(0, 300));
+    const data: { index?: number; embedding: number[] }[] = d.data ?? [];
+    if (data.length !== texts.length) throw new LLMFailure("parse", `${data.length} vectors for ${texts.length} texts`);
+    const vecs = data.sort((a, b) => (a.index ?? 0) - (b.index ?? 0)).map((x) => normalize(x.embedding));
+    const cost = d.usage?.cost ?? 0;
+    Object.assign(row, { provider: d.provider ?? "", tokens_in: d.usage?.prompt_tokens ?? 0, tokens_out: 0, cost, ok: 1 });
+    row.raw_output = `${vecs.length} vectors × ${vecs[0]?.length ?? 0}`;
+    spend.usd += cost;
+    spend.calls++;
+    const bt = (spend.byType[callType] ??= { calls: 0, usd: 0, tin: 0, tout: 0 });
+    bt.calls++, bt.usd += cost, bt.tin += row.tokens_in;
+    return vecs;
+  } catch (e) {
+    row.ok = 0;
+    const err = e instanceof LLMFailure ? e : new LLMFailure((e as Error).name === "TimeoutError" ? "timeout" : "transport", transportMessage(e as Error));
+    row.error = `${err.kind}: ${err.message}`;
+    throw err;
+  } finally {
+    s.release();
+    row.ms = Date.now() - started;
+    try {
+      db().insert("llm_calls", row);
+    } catch { /* tracing must never break a call */ }
+  }
+}
+
+function normalize(v: number[]): Float32Array {
+  const n = Math.sqrt(v.reduce((a, x) => a + x * x, 0)) || 1;
+  return Float32Array.from(v, (x) => x / n);
+}
+
 /** fetch only says "fetch failed"; the reason (URL, refused, TLS, DNS) is in its cause. */
 function transportMessage(e: Error): string {
   const cause = e.cause instanceof Error ? e.cause.message : "";

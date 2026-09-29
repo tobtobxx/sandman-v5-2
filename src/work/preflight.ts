@@ -32,7 +32,7 @@ export async function runLibrarian(card: Card): Promise<"answered" | "narrow" | 
   if (!hasNotes) return "proceed";
   const session_id = startSession("librarian", { card_id: card.id });
   const ent = await ask<{ entities: string[] }>("extract_entities", W.extractEntities(card), card, session_id);
-  const notes = findNotes(`${card.title} ${card.goal}`, ent.entities);
+  const notes = await findNotes(`${card.title} ${card.goal}`, ent.entities);
   if (!notes.length) return endSession(session_id, "proceed:no_notes"), "proceed";
   const answerable = notes.filter((n) => n.answerable).map((n) => n.id);
   const text = renderNotes(notes);

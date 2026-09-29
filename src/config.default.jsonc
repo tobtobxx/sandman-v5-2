@@ -32,7 +32,8 @@
 
   // Model endpoints. Any OpenAI-compatible server works (llama.cpp too).
   // The profile names are fixed by the code: every model call uses "small" unless it names another
-  // profile, and only the benchmark's grader names "judge". Other names are only used by `probe <name>`.
+  // profile, only the benchmark's grader names "judge", and memory search embeds with "embedding".
+  // Other names are only used by `probe <name>`.
   "profiles": {
     // The model that does all the work.
     "small": {
@@ -64,6 +65,24 @@
       "temperature": 0,
       "idle_timeout_s": 90,
       "quirks": []
+    },
+    // Embeds notes, claims and pending facts for memory search (POST {base_url}/embeddings).
+    // Memory search ranks by meaning and by words together; with "model" empty it uses words only.
+    // Local llama.cpp (llama-server --embedding --pooling last) with jina-embeddings-v5-text-small-retrieval:
+    //   "base_url": "http://localhost:8080/v1", "model": "jina-embeddings-v5-small-retrieval:Q8_0",
+    //   "query_prefix": "Query: ", "document_prefix": "Document: ", "min_similarity": 0.35
+    "embedding": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "model": "perplexity/pplx-embed-v1-0.6b",
+      "api_key": "",
+      // Put before each search text and each stored text. Some models need them (jina: "Query: ", "Document: ").
+      "query_prefix": "",
+      "document_prefix": "",
+      // Cosine similarity a text needs to count as a match by meaning. Model-specific: unrelated texts
+      // score about 0.0–0.25 with pplx-embed-v1, related ones 0.3 and up.
+      "min_similarity": 0.3,
+      "slots": 2,
+      "idle_timeout_s": 30
     }
   }
 }

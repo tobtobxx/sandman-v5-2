@@ -26,6 +26,16 @@ questions (#51), claim editing in the memory browser (#40), `report_mode: desk` 
 - No client modes (`active | driving | dnd`, §6.12, #63). `POST /presence` only reports the
   topic on screen, whose events are badged instead of pushed; driving mode never started a briefing.
 
+**Memory search by meaning (§7.6, §19 q3)** is on by default: `perplexity/pplx-embed-v1-0.6b` on
+OpenRouter (profile `embedding`; any OpenAI-compatible `/embeddings` server works, e.g. llama.cpp with
+jina-embeddings-v5-text-small). Vectors live in an `embeddings` table and are compared in code (no
+`sqlite-vec`); they are made on demand before each search, and after each consolidation. Notes, claims
+and pending facts are ranked by reciprocal-rank fusion of FTS words and cosine similarity
+(`min_similarity`), exact entity matches first. The same function serves the librarian, workers, desk,
+the consolidator's subject match and the Memory page's search box. Without an embedding model, or when
+it can't be reached, search falls back to words only. `bench/cases/search.ts` holds queries that share
+no words with their answer.
+
 **Artifacts live in the database** (`artifacts.content`), not in `workspace/<card>/` files, so
 they are easy to inspect and to isolate per bench case. Only the `code` role works in files.
 
