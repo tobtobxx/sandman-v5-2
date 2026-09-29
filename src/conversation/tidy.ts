@@ -4,7 +4,7 @@ import { db, ftsQuery, j, now, nowIso, Row } from "../db.ts";
 import { llmJson } from "../llm/gateway.ts";
 import { topicSame } from "../prompts/conversation.ts";
 import { createReview, resolveReview } from "./review.ts";
-import { getTopic, updateTopic } from "./topics.ts";
+import { getTopic, unarchiveTopic, updateTopic } from "./topics.ts";
 import { emit } from "../events.ts";
 
 export async function tidy(opts: { archive_after_days?: number } = {}) {
@@ -23,7 +23,7 @@ export async function tidy(opts: { archive_after_days?: number } = {}) {
       if (r.same === "yes") createReview({ kind: "topic_merge", topic_id: a.id, ref_ids: [a.id, b.id], payload: { a: a.title, b: b.title } });
     }
   }
-  const days = opts.archive_after_days ?? 14;
+  const days = opts.archive_after_days ?? 7;
   for (const t of all) {
     // conversation topics are small talk: archived after one quiet day, and silently
     const cutoff = new Date(now().getTime() - (t.kind === "conversation" ? 1 : days) * 86400e3).toISOString();
@@ -62,7 +62,7 @@ export function reviewAction(id: string, action: string, arg?: string): Row {
       mergeTopics(refs[0], refs[1]);
       break;
     case "topic_archived:undo":
-      updateTopic(refs[0], { status: "active", archived_at: null, last_activity_at: nowIso() });
+      unarchiveTopic(refs[0]);
       break;
     case "filing_check:ok":
       db().run(`UPDATE capture_items SET provisional=0 WHERE id=?`, refs[0]);

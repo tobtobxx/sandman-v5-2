@@ -39,16 +39,21 @@ export function updateTopic(id: string, patch: Row) {
   emit("topic.updated", { topic_id: id, ref_id: id, payload: patch });
 }
 
-/** Sidebar list (docs/API.md GET /topics). */
+/** Back to active with a fresh archive timer (tidy counts quiet days from last_activity_at). */
+export function unarchiveTopic(id: string) {
+  updateTopic(id, { status: "active", archived_at: null, last_activity_at: nowIso() });
+}
+
+/** Sidebar list, or with status "all" the overview of every topic (docs/API.md GET /topics). */
 export function listTopics(status = "active"): Row[] {
   const hourAgo = new Date(now().getTime() - 3600e3).toISOString();
   return db().all(
-    `SELECT t.id, t.title, t.kind, t.slug, t.last_activity_at, t.created_at, t.is_system,
+    `SELECT t.id, t.title, t.kind, t.slug, t.status, t.summary, t.last_activity_at, t.archived_at, t.created_at, t.is_system,
             (SELECT count(*) FROM questions q WHERE q.topic_id=t.id AND q.status='open') open_questions,
             (SELECT count(*) FROM cards c WHERE c.origin_topic_id=t.id AND c.kind='task' AND c.depth=0 AND c.state NOT IN ('done','failed','cancelled')) open_cards,
             (t.seen_at IS NULL AND t.created_at > ?) is_new
-     FROM topics t WHERE status=? AND merged_into IS NULL ORDER BY is_system, last_activity_at DESC`,
-    hourAgo, status,
+     FROM topics t WHERE (?='all' OR status=?) AND merged_into IS NULL ORDER BY is_system, last_activity_at DESC`,
+    hourAgo, status, status,
   ).map((t) => ({ ...t, is_new: !!t.is_new }));
 }
 

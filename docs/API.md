@@ -16,6 +16,12 @@ Sidebar list, most recently active first. Conversation topics are included.
 ```
 `is_new`: created in the last hour and not opened yet.
 
+`GET /topics?status=archived` lists only archived topics; `?status=all` lists every topic (the
+client's All topics view) and each row also carries `status`, `summary` and `archived_at`.
+
+### `POST /topics/:id/unarchive`
+Makes an archived topic active again and restarts its archive timer (`last_activity_at` = now).
+
 ### `GET /home`
 ```json
 { "now": "Tuesday 29 September · 08:14",
