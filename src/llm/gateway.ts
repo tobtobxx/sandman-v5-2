@@ -232,6 +232,10 @@ interface StreamResult {
   cost: number;
 }
 
+const USER_AGENT = "sandman/5.2";
+// calls outside any session/card/topic share one id per process
+const PROCESS_SESSION = newId("proc");
+
 const REASONING_BUDGET_MESSAGE = "\n\nThinking time is up, I'll answer now.\n";
 
 async function stream(p: Profile, prompt: string, schema: Schema | null, opts: CallOpts, out: StreamOut): Promise<StreamResult> {
@@ -275,7 +279,13 @@ async function stream(p: Profile, prompt: string, schema: Schema | null, opts: C
     for (let i = 0; i < 4; i++) {
       res = await fetch(`${p.base_url}/chat/completions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.api_key}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${p.api_key}`,
+          "User-Agent": USER_AGENT,
+          // OpenCode Go: stable id per conversation, for routing and prompt caching (ignored elsewhere)
+          "x-opencode-session": opts.session_id ?? opts.card_id ?? opts.topic_id ?? PROCESS_SESSION,
+        },
         body: JSON.stringify(body),
         signal: ac.signal,
       });
