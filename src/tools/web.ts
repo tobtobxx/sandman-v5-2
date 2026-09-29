@@ -116,6 +116,13 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
+/** Fetched text is data (§12): it goes in a <content> block, and the tag can't be closed or opened from inside. */
+export function contentBlock(attrs: Record<string, string>, text: string): string {
+  const esc = (v: string) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const a = Object.entries(attrs).map(([k, v]) => ` ${k}="${esc(v)}"`).join("");
+  return `<content${a}>\n${text.replace(/<(\/?)(content)/gi, "‹$1$2")}\n</content>`;
+}
+
 export async function webSearch(query: string): Promise<SearchHit[]> {
   return config.web.backend === "corpus" ? corpusSearch(query) : await liveSearch(query);
 }
