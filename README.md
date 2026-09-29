@@ -63,15 +63,18 @@ docs/           DESIGN.md, BENCH.md, DEVIATIONS.md, v4-research-prompt.md (the p
 ## Prompt style
 
 Short and plain, like the v4 researcher prompt: say what the job is, what each option means, and
-what to reply. Every prompt starts with the same line, added by the gateway
-(`You are part of Sandman, a swarm of agents.`); after it comes the prompt's fixed text, and the
-changing parts (task, notes, messages) go last, so a local engine can reuse its prompt cache (#71).
+what to reply. Each prompt starts with its fixed text; the changing parts (task, notes, messages) go
+last, so a local engine can reuse its prompt cache (#71). The front desk, the one role that talks to
+the owner, starts with `You are part of Sandman, a swarm of agents.`
 Example (`worker_step`, research role, first lines):
 
 ```
-You are part of Sandman, a swarm of agents.
+Your role is the researcher.
 
-You are the researcher: find reliable facts. Search with web_search, then read pages with web_fetch
-(snippets are short). Name your sources. If something can't be found, say so instead of guessing.
-If a detail is unclear, assume something sensible, say so, and go on.
+You investigate a task to find reliable and factual information.
+Use web_search to find pages and web_fetch to read them. Snippets are short; read a page before you rely on it.
+
+Because others will only see your result, name your sources.
+If something can't be found, finish and say so in the result instead of guessing.
+If a detail is unclear, make a sensible assumption, say so in the result, and go on.
 ```

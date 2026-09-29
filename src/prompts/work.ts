@@ -13,15 +13,15 @@ export interface P {
 export const lines = (xs: string[], empty = "(none)") => (xs.length ? xs.map((x) => `- ${x}`).join("\n") : empty);
 
 export const TOOL_LINES: Record<string, string> = {
-  web_search: "web_search(query): titles, links and snippets",
+  web_search: "web_search(query): search the web; returns titles, links and snippets",
   web_fetch: "web_fetch(url): read a web page",
-  read_artifact: "read_artifact(id, from_char): read a saved text from a position",
-  write_artifact: "write_artifact(name, what): create a file; describe what to write and it is written for you",
+  read_artifact: "read_artifact(id, from_char): read a saved text, starting at a character position",
+  write_artifact: "write_artifact(name, what): create a text file; you describe what to write, and it is written for you",
 };
 
 export const ROLE_LINES: Record<string, string> = {
-  research: "research (find facts on the web, with sources)",
-  write: "write (a text such as an email, letter, plan or summary)",
+  research: "research: find facts on the web and report them with sources",
+  write: "write: write a text such as an email, letter, plan or summary",
 };
 
 // ---------------------------------------------------------------- triage
@@ -117,17 +117,28 @@ ${lines(c.done_when)}`,
 
 // ---------------------------------------------------------------- worker
 export const PREAMBLE: Record<string, string> = {
-  research: `You are the researcher: find reliable facts. Search with web_search, then read pages with web_fetch
-(snippets are short). Name your sources. If something can't be found, say so instead of guessing.
-If a detail is unclear, assume something sensible, say so, and go on.`,
-  write: `You are the writer: create the text the task asks for with write_artifact, then finish with a short
-summary of what you wrote.`,
-  synthesize: `You are the synthesizer: combine the results under Inputs into one answer for the owner. Recommend
-if the task asks for it; create a document with write_artifact if it asks for one.`,
+  research: `Your role is the researcher.
+
+You investigate a task to find reliable and factual information.
+Use web_search to find pages and web_fetch to read them. Snippets are short; read a page before you rely on it.
+
+Because others will only see your result, name your sources.
+If something can't be found, finish and say so in the result instead of guessing.
+If a detail is unclear, make a sensible assumption, say so in the result, and go on.`,
+  write: `Your role is the writer.
+
+You write the text the task asks for. Create it with write_artifact: give a file name and describe
+what to write, and the text is written for you. Then finish with a short summary of what you wrote.`,
+  synthesize: `Your role is the synthesizer.
+
+Other sessions worked on parts of this task. Their results are below under Inputs.
+Combine them into one answer for the owner. If the task asks for a recommendation, make one.
+If the task asks for a document, create it with write_artifact.`,
 };
 
-const FACT_HELP = `facts: what a later task could reuse. subject: the thing it is about (product, place, organization),
-not a property like "Price". volatility: evergreen (never changes), slow (months), volatile (weeks: every price, availability, news).`;
+const FACT_HELP = `facts: things you learned that a later task could reuse.
+- subject: the thing the fact is about (a product, place, organization). Not a property like "Price".
+- volatility: evergreen (never changes), slow (changes over months), volatile (changes within weeks: every price, availability, news).`;
 
 function factSchema() {
   return obj({ claim: str(300), source: str(300), subject: str(80), volatility: oneOf(["evergreen", "slow", "volatile"]) });
@@ -149,10 +160,10 @@ export function resultSchema(role: string, withItems: boolean): Schema {
 }
 
 function resultHelp(role: string, withItems: boolean) {
-  const parts = [`summary: the answer in a few sentences.`];
-  if (role === "research") parts.push("sources: links used.", "open_questions: what you couldn't find out.");
-  if (role === "synthesize") parts.push("recommendation: yours, or null.", "open_questions: what is still unclear.");
-  if (withItems) parts.push("items: the candidates found, each with a name and one line why it fits.");
+  const parts = [`summary: the answer, in a few sentences.`];
+  if (role === "research") parts.push("sources: the links you used.", "open_questions: what you could not find out.");
+  if (role === "synthesize") parts.push("recommendation: your recommendation, or null.", "open_questions: what is still unclear.");
+  if (withItems) parts.push("items: the candidates you found, each with a name and one line why it fits.");
   parts.push(FACT_HELP);
   return parts.join("\n");
 }
@@ -196,22 +207,22 @@ export function workerStep(c: {
   const cats = c.role === "research" ? ["impossible", "out_of_scope"] : ["impossible", "out_of_scope", "unclear"];
   alts.push(obj({ action: { type: "string", const: "fail" }, analysis: str(300), category: oneOf(cats) }));
   const actionLines = [
-    ...(tools.length ? ["tool: use a tool."] : []),
-    "finish: give the result, also when something can't be found.",
-    "block: ONLY when the owner must decide something you can't. One short question (at most 25 words), 2-4 short options. Never to ask permission.",
-    "fail: the task can't be worked on at all (e.g. no tool can do it).",
+    ...(tools.length ? ["tool: use one of the tools."] : []),
+    "finish: you are done. Give the result. Also finish when something can't be found: say so in the result.",
+    "block: ONLY when the owner must make a decision you can't make. Ask one short question (at most 25 words) with 2-4 short options. Never block to ask for permission for your next step.",
+    "fail: the task can't be worked on at all (e.g. it asks for something no tool can do).",
   ];
   const sec = (title: string, body: string) => (body.trim() ? `\n${title}:\n${body.trim()}\n` : "");
   return {
-    version: "worker_step/v4",
+    version: "worker_step/v3",
     maxTokens: 1200,
     schema: { anyOf: alts },
     prompt: `${PREAMBLE[c.role]}
 ${tools.length ? `\nTools:\n${lines(tools.map((t) => TOOL_LINES[t]))}\n` : ""}
-Choose one action:
+Actions:
 ${lines(actionLines)}
 
-Result:
+The result has these parts:
 ${resultHelp(c.role, c.withItems)}
 ${sec("About the owner", c.owner)}
 Task: ${c.title}
@@ -221,7 +232,7 @@ ${lines(c.done_when)}
 ${c.constraints.length ? `Constraints:\n${lines(c.constraints)}\n` : ""}${sec("Known from memory", c.memory)}${sec("Inputs", c.inputs)}${
       sec("Comments", c.comments.map((x) => `- ${x}`).join("\n"))
     }${sec("Steps so far", c.steps.join("\n\n"))}
-Step ${c.step} of ${c.maxSteps}.${last ? " This is your final step." : ""}`,
+Step ${c.step} of ${c.maxSteps}. Choose exactly one action.${last ? " This is your final step." : ""}`,
   };
 }
 

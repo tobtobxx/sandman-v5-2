@@ -48,12 +48,15 @@ Message (voice memo or quick note, may contain transcription errors):
 
 export function topicTitle(c: { quote: string }): P {
   return {
-    version: "topic_title/v2",
+    version: "topic_title/v1",
     maxTokens: 40,
     schema: obj({ title: str(60) }),
-    prompt: `Name a new topic for a note in at most 5 words: the subject, not the action ("E-bike repair", not "Ask about e-bike repair").
+    prompt: `Name a new topic for this note. Use at most 5 words, naming the subject, not the action
+(e.g. "E-bike repair", not "Ask about e-bike repair").
 
-Note: "${c.quote}"`,
+Note: "${c.quote}"
+
+Reply with title.`,
   };
 }
 
@@ -86,6 +89,9 @@ Topic B: ${c.b}`,
 }
 
 // ---------------------------------------------------------------- front desk
+/** First line of the front desk's prompts, the one role that talks to the owner (#71). Never changes, so it stays cached. */
+export const IDENTITY = "You are part of Sandman, a swarm of agents.";
+
 export interface DeskCtx {
   owner: string;
   mode: "capture" | "conversation";
@@ -141,7 +147,9 @@ export function deskIntent(c: DeskCtx & { intents: string[] }): P {
     version: "desk_intent/v6",
     maxTokens: 120,
     schema: obj({ analysis: str(300), intent: oneOf(c.intents) }),
-    prompt: `You are the front desk. ${c.owner} is the owner. Decide the NEXT action for what ${c.owner} said.
+    prompt: `${IDENTITY}
+
+You are the front desk. ${c.owner} is the owner. Decide the NEXT action for what ${c.owner} said.
 
 Actions:
 ${lines(c.intents.map((i) => INTENT_LINES[i]))}
@@ -162,7 +170,9 @@ export function deskMore(c: DeskCtx): P {
     version: "desk_more/v3",
     maxTokens: 100,
     schema: obj({ analysis: str(300), left: oneOf(["nothing", "another_request"]) }),
-    prompt: `You are the front desk. Check whether everything the owner said has been handled: does the message contain
+    prompt: `${IDENTITY}
+
+You are the front desk. Check whether everything the owner said has been handled: does the message contain
 another, clearly separate request that the actions done did not handle? Details of a handled request don't
 count. When an action answered a question, the words of that answer count as handled too (e.g. "yes, book it"
 answering "Should I book it?").
@@ -181,7 +191,9 @@ export function deskArgsNewWork(c: DeskCtx): P {
     version: "desk_args_new_work/v4",
     maxTokens: 350,
     schema: obj({ analysis: str(300), done_when: arr(str(200), 3), goal: str(600), role: oneOf(["research", "write"]), title: str(80) }),
-    prompt: `You are the front desk. Create a work card for only the part of the owner's message that asks for research or
+    prompt: `${IDENTITY}
+
+You are the front desk. Create a work card for only the part of the owner's message that asks for research or
 writing (reminders and additions to other cards are handled separately). Reply with analysis (one sentence), then:
 - done_when: 1-3 checks of what the result contains (not how it was made). For research allow "or states that
   it is not available", e.g. "Names the repair price, or states that it is not available"
@@ -200,7 +212,9 @@ export function deskArgsReminder(c: DeskCtx): P {
     version: "desk_args_reminder/v4",
     maxTokens: 100,
     schema: obj({ text: str(200), when_text: str(80) }),
-    prompt: `You are the front desk. Set a reminder; handle only the reminder part. Reply with:
+    prompt: `${IDENTITY}
+
+You are the front desk. Set a reminder; handle only the reminder part. Reply with:
 - text: a short instruction (e.g. "File the tax extension")
 - when_text: when, in the owner's words (e.g. "Friday", "tomorrow at 3pm", "in 2 hours")
 
@@ -213,7 +227,9 @@ export function deskArgsAnswer(c: DeskCtx): P {
     version: "desk_args_answer/v2",
     maxTokens: 120,
     schema: obj({ question_id: oneOf(c.questions.map((q) => q.id)), response: str(300) }),
-    prompt: `You are the front desk. The owner answers an open question. Reply with question_id, then response: the answer in their words.
+    prompt: `${IDENTITY}
+
+You are the front desk. The owner answers an open question. Reply with question_id, then response: the answer in their words.
 
 Open questions:
 ${lines(c.questions.map((x) => `${x.id}: ${x.line}`))}
@@ -227,7 +243,9 @@ export function deskArgsAdd(c: DeskCtx): P {
     version: "desk_args_add/v4",
     maxTokens: 150,
     schema: obj({ card_id: oneOf(c.cards.map((x) => x.id)), note: str(400) }),
-    prompt: `You are the front desk. The owner adds something to a card. Reply with card_id, then note: only the addition,
+    prompt: `${IDENTITY}
+
+You are the front desk. The owner adds something to a card. Reply with card_id, then note: only the addition,
 as an instruction for whoever works on the card.
 
 Cards:
@@ -242,7 +260,9 @@ export function deskArgsCancel(c: DeskCtx): P {
     version: "desk_args_cancel/v2",
     maxTokens: 60,
     schema: obj({ card_id: oneOf(c.cards.map((x) => x.id)) }),
-    prompt: `You are the front desk. Reply with card_id: the card the owner wants to stop.
+    prompt: `${IDENTITY}
+
+You are the front desk. Reply with card_id: the card the owner wants to stop.
 
 Cards:
 ${lines(c.cards.map((x) => `${x.id}: ${x.line}`))}
@@ -256,7 +276,9 @@ export function deskReply(c: DeskCtx): P {
     version: "desk_reply/v3",
     maxTokens: 500,
     schema: {},
-    prompt: `You are the front desk, ${c.owner}'s assistant. Reply to ${c.owner} in 1-3 short sentences. If ${c.owner} asks for an
+    prompt: `${IDENTITY}
+
+You are the front desk, ${c.owner}'s assistant. Reply to ${c.owner} in 1-3 short sentences. If ${c.owner} asks for an
 overview or a list, use one short line per topic instead. If ${c.owner} asks for a length (e.g. one sentence), keep
 to it. Plain text, no markdown. Only say you did something if it is listed under "Done". If you don't know
 something, say so.${c.mode === "capture" ? "\nKeep it short and easy to listen to." : ""}
