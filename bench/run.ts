@@ -1,8 +1,9 @@
-// sandman bench [filter...] [--full] [--repeat N] [--concurrency N] [--label name] [--no-save]
+// sandman bench [filter...] [--full] [--repeat N] [--concurrency N] [--label name] [--no-save] [--min-pass PCT]
 // Runs the hard cases (HARD below), or every case with --full; filters narrow either set.
 // Runs each case in a fresh in-memory database, with the offline corpus and a fixed clock.
 // Writes bench/results/<stamp>-<label>.json + bench/results/latest.md, and copies all traces into
 // data/bench.db (set db_path to it in config.jsonc and open /observer).
+// --min-pass exits with 1 when fewer than PCT % of case runs pass (CI; see docs/BENCH.md).
 
 import { DB, withCtx } from "../src/db.ts";
 import { config } from "../src/config.ts";
@@ -93,6 +94,7 @@ export async function runBench(args: string[]) {
   const repeat = Number(opt("--repeat", "1"));
   const concurrency = Number(opt("--concurrency", "6"));
   const label = opt("--label", "run");
+  const minPass = Number(opt("--min-pass", "0"));
   const save = !args.includes("--no-save");
   const full = args.includes("--full");
   const filters = args.filter((a) => !a.startsWith("--"));
@@ -180,5 +182,12 @@ export async function runBench(args: string[]) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: config.profiles.small.model, set, repeat, spend, results }, null, 1));
     Deno.writeTextFileSync(`bench/results/latest.md`, lines.join("\n") + "\n");
+  }
+  const summary = Deno.env.get("GITHUB_STEP_SUMMARY");
+  if (summary) Deno.writeTextFileSync(summary, lines.join("\n") + "\n", { append: true });
+  const rate = results.length ? (100 * total) / results.length : 0;
+  if (rate < minPass) {
+    console.error(`\nPass rate ${rate.toFixed(1)}% is below --min-pass ${minPass}%.`);
+    Deno.exit(1);
   }
 }
