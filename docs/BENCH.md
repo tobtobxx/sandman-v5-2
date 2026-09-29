@@ -85,6 +85,7 @@ Each row was found in a trace, fixed, and confirmed by the next run.
 | 16 | After answering a question the desk also added to a card and set a reminder | Later passes offered actions directly | Gate: `desk_more` asks "is a separate request left? yes/no" before any further action | P2 |
 | 17 | Verifier passed "I wrote the email and saved it" with no file | Trusted the result over the record | "If the result claims something the system did not record, it did not happen" | P12 |
 | 18 | 6 worker parse errors (all recovered by retry) | Provider Darkbloom doesn't enforce `anyOf`/`const`; model writes `"action": "web_fetch"` | Quirk repair: tool name as action → tool action (logged as a repair) | §10.2 |
+| 19 | "Research X and message me about it" and "There was X. Research why." split into two topics (issue #19) | "Don't combine two subjects" read as "split at every request or sentence" | `segment_capture/v3`: an item is a subject with everything that belongs to it; keep background + request, follow-up on another part's result, and back-references ("it", "why") together | P2 |
 
 **A negative result (v5).** Splitting triage's `missing_info` into its own gated call
 ("Can work start without asking the owner?") made it *worse*: triage dropped from 96% to 85%
@@ -153,6 +154,18 @@ and one episode ("hi, what's new?" from home). Result over 3 repeats: **357/363 
 
 One fix came from a live run, not the bench: "hi" in a conversation topic got no answer, because the
 desk chose `nothing`. `nothing` is no longer offered in conversation topics (`desk/conversation-hi`).
+
+## Over-splitting (issue #19)
+
+Captures whose second part needs the first were split into separate topics: "Research when the
+Umwelt Arena Spreitenbach was created and message me about it tomorrow morning", and background
+followed by "Research why". Five cases (`segment/research-then-message-about-it`,
+`background-then-request`, `find-then-book-it`, `context-then-question`, and
+`dependent-plus-unrelated`, which must still split off an unrelated reminder) failed 9 of 15 runs
+on `segment_capture/v2`; with the old prompt the background sentence was sometimes dropped entirely.
+v3 (row 19) passes all 14 segment cases × 3 twice (42/42, 42/42; v2: 32/42). Route, desk and the
+capture episodes showed no failures traceable to the change. `desk/conversation-answers-question`
+(no segmenter call) fails now and then on both prompt versions.
 
 ## Cost
 
