@@ -78,7 +78,7 @@ interface Settings {
   owner: { name: string; timezone: string };
   db_path: string;
   workspace: string;
-  api: { port: number; token: string };
+  api: { host: string; port: number; token: string };
   web: { searxng: string };
   api_key: string;
   roles: Record<ModelRole, string | null>;

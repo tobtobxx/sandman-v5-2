@@ -12,6 +12,9 @@
   // Files of the "code" role (not implemented in this prototype yet).
   "workspace": "data/workspace",
   "api": {
+    // Address to listen on. "::1": this machine only (IPv6 loopback); "127.0.0.1" for IPv4 loopback;
+    // "::" or "0.0.0.0" for all interfaces (set a token then).
+    "host": "::1",
     "port": 8700,
     // Optional shared secret. When set, API calls need "Authorization: Bearer <token>" or ?token=<token>.
     // The UIs at / and /observer are always served.
