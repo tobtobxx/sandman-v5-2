@@ -1,7 +1,7 @@
 // sandman <command> [--config path]   (default ./config.jsonc; written with defaults on first run)
 //   serve            run API, dispatcher and both web UIs
 //   bench [--full] [filter]   run the benchmark (see bench/README.md)
-//   probe [slug|role]  report engine quirks (default: the "main" model)
+//   probe [slug|role]  a few test calls: latency, tokens, speed, repairs (default: the "main" model)
 //   lint             check all prompt schemas (reasoning key first)
 
 import { DB, setDefaultDb } from "./db.ts";
@@ -39,7 +39,7 @@ switch (cmd) {
     const { probe } = await import("./llm/probe.ts");
     const { LLMFailure } = await import("./llm/gateway.ts");
     try {
-      console.log("quirks:", await probe(args[0] ?? "main"));
+      if (!await probe(args[0] ?? "main")) Deno.exit(1);
     } catch (e) {
       if (!(e instanceof LLMFailure)) throw e;
       console.error(`probe failed: ${e.kind}: ${e.message}`);

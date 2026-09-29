@@ -1,36 +1,71 @@
-// Quirk probe (DESIGN §10.2): a few fixed calls that reveal how an engine behaves under a schema.
+// Model probe: a few fixed calls against one model, to check a new engine or quantization before the
+// benchmark. Reports the endpoint's settings and, per call, outcome, latency, tokens, speed, cost and
+// what local validation had to repair.
 
-import { llmJson, llmText } from "./gateway.ts";
-import { isRole, modelSlug } from "../config.ts";
+import { LLMFailure, llmJson, llmText } from "./gateway.ts";
+import { config, isRole, modelSlug } from "../config.ts";
 import { obj, str } from "./schema.ts";
 import { db } from "../db.ts";
 
-/** `name`: a model slug, or a role (its model is probed). */
-export async function probe(name = "main") {
-  const found: string[] = [];
-  const model = isRole(name) ? modelSlug(name) : name;
-  const opts = { maxTokens: 300, model };
+const CALLS: { type: string; run: (opts: { maxTokens: number; model: string }) => Promise<unknown> }[] = [
+  {
+    type: "probe_json",
+    run: (o) => llmJson("probe_json", 'Give zeta="z" and alpha="a".', obj({ zeta: str(), alpha: str() }), o),
+  },
+  {
+    type: "probe_maxlen",
+    run: (o) => llmJson("probe_maxlen", "Describe the sea in two or three sentences in the field text.", obj({ text: str(20) }), o),
+  },
+  {
+    type: "probe_text",
+    run: (o) => llmText("probe_text", "Write four sentences about the sea.", { ...o, maxTokens: 200 }),
+  },
+];
 
-  // 1. key order: schema lists zeta before alpha; does output follow schema order or alphabetical?
-  const s1 = { type: "object", properties: { zeta: str(), alpha: str() }, required: ["zeta", "alpha"], additionalProperties: false };
-  await llmJson("probe_order", 'Give zeta="z" and alpha="a".', s1, opts);
-  const raw1 = db().get(`SELECT raw_output FROM llm_calls WHERE call_type='probe_order' ORDER BY rowid DESC`)!.raw_output as string;
-  if (raw1.indexOf('"alpha"') < raw1.indexOf('"zeta"')) found.push("keys_alphabetical");
-  if (/^\s{3,}/.test(raw1)) found.push("unbounded_whitespace(leading)");
+/** `name`: a model slug, or a role (its model is probed). Returns false if every call failed. */
+export async function probe(name = "main"): Promise<boolean> {
+  const slug = isRole(name) ? modelSlug(name) : name;
+  const m = config.models[slug];
+  if (!m) throw new Error(`no model "${slug}" in config.models`);
+  console.log(`${slug}: ${m.model} @ ${m.base_url}`);
+  console.log(
+    `  reasoning_effort=${m.reasoning_effort} reasoning_tokens=${m.reasoning_tokens} temperature=${m.temperature ?? "default"} ` +
+      `slots=${m.slots} idle_timeout_s=${m.idle_timeout_s}`,
+  );
 
-  // 2. maxLength enforcement
-  const s2 = obj({ text: str(20) });
-  await llmJson("probe_maxlen", "Describe the sea in two or three sentences in the field text.", s2, opts);
-  const raw2 = JSON.parse(db().get(`SELECT raw_output FROM llm_calls WHERE call_type='probe_maxlen' ORDER BY rowid DESC`)!.raw_output);
-  if ((raw2.text ?? "").length > 20) found.push("ignores_maxLength");
+  let okCalls = 0;
+  for (const c of CALLS) {
+    try {
+      await c.run({ maxTokens: 300, model: slug });
+      okCalls++;
+    } catch (e) {
+      if (!(e instanceof LLMFailure)) throw e;
+    }
+  }
 
-  // 3. newlines inside JSON strings
-  const r3 = await llmJson<{ poem: string }>("probe_newlines", "Write a 4-line poem in the field poem, one line per verse.", obj({ poem: str() }), opts);
-  if (!r3.poem.includes("\n")) found.push("drops_newlines_in_strings");
+  const rows = db().all(
+    `SELECT call_type, attempt, ok, error, repaired, provider, tokens_in, tokens_out, cost, ms, length(reasoning) reasoning_chars
+     FROM llm_calls WHERE call_type LIKE 'probe_%' ORDER BY rowid`,
+  );
+  console.log();
+  console.table(rows.map((r) => ({
+    call: r.call_type,
+    try: r.attempt,
+    result: r.ok ? "ok" : r.error,
+    ms: r.ms,
+    "tok in": r.tokens_in ?? "",
+    "tok out": r.tokens_out ?? "",
+    "tok/s": r.tokens_out && r.ms ? Math.round(r.tokens_out / (r.ms / 1000)) : "",
+    reasoning: r.reasoning_chars ?? 0,
+    repairs: r.repaired ? JSON.parse(r.repaired).join("; ") : "",
+    provider: r.provider ?? "",
+  })));
 
-  // 4. plain text works
-  const t = await llmText("probe_text", "Say hello in three words.", { maxTokens: 20, model });
-  if (!t) found.push("empty_text");
-
-  return found;
+  const sum = (k: string) => rows.reduce((a, r) => a + (r[k] ?? 0), 0);
+  const ms = sum("ms"), tout = sum("tokens_out");
+  console.log(
+    `${okCalls}/${CALLS.length} calls ok, ${rows.length} requests · ${ms} ms · ${sum("tokens_in")} in / ${tout} out tokens` +
+      (tout && ms ? ` · ${Math.round(tout / (ms / 1000))} tok/s overall` : "") + ` · $${sum("cost").toFixed(5)}`,
+  );
+  return okCalls > 0;
 }
