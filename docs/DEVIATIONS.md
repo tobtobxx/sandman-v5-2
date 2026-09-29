@@ -1,113 +1,88 @@
 # Deviations from DESIGN.md
 
-This is a prototype built to test whether the design's model works with a weak model. Where it
-differs from the design, the reason is below. Bench-driven changes reference docs/BENCH.md rows.
+This is a prototype built to test whether the design works with a weak model. Where it differs
+from the design, the reason is below. Bench-driven changes reference docs/BENCH.md rows.
 
 ## Stack and scope
 
 **Deno/TypeScript instead of Python/FastAPI (§3.2).** Owner request. SQLite via the built-in
-`node:sqlite` (WAL, FTS5), no dependencies at all, so `flake.nix` only needs `deno`.
+`node:sqlite` (WAL, FTS5), no dependencies, so `flake.nix` only needs `deno`.
 
-**Not implemented (prototype scope).** Speech-to-text and voice capture (the UI has a disabled
-button), text-to-speech, Web Push (the notifier computes levels and the client uses browser
-notifications while open), client tokens (one optional shared `api.token`), capture merging
-within 10 s, the typing debounce, schedules/cron cards, projects and project briefs, recipe
-promotion and `generalize_recipe`, `render_note`/`render_brief` (note one-liners are rendered in
-code from claims), embeddings, the `code` role and its sandbox, the `large` escalation profile,
-question nagging, quiet hours. `report_mode: desk` is not implemented; results are structured.
+**Not implemented yet** (tracked as `enhancement` issues): speech-to-text (#41), text-to-speech
+(#42), Web Push (#43), per-client tokens (one shared `api.token`, #44), capture merging (#45),
+typing debounce (#46), projects and briefs (#47), recipe promotion (#48), quiet hours (#49), a
+reserved interactive slot (priorities only, #50), message paging, unread counts and approval
+questions (#51), claim editing in the memory browser (#40), `report_mode: desk` (#58).
 
-**Artifacts live in the database** (`artifacts.content`), not in `workspace/<card>/` files.
-Simpler to inspect and to isolate per bench case.
+**Left out on purpose.**
+- `render_note` / `render_brief`: a note's one-liner and body are built in code from its claims.
+- `summarize_artifact`: an artifact's summary is the `what` of the write, or the page title.
+- No per-call golden sets or `sandman eval`: the benchmark (docs/BENCH.md) is the eval suite;
+  the observer's correct/incorrect labels are the only "add to eval set".
+- Moving an item records no routing example; a move to a new topic titles it from the quote.
+- Undoing a "new card" receipt always cancels the card, never deletes it.
+- No `rebuild_memory`, purge or episodic FTS log. Retracted claims stay in the table.
+- No secret redaction in traces: secrets live only in `config.jsonc` and never enter prompts.
 
-**Live web search is best effort.** `web.backend: "live"` uses SearXNG if `web.searxng` is set,
-else DuckDuckGo's HTML endpoint (form POST, throttled to one request per 6 s; a bot challenge is
-reported as a tool error, not as "no results"). The bench always uses the offline corpus (§14.3).
+**Artifacts live in the database** (`artifacts.content`), not in `workspace/<card>/` files, so
+they are easy to inspect and to isolate per bench case. Only the `code` role works in files.
 
-**Shorter IDs.** `prefix_` + 12 base32 chars (time + random) instead of a 26-char ULID. They stay
-unique and sortable, and cost fewer prompt tokens when the model has to choose one.
+**Live web search is best effort.** SearXNG if `web.searxng` is set, else DuckDuckGo's HTML
+endpoint (one request per 6 s; a bot challenge is a tool error). The bench uses the offline corpus.
+
+**Shorter IDs.** `prefix_` + 12 base32 chars (time + random) instead of a 26-char ULID: unique,
+sortable, and fewer prompt tokens when the model has to choose one.
 
 **Prompts are TypeScript functions** (`src/prompts/*.ts`) with a version string each, instead of
-`prompts/<call_type>/vN.md` files. Conditional sections (tools only when applicable, open
-questions only when present) are easier to keep correct that way. `sandman lint` builds every
-prompt and checks its schema.
+`prompts/<call_type>/vN.md`. Conditional sections are easier to keep correct; `sandman lint` checks
+every schema.
 
-**Streaming** is implemented as in §11 (idle timeout, whitespace watchdog, no resend after a
-timeout). Rate-limit and 5xx responses *before* generation starts are retried with backoff,
-since nothing is running server-side then.
+**Cheaper classifier profile.** Some pure classification calls may run on a separate, cheaper
+profile (#32); the bench decides which.
 
 ## Chat-first client (owner decision, after the first benchmark)
 
-The design separates capture, organization and attention and has no chat window (§6.1): talking
-happened only on topic pages, and nothing handled "hi" or "give me an overview" (a live test filed
-"hi" into a new topic called "General Greeting" and answered nothing). The client is now chat-first
-(API in docs/API.md):
+The design has no chat window (§6.1), and nothing handled "hi" or "give me an overview" (a live test
+filed "hi" into a new topic "General Greeting"). The client is chat-first (API in docs/API.md):
 
-- **Home is one prompt.** A message sent from home is segmented and routed as a capture. One item
-  opens its topic; several items open a screen listing the topics they went to.
-- **`chat` routing option.** `route_item` can choose `chat` for a greeting, small talk or a
-  question about everything. That creates a **conversation topic** (`topics.kind = 'conversation'`,
-  titled "Conversation 10:15"). The design's `reply_only`-without-a-topic outcome is gone.
-- **Conversation topics see all topics.** Their desk context holds a code-built overview (every
-  subject topic with its open cards and questions, results of the last day, pending reminders), all
-  open cards and all open questions. `nothing` is not offered there, so Sandman always answers.
-  Work or a reminder asked for in a conversation is routed into a subject topic (with a note there).
-- **Topic pages are chat histories.** A message typed in a topic goes straight to that topic.
-- **Sending is two steps.** `POST /send` segments and routes, then returns so the client can
-  navigate at once; the desk turns run in the background and arrive as events.
-- **Conversation topics are archived after one quiet day**, without a review notice, and never get
-  merge suggestions. They are never routing candidates.
+- **Home is one prompt.** A message from home is segmented and routed as a capture. One item opens
+  its topic; several open a screen listing the topics they went to.
+- **`chat` routing option.** `route_item` can choose `chat` for small talk or a question about
+  everything. That creates a **conversation topic** ("Conversation 10:15"); `reply_only` without a
+  topic is gone. Its desk context holds a code-built overview of all topics, open cards and
+  questions; `nothing` is not offered there. Work asked for there is routed into a subject topic.
+- **Topic pages are chat histories**; a message typed in a topic goes straight to it.
+- **Sending is two steps.** `POST /send` segments and routes, then returns; desk turns run in the
+  background and arrive as events.
+- **Conversation topics are archived after one quiet day**, silently, and never get merge
+  suggestions or routing candidacy.
 
 ## Behaviour changed because of the benchmark
 
-**Segmentation threshold 12 words, not 30 (§6.3, BENCH row 1).** The design's own M3 acceptance
-capture ("garden: …, remind me Friday …, and find out if …") is one sentence of 26 words and was
-never segmented under the 30-word rule.
-
-**The desk does not see the full memo in capture mode (§6.3, §6.6, row 15).** With the full
-transcript, the desk acted on other items' parts: it created the e-bike card in the garden topic
-and gave the balcony remark a reminder with the tax item's "Friday". Without it, cross-talk
-stopped. References like "that kit" across items are not resolved now; the topic context
-(summary, cards, recent messages) covers most of them.
-
-**Desk later passes are gated (§6.6, row 16).** Instead of offering `done` among the actions on
-passes 2–3, a `desk_more` call asks whether another request is left (`nothing` /
-`another_request`; a yes/no version flipped its answer, issue #24), and only on `another_request`
-are the (remaining) actions offered. An intent already executed in the turn is not offered again.
-
-**`cancel_card` desk intent (P4, row 4).** Missing from §6.6; without it the desk claimed
-cancellations it couldn't do. Its receipt's undo re-creates the card from its contract (cancelled
-is terminal).
-
-**Triage has a `compare_count` field and a code rule (§5.5, §19 Q1, row 9).** Comparing ≥3 things
-always splits. The key sorts before `fits`, so the count is produced before the decision.
-
-**Research "not found" is a result (§5.10, row 7).** A research worker's `fail` other than
-`out_of_scope` becomes a finished result ("Not found. …") that the verifier judges, plus a
-negative fact. Not on item-gathering recipe steps, where the items matter (row 11). Research
-workers are only offered `impossible | out_of_scope` as fail categories.
-
-**Free-mode plans are research-only (§5.6).** `plan_generate` no longer offers a `write` role:
-a write subtask in a parallel plan always depended on the research subtasks. The parent's
-synthesis does the writing.
-
-**Code guards (P1/P12).** plan_fill `criteria` must be short and not the request itself (row 10);
-a claim with a money amount is `volatile` (row 12); `update`/`contradicts` in the consolidator
-require the same detail (row 13); an items step with no items fails verification (row 11).
-
-**Owner profile in triage and in generated content.** Triage asked "which city?" without it.
-`generate_content` also gets today's date, to stop `[Date]` placeholders.
-
-**Worker quirk repair (§10.2, row 18).** When an engine doesn't enforce `anyOf`, a tool name
-written as the action is rewritten to a tool action before validation and logged as a repair.
+- **Segmentation threshold 12 words, not 30 (§6.3, row 1).** The design's own M3 capture is one
+  26-word sentence and was never segmented.
+- **The desk doesn't see the full memo in capture mode (§6.6, row 15).** It acted on other items'
+  parts. References like "that kit" across items are now resolved only via topic context.
+- **Desk later passes are gated (row 16).** `desk_more` asks `nothing | another_request` (a yes/no
+  version flipped, #24) before offering actions again; executed intents aren't offered again.
+- **`cancel_card` desk intent (P4, row 4).** Without it the desk claimed cancellations. Undo
+  re-creates the card from its contract.
+- **Triage `compare_count` + code rule (§5.5, §19 Q1, row 9).** Comparing ≥3 things always splits.
+- **Research "not found" is a result (§5.10, row 7)**, judged by the verifier, plus a negative
+  fact; not on item-gathering steps (row 11). Research may only fail `impossible | out_of_scope`.
+- **Free-mode plans are research-only (§5.6).** A `write` subtask always depended on the others;
+  the parent's synthesis writes.
+- **Code guards (P1/P12).** Short, non-verbatim plan criteria (row 10); money claims are `volatile`
+  (row 12); `update`/`contradicts` need the same detail (row 13); an items step with no items fails
+  verification (row 11).
+- **Owner profile in triage and content**, plus today's date in `generate_content`.
+- **Worker quirk repair (§10.2, row 18).** A tool name written as the action is rewritten to a tool
+  action before validation and logged.
 
 ## Smaller choices
 
-- A reminder is a `reminder` card, as in §5.2. `when_text` is parsed in code (weekday names,
-  "tomorrow at 3pm", "in two hours", dates); only when code fails, the model picks a date from a
-  printed 21-day calendar (`resolve_when`) rather than doing date arithmetic.
-- Topic summaries and owner-fact extraction run every 4 messages on a topic page, in the
-  background.
-- The needs-you ranking counts the blocked card plus its ancestors (children never have
-  dependants other than their parent in v5).
-- Consolidation runs when ≥20 facts are pending or once around 03:00, plus on demand; the tidy-up
-  job runs after it.
+- Reminders are `reminder` cards. `when_text` is parsed in code; only if that fails, the model picks
+  a date from a printed 21-day calendar (`resolve_when`) instead of doing date arithmetic.
+- Topic summaries and owner-fact extraction run every 4 messages, in the background.
+- Needs-you ranking counts the blocked card plus its ancestors (children have no other dependants).
+- Consolidation runs at ≥20 pending facts or around 03:00, plus on demand; tidy-up runs after it.
