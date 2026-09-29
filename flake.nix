@@ -11,12 +11,16 @@
       let
         pkgs = import nixpkgs { inherit system; };
         # node:sqlite (with FTS5) ships inside deno >= 2.2; no other dependencies.
+        # Deno trusts only its bundled roots by default; also trust the system store (custom CAs).
+        caStore = "system,mozilla";
         run = name: args: pkgs.writeShellScriptBin name ''
+          export DENO_TLS_CA_STORE="''${DENO_TLS_CA_STORE:-${caStore}}"
           exec ${pkgs.deno}/bin/deno run -A --no-lock ${self}/src/main.ts ${args} "$@"
         '';
       in {
         devShells.default = pkgs.mkShell {
           packages = [ pkgs.deno pkgs.sqlite ];
+          DENO_TLS_CA_STORE = caStore;
         };
         packages.default = run "sandman" "";
         apps = {
