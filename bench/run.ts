@@ -2,7 +2,7 @@
 // Runs the hard cases (HARD below), or every case with --full; filters narrow either set.
 // Runs each case in a fresh in-memory database, with the offline corpus and a fixed clock.
 // Writes bench/results/<stamp>-<label>.json + bench/results/latest.md, and copies all traces into
-// data/bench.db (open it with SANDMAN_DB=data/bench.db deno task serve → /observer).
+// data/bench.db (set db_path to it in config.jsonc and open /observer).
 
 import { DB, withCtx } from "../src/db.ts";
 import { config } from "../src/config.ts";
@@ -78,7 +78,7 @@ function exportTraces(from: DB, to: DB, caseId: string, run: number) {
 }
 
 export async function runBench(args: string[]) {
-  config.web_backend = "corpus";
+  config.web.backend = "corpus";
   config.profiles.small.slots = 8;
   const opt = (k: string, d: string) => {
     const i = args.indexOf(k);

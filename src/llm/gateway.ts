@@ -33,7 +33,6 @@ export class LLMFailure extends Error {
 
 // ---- spend tracking (the benchmark key is budget-limited) ----
 export const spend = { usd: 0, calls: 0, byType: {} as Record<string, { calls: number; usd: number; tin: number; tout: number }> };
-const budget = Number(Deno.env.get("SANDMAN_BUDGET_USD") ?? "0");
 
 // ---- priority slots per profile (§5.11) ----
 const PRI: Record<Priority, number> = { interactive: 0, high: 1, normal: 2, background: 3 };
@@ -94,6 +93,7 @@ export async function llmText(callType: string, prompt: string, opts: CallOpts):
 async function callOnce(callType: string, prompt: string, schema: Schema | null, opts: CallOpts, attempt: number): Promise<any> {
   const profileName = opts.profile ?? "small";
   const p = config.profiles[profileName];
+  const budget = config.budget_usd;
   if (budget && spend.usd > budget) throw new LLMFailure("budget", `spend limit ${budget} USD reached`);
   const id = newId("cal");
   const started = Date.now();

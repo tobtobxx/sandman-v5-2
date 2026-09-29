@@ -225,7 +225,7 @@ function cardDetail(id: string) {
 
 async function handle(req: Request): Promise<Response> {
   const url = new URL(req.url);
-  const token = Deno.env.get("SANDMAN_TOKEN");
+  const token = config.api.token;
   if (url.pathname === "/" || url.pathname === "/observer") {
     const f = url.pathname === "/" ? "client.html" : "observer.html";
     return new Response(await Deno.readTextFile(new URL(`../ui/${f}`, import.meta.url)), { headers: { "content-type": "text/html; charset=utf-8" } });
@@ -289,6 +289,6 @@ export async function serve() {
       bg(consolidate().then(() => tidy()));
     }
   }, 60_000);
-  console.log(`Sandman on http://localhost:${config.api.port}  (observer: /observer)  model: ${config.profiles.small.model}  web: ${config.web_backend}`);
+  console.log(`Sandman on http://localhost:${config.api.port}  (observer: /observer)  model: ${config.profiles.small.model}  web: ${config.web.backend}`);
   await Deno.serve({ port: config.api.port, onListen: () => {} }, handle).finished;
 }

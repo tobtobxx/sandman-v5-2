@@ -12,7 +12,7 @@ See [docs/BENCH.md](docs/BENCH.md) for what the benchmark found and changed, and
 
 ```sh
 nix develop                     # or: install deno ≥ 2.2 yourself
-echo 'OPENROUTER_API_KEY=sk-or-…' > .env
+deno task serve                 # first run writes config.jsonc and exits: put your API key there
 deno task serve                 # http://localhost:8700  (client)  ·  /observer (all internal state)
 deno task bench                 # the hard cases; --full for all; filters: deno task bench desk/ --repeat 3
 deno task probe                 # which engine quirks apply
@@ -21,16 +21,10 @@ deno run -A src/main.ts lint    # every prompt schema: reasoning key sorts first
 
 With Nix: `nix run` starts the server, `nix run .#bench` runs the benchmark.
 
-| env | default | |
-|---|---|---|
-| `OPENROUTER_API_KEY` | — | also read from `.env` |
-| `SANDMAN_MODEL` / `SANDMAN_BASE_URL` | qwen3.6-35b-a3b / OpenRouter | any OpenAI-compatible server (llama.cpp works) |
-| `SANDMAN_JUDGE_MODEL` | xiaomi/mimo-v2.6-pro | bench judge only |
-| `SANDMAN_DB` | `data/sandman.db` | `data/bench.db` holds the last bench run's traces |
-| `SANDMAN_WEB` | `live` | `corpus` = offline pages from `bench/corpus/` |
-| `SANDMAN_SEARXNG` | — | search backend for `live`; otherwise DuckDuckGo HTML (best effort) |
-| `SANDMAN_OWNER`, `SANDMAN_TZ` | Alex, Europe/Zurich | |
-| `SANDMAN_PORT`, `SANDMAN_SLOTS`, `SANDMAN_TOKEN`, `SANDMAN_BUDGET_USD` | 8700, 4, —, — | |
+Configuration lives in `config.jsonc` in the working directory (`--config path` for another file).
+If it is missing, sandman writes the default and exits. Every setting is explained in
+[src/config.default.jsonc](src/config.default.jsonc); keys left out of `config.jsonc` fall back to it.
+Environment variables and `.env` are not read.
 
 ## The two UIs
 

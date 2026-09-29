@@ -1,13 +1,26 @@
-// sandman <command>
+// sandman <command> [--config path]   (default ./config.jsonc; written with defaults on first run)
 //   serve            run API, dispatcher and both web UIs
 //   bench [--full] [filter]   run the benchmark (see bench/README.md)
 //   probe [profile]  report engine quirks
 //   lint             check all prompt schemas (reasoning key first)
 
 import { DB, setDefaultDb } from "./db.ts";
-import { config } from "./config.ts";
+import { config, loadConfig } from "./config.ts";
 
 const [cmd, ...args] = Deno.args;
+/** Removes `--name value` from args and returns the value. */
+function flag(name: string): string | undefined {
+  const i = args.indexOf(name);
+  if (i < 0) return undefined;
+  const [, v] = args.splice(i, 2);
+  if (v === undefined) {
+    console.error(`${name} needs a value`);
+    Deno.exit(1);
+  }
+  return v;
+}
+const configPath = flag("--config") ?? "config.jsonc";
+if (cmd === "serve" || cmd === "bench" || cmd === "probe") loadConfig(configPath);
 
 switch (cmd) {
   case "serve": {
@@ -35,5 +48,5 @@ switch (cmd) {
     break;
   }
   default:
-    console.log("usage: sandman serve | bench [--full] [filter] | probe [profile] | lint");
+    console.log("usage: sandman serve | bench [--full] [filter] | probe [profile] | lint   [--config path]");
 }
