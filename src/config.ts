@@ -6,13 +6,15 @@ export interface Profile {
   base_url: string;
   model: string;
   api_key: string;
-  thinking: boolean;
+  // "none": reasoning off; anything else is sent as the reasoning effort
+  reasoning_effort: string;
+  // Unless reasoning is off: the reasoning budget (llama.cpp), also added to every call's max_tokens; 0: none
+  reasoning_tokens: number;
   slots: number;
-  temperature: number;
+  // null: the provider's default
+  temperature: number | null;
   idle_timeout_s: number;
   quirks: string[];
-  // OpenRouter only: provider routing preferences
-  provider?: Record<string, unknown>;
 }
 
 /** The commented default config.jsonc; also the source of the defaults. */
@@ -123,6 +125,11 @@ export function loadConfig(path = "config.jsonc") {
   const unknown = Object.keys(user).filter((k) => !known.includes(k));
   if (unknown.length) console.warn(`${path}: ignoring unknown keys: ${unknown.join(", ")}`);
   for (const k of unknown) delete user[k];
+  const profileKeys = Object.keys(parseJsonc(DEFAULT_CONFIG_JSONC).profiles.small);
+  for (const [name, p] of Object.entries(isObj(user.profiles) ? user.profiles : {})) {
+    const extra = isObj(p) ? Object.keys(p).filter((k) => !profileKeys.includes(k)) : [];
+    if (extra.length) console.warn(`${path}: profile ${name}: ignoring unknown keys: ${extra.join(", ")}`);
+  }
   merge(config, user);
   for (const p of Object.values(config.profiles)) p.api_key ||= config.api_key;
 }

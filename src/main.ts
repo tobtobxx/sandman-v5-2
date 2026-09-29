@@ -37,7 +37,14 @@ switch (cmd) {
   case "probe": {
     setDefaultDb(new DB(":memory:"));
     const { probe } = await import("./llm/probe.ts");
-    console.log("quirks:", await probe(args[0] ?? "small"));
+    const { LLMFailure } = await import("./llm/gateway.ts");
+    try {
+      console.log("quirks:", await probe(args[0] ?? "small"));
+    } catch (e) {
+      if (!(e instanceof LLMFailure)) throw e;
+      console.error(`probe failed: ${e.kind}: ${e.message}`);
+      Deno.exit(1);
+    }
     break;
   }
   case "lint": {

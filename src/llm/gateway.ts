@@ -21,7 +21,7 @@ export interface CallOpts {
   topic_id?: string;
   step?: number;
   version?: string;
-  temperature?: number;
+  temperature?: number | null;
   /** call-specific repair applied before validation (engine quirks, §10.2); must log what it changed */
   repair?: (v: any) => { value: any; note?: string };
 }
@@ -114,7 +114,6 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
   const budget = config.budget_usd;
   if (budget && spend.usd > budget) throw new LLMFailure("budget", `spend limit ${budget} USD reached`);
   const id = newId("cal");
-  const started = Date.now();
   const row: Record<string, any> = {
     id, call_type: callType, prompt_version: opts.version ?? "v1", model_profile: profileName, model: p.model,
     session_id: opts.session_id, card_id: opts.card_id, topic_id: opts.topic_id, step: opts.step, attempt,
@@ -124,6 +123,7 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
   if (tags) row.eval_label = JSON.stringify({ tags });
   const s = slotsFor(profileName, p);
   await s.acquire(opts.priority ?? "normal");
+  const started = Date.now(); // ms: the call itself, not the wait for a slot
   const out: StreamOut = { text: "", reasoning: "" };
   try {
     const res = await stream(p, prompt, schema, opts, out);
@@ -160,9 +160,9 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
     return v.value;
   } catch (e) {
     row.ok = 0;
-    row.error = e instanceof LLMFailure ? `${e.kind}: ${e.message}` : `transport: ${(e as Error).message}`;
-    if (e instanceof LLMFailure) throw e;
-    throw new LLMFailure("transport", (e as Error).message);
+    const err = e instanceof LLMFailure ? e : new LLMFailure("transport", transportMessage(e as Error));
+    row.error = `${err.kind}: ${err.message}`;
+    throw err;
   } finally {
     s.release();
     const kind = String(row.error ?? "").split(":")[0];
@@ -176,6 +176,14 @@ async function callOnce(callType: string, prompt: string, schema: Schema | null,
       if (opts.card_id) db().run(`UPDATE cards SET llm_calls_used = llm_calls_used + 1 WHERE id = (SELECT root_id FROM cards WHERE id=?)`, opts.card_id);
     } catch { /* tracing must never break a call */ }
   }
+}
+
+/** fetch only says "fetch failed"; the reason (URL, refused, TLS, DNS) is in its cause. */
+function transportMessage(e: Error): string {
+  const cause = e.cause instanceof Error ? e.cause.message : "";
+  let msg = cause && !e.message.includes(cause) ? `${e.message}: ${cause}` : e.message;
+  if (/certificate|UnknownIssuer/i.test(msg)) msg += " (custom CA? set DENO_TLS_CA_STORE=system,mozilla)";
+  return msg;
 }
 
 function extractJson(raw: string): string {
@@ -224,20 +232,34 @@ interface StreamResult {
   cost: number;
 }
 
+const REASONING_BUDGET_MESSAGE = "\n\nThinking time is up, I'll answer now.\n";
+
 async function stream(p: Profile, prompt: string, schema: Schema | null, opts: CallOpts, out: StreamOut): Promise<StreamResult> {
+  const thinking = p.reasoning_effort !== "none";
   const body: Record<string, any> = {
     model: p.model,
     messages: [{ role: "user", content: prompt }],
-    max_tokens: opts.maxTokens,
-    temperature: opts.temperature ?? p.temperature,
+    max_tokens: opts.maxTokens + (thinking ? p.reasoning_tokens : 0),
     stream: true,
-    usage: { include: true },
+    usage: { include: true }, // OpenRouter
+    stream_options: { include_usage: true }, // llama.cpp, vLLM: token counts in the stream
+    // OpenRouter: only providers that support every parameter sent (the JSON schema, reasoning)
+    provider: { require_parameters: true },
   };
-  if (!p.thinking) {
+  const temperature = opts.temperature ?? p.temperature;
+  if (temperature != null) body.temperature = temperature; // otherwise the provider's default
+  // reasoning_effort "none" turns reasoning off; any other value is passed on as the effort
+  if (thinking) {
+    body.reasoning = { effort: p.reasoning_effort };
+    if (p.reasoning_tokens > 0) {
+      // llama.cpp: cut the reasoning off at the budget, so the answer's max_tokens share stays free
+      body.reasoning_budget_tokens = p.reasoning_tokens;
+      body.reasoning_budget_message = REASONING_BUDGET_MESSAGE;
+    }
+  } else {
     body.reasoning = { enabled: false }; // OpenRouter
     body.chat_template_kwargs = { enable_thinking: false }; // llama.cpp / vLLM
   }
-  if (p.provider) body.provider = p.provider;
   if (schema) {
     body.response_format = { type: "json_schema", json_schema: { name: "output", strict: true, schema: wireSchema(schema) } };
   }
@@ -258,7 +280,7 @@ async function stream(p: Profile, prompt: string, schema: Schema | null, opts: C
         signal: ac.signal,
       });
       // rate limit / overloaded before any generation: safe to retry (nothing is running server-side)
-      if (res.status !== 429 && res.status !== 502 && res.status !== 503) break;
+      if ((res.status !== 429 && res.status !== 502 && res.status !== 503) || i === 3) break; // last one: report its error
       await res.body?.cancel();
       await new Promise((r) => setTimeout(r, 1500 * 2 ** i));
       arm();

@@ -17,7 +17,7 @@ export async function probe(profile = "small") {
 
   // 2. maxLength enforcement
   const s2 = obj({ text: str(20) });
-  await llmJson("probe_maxlen", "Write a 60-word description of the sea in the field text.", s2, opts);
+  await llmJson("probe_maxlen", "Describe the sea in two or three sentences in the field text.", s2, opts);
   const raw2 = JSON.parse(db().get(`SELECT raw_output FROM llm_calls WHERE call_type='probe_maxlen' ORDER BY rowid DESC`)!.raw_output);
   if ((raw2.text ?? "").length > 20) found.push("ignores_maxLength");
 

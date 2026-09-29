@@ -39,28 +39,31 @@
       "base_url": "https://openrouter.ai/api/v1",
       "model": "qwen/qwen3.6-35b-a3b",
       "api_key": "",
-      "thinking": false,
+      // "none": reasoning off; "minimal" … "high": sent as the reasoning effort.
+      "reasoning_effort": "none",
+      // Unless "none": the reasoning budget. llama.cpp cuts reasoning off there (reasoning_budget_tokens);
+      // it is also added to each call's max_tokens, which counts reasoning too. 0: no budget.
+      "reasoning_tokens": 0,
       // Concurrent calls; also the number of cards worked on at once.
       "slots": 4,
+      // null: the provider's default. Retries and a few calls set their own.
       "temperature": 0.3,
       // Abort a streaming call after this many seconds without a token.
       "idle_timeout_s": 60,
       // Engine quirks the gateway works around. `deno task probe` reports which apply to a model.
-      "quirks": ["keys_alphabetical", "unbounded_whitespace", "ignores_maxLength"],
-      // OpenRouter only: provider routing preferences.
-      "provider": { "require_parameters": true }
+      "quirks": ["keys_alphabetical", "unbounded_whitespace", "ignores_maxLength"]
     },
     // Grades benchmark answers; unused by serve.
     "judge": {
       "base_url": "https://openrouter.ai/api/v1",
       "model": "xiaomi/mimo-v2.6-pro",
       "api_key": "",
-      "thinking": false,
+      "reasoning_effort": "none",
+      "reasoning_tokens": 0,
       "slots": 4,
       "temperature": 0,
       "idle_timeout_s": 90,
-      "quirks": [],
-      "provider": { "require_parameters": true }
+      "quirks": []
     }
   }
 }
