@@ -104,6 +104,13 @@ export const cases: Case[] = [
       [o.receipts[0]?.ref_id === o.ctx.running.id, "added to wrong card"],
       [has(db().get(`SELECT body FROM comments WHERE card_id=?`, o.ctx.running.id)?.body, "balcony"), "comment lacks the detail"],
     )),
+  // Stage of episode/capture-three-items: the garden item exactly as segmented; v7 also created a card.
+  desk("episode-balcony-add", () => {
+    const t = irrigation();
+    topic("Taxes 2026", "Tax return 2026: deadlines, accountant, extension.");
+    return t;
+  }, "garden: the kit must also reach the balcony pots", (o) =>
+    all([kinds(o) === "added_to_card", `receipts: ${kinds(o)}`], [o.receipts[0]?.ref_id === o.ctx.running.id, "added to wrong card"])),
   desk("two-intents-work-and-reminder", () => ({ topic_id: topic("Garden", "Vegetable garden and raised beds").id }),
     "find out when to plant garlic in Zurich and remind me on Sunday to buy compost", (o) =>
       all([kinds(o) === "card_created,reminder_set", `receipts: ${kinds(o)}`])),

@@ -1,0 +1,260 @@
+{
+ "label": "i27-gather-open-x20",
+ "model": "qwen/qwen3.6-35b-a3b",
+ "set": "full",
+ "repeat": 20,
+ "spend": {
+  "usd": 0.034547139000000004,
+  "calls": 124,
+  "byType": {
+   "worker_step": {
+    "calls": 124,
+    "usd": 0.034547139000000004,
+    "tin": 130262,
+    "tout": 20848
+   }
+  }
+ },
+ "results": [
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 8,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001530243,
+   "tokens_in": 6170,
+   "tokens_out": 937,
+   "ms": 12576,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 7,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001537173,
+   "tokens_in": 6170,
+   "tokens_out": 944,
+   "ms": 12617,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 6,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0015490529999999999,
+   "tokens_in": 6170,
+   "tokens_out": 956,
+   "ms": 12772,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 1,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001553013,
+   "tokens_in": 6170,
+   "tokens_out": 960,
+   "ms": 12846,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 3,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0016711695,
+   "tokens_in": 6155,
+   "tokens_out": 976,
+   "ms": 12862,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 2,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001626867,
+   "tokens_in": 6110,
+   "tokens_out": 938,
+   "ms": 12905,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 5,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001579743,
+   "tokens_in": 6170,
+   "tokens_out": 987,
+   "ms": 12911,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 4,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001615383,
+   "tokens_in": 6170,
+   "tokens_out": 1023,
+   "ms": 13313,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 13,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001558458,
+   "tokens_in": 6160,
+   "tokens_out": 967,
+   "ms": 11214,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 16,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0016758720000000001,
+   "tokens_in": 6160,
+   "tokens_out": 980,
+   "ms": 10908,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 12,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0017455185,
+   "tokens_in": 6105,
+   "tokens_out": 953,
+   "ms": 12093,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 9,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0017623485,
+   "tokens_in": 6105,
+   "tokens_out": 970,
+   "ms": 12458,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 11,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0017414594999999998,
+   "tokens_in": 6071,
+   "tokens_out": 954,
+   "ms": 13651,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 15,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0015837029999999999,
+   "tokens_in": 6170,
+   "tokens_out": 991,
+   "ms": 14147,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 10,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0015658830000000001,
+   "tokens_in": 6170,
+   "tokens_out": 973,
+   "ms": 14646,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 14,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.0015176205,
+   "tokens_in": 6105,
+   "tokens_out": 934,
+   "ms": 14493,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 18,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001587663,
+   "tokens_in": 6170,
+   "tokens_out": 995,
+   "ms": 10475,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 19,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001658943,
+   "tokens_in": 6170,
+   "tokens_out": 1067,
+   "ms": 12604,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 17,
+   "pass": true,
+   "calls": 6,
+   "cost": 0.001573308,
+   "tokens_in": 6160,
+   "tokens_out": 982,
+   "ms": 15934,
+   "judged": false
+  },
+  {
+   "id": "worker/research-gather-open",
+   "group": "worker",
+   "run": 20,
+   "pass": true,
+   "calls": 10,
+   "cost": 0.0039137175,
+   "tokens_in": 13431,
+   "tokens_out": 2361,
+   "ms": 33085,
+   "judged": false
+  }
+ ]
+}

@@ -1,0 +1,735 @@
+{
+ "label": "i27-episodes-x5",
+ "model": "qwen/qwen3.6-35b-a3b",
+ "set": "full",
+ "repeat": 5,
+ "spend": {
+  "usd": 0.07087493778749991,
+  "calls": 607,
+  "byType": {
+   "segment_capture": {
+    "calls": 15,
+    "usd": 0.0018218969999999998,
+    "tin": 5445,
+    "tout": 1614
+   },
+   "route_item": {
+    "calls": 50,
+    "usd": 0.0036992835,
+    "tin": 14111,
+    "tout": 3210
+   },
+   "triage": {
+    "calls": 20,
+    "usd": 0.0019892069999999998,
+    "tin": 8758,
+    "tout": 1665
+   },
+   "desk_intent": {
+    "calls": 50,
+    "usd": 0.0033929675999999987,
+    "tin": 14461,
+    "tout": 2170
+   },
+   "worker_step": {
+    "calls": 130,
+    "usd": 0.032378544,
+    "tin": 136944,
+    "tout": 19263
+   },
+   "desk_reply": {
+    "calls": 5,
+    "usd": 0.0003157765875,
+    "tin": 1200,
+    "tout": 177
+   },
+   "desk_args_new_work": {
+    "calls": 25,
+    "usd": 0.0040020057,
+    "tin": 8891,
+    "tout": 3628
+   },
+   "topic_title": {
+    "calls": 15,
+    "usd": 0.0003740022,
+    "tin": 1360,
+    "tout": 226
+   },
+   "desk_more": {
+    "calls": 45,
+    "usd": 0.0025827318,
+    "tin": 10316,
+    "tout": 2169
+   },
+   "desk_args_add": {
+    "calls": 5,
+    "usd": 0.0002846745,
+    "tin": 536,
+    "tout": 220
+   },
+   "verify_criterion": {
+    "calls": 96,
+    "usd": 0.007546542299999998,
+    "tin": 33927,
+    "tout": 5610
+   },
+   "pick_recipe": {
+    "calls": 11,
+    "usd": 0.0007551225000000001,
+    "tin": 2561,
+    "tout": 696
+   },
+   "plan_fill": {
+    "calls": 11,
+    "usd": 0.0009839115,
+    "tin": 3036,
+    "tout": 768
+   },
+   "generate_content": {
+    "calls": 5,
+    "usd": 0.0006796845,
+    "tin": 1121,
+    "tout": 810
+   },
+   "desk_args_reminder": {
+    "calls": 15,
+    "usd": 0.0004401044999999999,
+    "tin": 1885,
+    "tout": 315
+   },
+   "relevance_rubric": {
+    "calls": 10,
+    "usd": 0.0007469055,
+    "tin": 2380,
+    "tout": 717
+   },
+   "consolidate_fact": {
+    "calls": 5,
+    "usd": 0.000362241,
+    "tin": 1394,
+    "tout": 301
+   },
+   "extract_entities": {
+    "calls": 32,
+    "usd": 0.0012384801,
+    "tin": 4872,
+    "tout": 1047
+   },
+   "librarian": {
+    "calls": 33,
+    "usd": 0.004928111100000002,
+    "tin": 17224,
+    "tout": 3994
+   },
+   "render_answer": {
+    "calls": 29,
+    "usd": 0.0023527449000000002,
+    "tin": 6253,
+    "tout": 1873
+   }
+  }
+ },
+ "results": [
+  {
+   "id": "episode/send-hi",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.00021578658750000002,
+   "tokens_in": 689,
+   "tokens_out": 131,
+   "ms": 3090,
+   "judged": false
+  },
+  {
+   "id": "episode/undo-new-card",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.0003694185,
+   "tokens_in": 1185,
+   "tokens_out": 293,
+   "ms": 4316,
+   "judged": false
+  },
+  {
+   "id": "episode/research-card",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 7,
+   "cost": 0.001012572,
+   "tokens_in": 5166,
+   "tokens_out": 554,
+   "ms": 6634,
+   "judged": false
+  },
+  {
+   "id": "episode/write-card",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0005472225,
+   "tokens_in": 2594,
+   "tokens_out": 535,
+   "ms": 7143,
+   "judged": false
+  },
+  {
+   "id": "episode/move-item-reparents",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 9,
+   "cost": 0.0006730515,
+   "tokens_in": 2280,
+   "tokens_out": 520,
+   "ms": 10276,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-three-items",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 14,
+   "cost": 0.0009755955,
+   "tokens_in": 3536,
+   "tokens_out": 814,
+   "ms": 10550,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-no-cross-talk",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.001100187,
+   "tokens_in": 4024,
+   "tokens_out": 1013,
+   "ms": 12804,
+   "judged": false
+  },
+  {
+   "id": "episode/send-hi",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.0002301255,
+   "tokens_in": 787,
+   "tokens_out": 136,
+   "ms": 3205,
+   "judged": false
+  },
+  {
+   "id": "episode/undo-new-card",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.00037993230000000003,
+   "tokens_in": 1194,
+   "tokens_out": 296,
+   "ms": 5644,
+   "judged": false
+  },
+  {
+   "id": "episode/memory-reuse",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.0014963355,
+   "tokens_in": 7029,
+   "tokens_out": 996,
+   "ms": 14248,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-no-cross-talk",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.0010993257,
+   "tokens_in": 3864,
+   "tokens_out": 975,
+   "ms": 14721,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-three-items",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 14,
+   "cost": 0.0009438165,
+   "tokens_in": 3816,
+   "tokens_out": 828,
+   "ms": 16218,
+   "judged": false
+  },
+  {
+   "id": "episode/move-item-reparents",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 9,
+   "cost": 0.0006928515,
+   "tokens_in": 2489,
+   "tokens_out": 502,
+   "ms": 6526,
+   "judged": false
+  },
+  {
+   "id": "episode/write-card",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.0006008805,
+   "tokens_in": 2556,
+   "tokens_out": 537,
+   "ms": 6412,
+   "judged": false
+  },
+  {
+   "id": "episode/compare-card",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 26,
+   "cost": 0.003976632,
+   "tokens_in": 15621,
+   "tokens_out": 2493,
+   "ms": 28114,
+   "judged": false
+  },
+  {
+   "id": "episode/recipe-tree",
+   "group": "episode",
+   "run": 1,
+   "pass": true,
+   "calls": 28,
+   "cost": 0.0041374674,
+   "tokens_in": 16582,
+   "tokens_out": 2636,
+   "ms": 32305,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-three-items",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 14,
+   "cost": 0.0009653985,
+   "tokens_in": 3392,
+   "tokens_out": 804,
+   "ms": 10187,
+   "judged": false
+  },
+  {
+   "id": "episode/research-card",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 11,
+   "cost": 0.0019421225999999999,
+   "tokens_in": 7999,
+   "tokens_out": 1465,
+   "ms": 19019,
+   "judged": false
+  },
+  {
+   "id": "episode/send-hi",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000254628,
+   "tokens_in": 689,
+   "tokens_out": 144,
+   "ms": 2631,
+   "judged": false
+  },
+  {
+   "id": "episode/memory-reuse",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.0014820201,
+   "tokens_in": 6978,
+   "tokens_out": 1006,
+   "ms": 15073,
+   "judged": false
+  },
+  {
+   "id": "episode/undo-new-card",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.0002995245,
+   "tokens_in": 1183,
+   "tokens_out": 255,
+   "ms": 5120,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-no-cross-talk",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.0012211848,
+   "tokens_in": 3787,
+   "tokens_out": 1021,
+   "ms": 11832,
+   "judged": false
+  },
+  {
+   "id": "episode/research-card",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 7,
+   "cost": 0.000986931,
+   "tokens_in": 5014,
+   "tokens_out": 546,
+   "ms": 6428,
+   "judged": false
+  },
+  {
+   "id": "episode/move-item-reparents",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 9,
+   "cost": 0.0006069195,
+   "tokens_in": 2482,
+   "tokens_out": 505,
+   "ms": 8071,
+   "judged": false
+  },
+  {
+   "id": "episode/write-card",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.00048693149999999997,
+   "tokens_in": 2564,
+   "tokens_out": 448,
+   "ms": 5580,
+   "judged": false
+  },
+  {
+   "id": "episode/compare-card",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 26,
+   "cost": 0.0038638215,
+   "tokens_in": 15924,
+   "tokens_out": 2629,
+   "ms": 27948,
+   "judged": false
+  },
+  {
+   "id": "episode/recipe-tree",
+   "group": "episode",
+   "run": 3,
+   "pass": false,
+   "calls": 7,
+   "cost": 0.0011251845,
+   "tokens_in": 5182,
+   "tokens_out": 530,
+   "ms": 7547,
+   "judged": false,
+   "detail": "children: gather:Find candidate drip irrigation kits:blocked; state waiting; recommendation: undefined"
+  },
+  {
+   "id": "episode/send-hi",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.000182952,
+   "tokens_in": 689,
+   "tokens_out": 155,
+   "ms": 1950,
+   "judged": false
+  },
+  {
+   "id": "episode/recipe-tree",
+   "group": "episode",
+   "run": 2,
+   "pass": true,
+   "calls": 25,
+   "cost": 0.0042530301,
+   "tokens_in": 14462,
+   "tokens_out": 2998,
+   "ms": 35097,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-three-items",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 14,
+   "cost": 0.0009171855,
+   "tokens_in": 3690,
+   "tokens_out": 839,
+   "ms": 12420,
+   "judged": false
+  },
+  {
+   "id": "episode/undo-new-card",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.0004350555,
+   "tokens_in": 974,
+   "tokens_out": 271,
+   "ms": 4124,
+   "judged": false
+  },
+  {
+   "id": "episode/memory-reuse",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.0015162345,
+   "tokens_in": 6866,
+   "tokens_out": 1023,
+   "ms": 14135,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-no-cross-talk",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.0012663387,
+   "tokens_in": 3819,
+   "tokens_out": 999,
+   "ms": 13664,
+   "judged": false
+  },
+  {
+   "id": "episode/move-item-reparents",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 9,
+   "cost": 0.0006418665,
+   "tokens_in": 2489,
+   "tokens_out": 491,
+   "ms": 6876,
+   "judged": false
+  },
+  {
+   "id": "episode/research-card",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 7,
+   "cost": 0.0009544590000000001,
+   "tokens_in": 5131,
+   "tokens_out": 559,
+   "ms": 4957,
+   "judged": false
+  },
+  {
+   "id": "episode/compare-card",
+   "group": "episode",
+   "run": 3,
+   "pass": true,
+   "calls": 25,
+   "cost": 0.0037790181,
+   "tokens_in": 13948,
+   "tokens_out": 2533,
+   "ms": 22917,
+   "judged": false
+  },
+  {
+   "id": "episode/write-card",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000575388,
+   "tokens_in": 2658,
+   "tokens_out": 572,
+   "ms": 10418,
+   "judged": false
+  },
+  {
+   "id": "episode/send-hi",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 3,
+   "cost": 0.0001917135,
+   "tokens_in": 804,
+   "tokens_out": 152,
+   "ms": 2097,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-three-items",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 14,
+   "cost": 0.0010460835,
+   "tokens_in": 3348,
+   "tokens_out": 812,
+   "ms": 11709,
+   "judged": false
+  },
+  {
+   "id": "episode/memory-reuse",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.001532718,
+   "tokens_in": 7024,
+   "tokens_out": 1023,
+   "ms": 13257,
+   "judged": false
+  },
+  {
+   "id": "episode/undo-new-card",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 4,
+   "cost": 0.0002923965,
+   "tokens_in": 1310,
+   "tokens_out": 299,
+   "ms": 4903,
+   "judged": false
+  },
+  {
+   "id": "episode/capture-no-cross-talk",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.0011680515,
+   "tokens_in": 3501,
+   "tokens_out": 950,
+   "ms": 11994,
+   "judged": false
+  },
+  {
+   "id": "episode/move-item-reparents",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 9,
+   "cost": 0.0007440543,
+   "tokens_in": 2184,
+   "tokens_out": 524,
+   "ms": 7837,
+   "judged": false
+  },
+  {
+   "id": "episode/research-card",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 7,
+   "cost": 0.0009239669999999999,
+   "tokens_in": 5070,
+   "tokens_out": 536,
+   "ms": 7954,
+   "judged": false
+  },
+  {
+   "id": "episode/write-card",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 5,
+   "cost": 0.000658251,
+   "tokens_in": 2491,
+   "tokens_out": 539,
+   "ms": 8301,
+   "judged": false
+  },
+  {
+   "id": "episode/recipe-tree",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 26,
+   "cost": 0.0046928376,
+   "tokens_in": 16173,
+   "tokens_out": 3170,
+   "ms": 27396,
+   "judged": false
+  },
+  {
+   "id": "episode/compare-card",
+   "group": "episode",
+   "run": 4,
+   "pass": true,
+   "calls": 29,
+   "cost": 0.0041886405,
+   "tokens_in": 17669,
+   "tokens_out": 2762,
+   "ms": 33172,
+   "judged": false
+  },
+  {
+   "id": "episode/compare-card",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 24,
+   "cost": 0.003830112,
+   "tokens_in": 12420,
+   "tokens_out": 2698,
+   "ms": 21382,
+   "judged": false
+  },
+  {
+   "id": "episode/memory-reuse",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 15,
+   "cost": 0.001456389,
+   "tokens_in": 6957,
+   "tokens_out": 1031,
+   "ms": 16958,
+   "judged": false
+  },
+  {
+   "id": "episode/recipe-tree",
+   "group": "episode",
+   "run": 5,
+   "pass": true,
+   "calls": 27,
+   "cost": 0.0039423285,
+   "tokens_in": 14392,
+   "tokens_out": 2925,
+   "ms": 31375,
+   "judged": false
+  }
+ ]
+}

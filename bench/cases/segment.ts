@@ -65,4 +65,8 @@ export const cases: Case[] = [
   seg("dependent-plus-unrelated",
     "Research when the Umwelt Arena Spreitenbach was created and message me about it tomorrow morning. Also remind me to buy milk tonight.",
     [["umwelt", "message"], ["milk"]]),
+  // Stage of episode/capture-no-cross-talk: the cost question stays with the e-bike item (v7 split it off).
+  seg("no-cross-talk-memo",
+    "garden: the drip kit also needs to reach the two balcony pots. remind me Friday to file the tax extension, and find out if Velostation Nord repairs e-bikes and what a service costs",
+    [["balcony"], ["tax"], ["e-bike", "cost"]]),
 ];

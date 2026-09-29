@@ -29,6 +29,11 @@ const KITS = [
   { title: "Detail AquaLine Basic kit", state: "done", summary: "AquaLine Basic kit: CHF 34.95, covers about 8 m², 20 drippers. Water use is not published.", facts: [] },
 ];
 
+const COMPARE_NAMED = "Compare the Gardena Micro-Drip, Hozelock Easy Drip and AquaLine Basic drip kits on price and coverage for 3 raised beds of 4 m² each, and recommend one.";
+const COMPARE_OPEN = "Compare drip irrigation kits sold in Switzerland on price and coverage for 3 raised beds of 4 m² each, and recommend one.";
+const gatherGoal = (subject: string, request: string) => `Find candidate ${subject} for this request: Compare drip kits. ${request}. List the best ones you find, at most 3; fewer is fine. If the owner named them, list those.`;
+const GATHER = { recipe_id: "rcp_research_detail", recipe_step: "gather" };
+
 export const cases: Case[] = [
   research("zoo-hours", "Zoo Zürich winter opening hours", "Find the opening hours of Zoo Zürich in winter.", ["Names the winter opening hours"],
     (o) => all(finished(o), [/17[:.]?00|17 ?h|5 ?pm/i.test(o.text), `no 17:00 in: ${o.text.slice(0, 300)}`], [tools(o).includes("web_fetch"), `never fetched a page: ${tools(o)}`])),
@@ -53,6 +58,19 @@ export const cases: Case[] = [
       const items = o.result?.items ?? [];
       return all(finished(o), [items.length >= 2 && items.length <= 3, `${items.length} items`], [items.filter((i: any) => /gardena|hozelock|aqualine|claber/i.test(i.name)).length >= 2, `items: ${items.map((i: any) => i.name)}`]);
     }, undefined, { recipe_id: "rcp_research_detail", recipe_step: "gather" }),
+  // Stages of episode/compare-card and episode/recipe-tree: the gather step with the goal the recipe fills in
+  // (copied from traces). Its facts let the librarian answer the detail cards, so they must be there.
+  research("gather-named", "Find candidate drip kits", gatherGoal("drip kits", COMPARE_NAMED), ["Lists candidate drip kits (at most 3), each with a name and one line why it fits"],
+    (o) => {
+      const items = o.result?.items ?? [];
+      const named = ["gardena", "hozelock", "aqualine"].filter((k) => items.some((i: any) => i.name.toLowerCase().includes(k)));
+      return all(finished(o), [items.length === 3 && named.length === 3, `items: ${items.map((i: any) => i.name)}`], [(o.result?.facts ?? []).length >= 3, `${(o.result?.facts ?? []).length} facts`]);
+    }, undefined, GATHER),
+  research("gather-open", "Find candidate drip irrigation kits", gatherGoal("drip irrigation kits", COMPARE_OPEN), ["Lists candidate drip irrigation kits (at most 3), each with a name and one line why it fits"],
+    (o) => {
+      const items = o.result?.items ?? [];
+      return all(finished(o), [items.length >= 2 && items.length <= 3, `${items.length} items`], [items.filter((i: any) => /gardena|hozelock|aqualine|claber/i.test(i.name)).length >= 2, `items: ${items.map((i: any) => i.name)}`]);
+    }, undefined, GATHER),
   research("closed-sunday", "Library on Sundays", "Find out whether the city library is open on Sundays.", ["States whether it is open on Sundays"],
     (o) => all(finished(o), [/closed|not open|no\b/i.test(o.text), o.text.slice(0, 200)])),
   research("deadline", "Free tax extension deadline", "Find until when a private person in the canton of Zurich can request a free extension of the tax return.", ["Names the deadline"],

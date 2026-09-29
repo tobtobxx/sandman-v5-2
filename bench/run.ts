@@ -1,8 +1,9 @@
-// sandman bench [filter...] [--full] [--repeat N] [--concurrency N] [--label name] [--no-save]
+// sandman bench [filter...] [--full] [--repeat N] [--concurrency N] [--label name] [--no-save] [--min-pass PCT]
 // Runs the hard cases (HARD below), or every case with --full; filters narrow either set.
 // Runs each case in a fresh in-memory database, with the offline corpus and a fixed clock.
 // Writes bench/results/<stamp>-<label>.json + bench/results/latest.md, and copies all traces into
 // data/bench.db (set db_path to it in config.jsonc and open /observer).
+// --min-pass exits with 1 when fewer than PCT % of case runs pass (CI; see docs/BENCH.md).
 
 import { DB, withCtx } from "../src/db.ts";
 import { config } from "../src/config.ts";
@@ -16,29 +17,32 @@ const CASE_FILES = ["segment", "route", "desk", "triage", "planner", "worker", "
 // The cases that still fail now and then: each failed at least once in the last five saved runs
 // (v7, v8, v9, v10-worker, chat-v1). The rest pass reliably and only prove the floor; run them with
 // --full before a release or after a change that touches every role.
+// Episodes are not in this list: they cost two thirds of a hard run. Instead, the stage each one failed
+// at is here as a unit case (issue #27); the episodes run with --full.
 const HARD = [
   "answers/model-free-text",
   "desk/answer-one-of-two",
   "desk/conversation-answers-question",
   "desk/conversation-work-goes-to-topic",
+  "desk/episode-balcony-add", // episode/capture-three-items
   "desk/status-from-context",
-  "episode/capture-no-cross-talk",
-  "episode/capture-three-items",
-  "episode/compare-card",
-  "episode/memory-reuse",
+  "librarian/answered-rephrased", // episode/memory-reuse
   "librarian/negative-note",
   "memory/duplicate",
   "memory/new-claim",
   "memory/relevance-trivial",
   "planner/generate-trip",
   "segment/background-then-request",
+  "segment/no-cross-talk-memo", // episode/capture-no-cross-talk
   "segment/one-long-subject",
   "segment/research-then-message-about-it",
   "triage/big-trip-plan",
-  "triage/compare-three-named",
+  "triage/compare-three-named", // episode/compare-card
   "triage/write-missing-info",
   "verifier/file-claimed-not-written",
   "verifier/not-available-ok",
+  "worker/research-gather-open", // episode/recipe-tree, episode/compare-card
+  "worker/research-not-available-honest",
 ];
 
 async function loadCases(): Promise<Case[]> {
@@ -90,6 +94,7 @@ export async function runBench(args: string[]) {
   const repeat = Number(opt("--repeat", "1"));
   const concurrency = Number(opt("--concurrency", "6"));
   const label = opt("--label", "run");
+  const minPass = Number(opt("--min-pass", "0"));
   const save = !args.includes("--no-save");
   const full = args.includes("--full");
   const filters = args.filter((a) => !a.startsWith("--"));
@@ -177,5 +182,12 @@ export async function runBench(args: string[]) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: config.profiles.small.model, set, repeat, spend, results }, null, 1));
     Deno.writeTextFileSync(`bench/results/latest.md`, lines.join("\n") + "\n");
+  }
+  const summary = Deno.env.get("GITHUB_STEP_SUMMARY");
+  if (summary) Deno.writeTextFileSync(summary, lines.join("\n") + "\n", { append: true });
+  const rate = results.length ? (100 * total) / results.length : 0;
+  if (rate < minPass) {
+    console.error(`\nPass rate ${rate.toFixed(1)}% is below --min-pass ${minPass}%.`);
+    Deno.exit(1);
   }
 }
