@@ -308,7 +308,7 @@ const USER_AGENT = "sandman/5.2";
 // calls outside any session/card/topic share one id per process
 const PROCESS_SESSION = newId("proc");
 
-const REASONING_BUDGET_MESSAGE = "\n\nThinking time is up, I'll answer now.\n";
+const REASONING_BUDGET_MESSAGE = "...\n\nThinking time is up, I'll answer now.\n";
 
 async function stream(p: ModelConfig, prompt: string, schema: Schema | null, opts: CallOpts, out: StreamOut): Promise<StreamResult> {
   const thinking = p.reasoning_effort !== "none";
