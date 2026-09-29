@@ -154,6 +154,7 @@ main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: h
 .board-page h1 { margin: 0; font-size: 24px; font-weight: 600; }
 .board-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
 .board-head .meta { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.board-head select { margin-left: auto; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font-size: 13px; padding: 4px 8px; }
 .board { display: grid; grid-template-columns: repeat(5, minmax(200px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 6px; align-items: start; }
 .lane { --c: var(--muted); --c-soft: var(--chip); background: var(--c-soft); border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 12px; display: flex; flex-direction: column; min-height: 240px; }
 .lane.queued { --c: var(--lane-queue); --c-soft: var(--lane-queue-soft); }
@@ -476,6 +477,7 @@ function filterAll() {
   const none = $("#allNone");
   if (none) none.hidden = shown > 0;
 }
+document.addEventListener("change", (e) => { if (e.target.id === "boardTopic") location.hash = e.target.value ? `board/${e.target.value}` : "board"; });
 document.addEventListener("input", (e) => { if (e.target.id === "allq") { allq = e.target.value; filterAll(); } });
 const LANES = [
   ["queued", "Queued", ["new", "ready"]],
@@ -505,10 +507,14 @@ function boardCard(c) {
     ${c.state === "blocked" && c.blocked_reason ? `<div class="why">${esc(c.blocked_reason)}</div>` : ""}
     ${topic || acts ? `<div class="foot"><span>${topic ? `<a href="#topic/${topic.id}">${esc(topic.title)}</a>` : ""}</span>${acts ? `<div class="acts">${acts}</div>` : ""}</div>` : ""}</div>`;
 }
-async function viewBoard() {
-  const cs = await api("/cards");
+// The topic filter lives in the hash (#board/<topic id>), so it survives live re-renders and can be linked.
+async function viewBoard(topicId) {
+  const cs = await api(topicId ? `/cards?topic_id=${encodeURIComponent(topicId)}` : "/cards");
   const open = cs.filter((c) => !["done", "failed", "cancelled"].includes(c.state)).length;
-  return `<div class="scroll"><div class="board-page"><div class="board-head"><h1>Board</h1><span class="meta">${open} open · ${cs.length} total</span></div>
+  const opts = topicsCache.filter((t) => !t.is_system);
+  if (topicId && !opts.some((t) => t.id === topicId)) opts.push({ id: topicId, title: (await api(`/topics/${topicId}`).catch(() => null))?.topic?.title ?? "Unknown topic" });
+  const filter = `<select id="boardTopic" aria-label="Filter by topic"><option value="">All topics</option>${opts.map((t) => `<option value="${t.id}" ${t.id === topicId ? "selected" : ""}>${esc(t.title)}</option>`).join("")}</select>`;
+  return `<div class="scroll"><div class="board-page"><div class="board-head"><h1>Board</h1><span class="meta">${open} open · ${cs.length} total</span>${filter}</div>
     <div class="board">${LANES.map(([k, label, states]) => {
       const xs = cs.filter((c) => states.includes(c.state));
       return `<section class="lane ${k}" aria-label="${label}"><div class="lane-head"><b>${label}</b><span class="n">${xs.length}</span></div>
@@ -646,7 +652,7 @@ async function render(navigated = false, keepFocus = false) {
       if (input && (inBf || navigated || keepFocus)) { input.focus(); input.setSelectionRange(...(bf ?? [input.value.length, input.value.length])); }
     }
     else if (r.view === "review") swap(await viewReview());
-    else if (r.view === "board") swap(await viewBoard());
+    else if (r.view === "board") swap(await viewBoard(r.id));
     else if (r.view === "memory") swap(await viewMemory());
     else if (r.view === "all") {
       const el = document.activeElement, caret = el?.id === "allq" ? [el.selectionStart, el.selectionEnd] : null;
