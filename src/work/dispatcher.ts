@@ -2,7 +2,7 @@
 // Also fires due reminders and wires the terminal hooks (results flow back, §5.9).
 
 import { db, now, nowIso } from "../db.ts";
-import { config } from "../config.ts";
+import { config, modelFor } from "../config.ts";
 import { Card, children, getCard, onCardTerminal, parseCard, TERMINAL, transition, treeCallsUsed } from "./board.ts";
 import { fanOut, preflight } from "./preflight.ts";
 import { runWorker } from "./worker.ts";
@@ -124,7 +124,7 @@ export async function runTree(rootId: string, maxRounds = 60, concurrency = 3): 
 }
 
 /** Background loop for the server. */
-export function startDispatcher(concurrency = config.profiles.small.slots) {
+export function startDispatcher(concurrency = modelFor("main").slots) {
   installHooks();
   reclaimLeases();
   let busy = false;

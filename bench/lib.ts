@@ -76,7 +76,7 @@ ${material}
 
 Reply with analysis (at most 40 words), then verdict: pass or fail.`,
       obj({ analysis: str(400), verdict: oneOf(["pass", "fail"]) }),
-      { maxTokens: 400, profile: "judge", temperature: 0 },
+      { maxTokens: 400, role: "judge", temperature: 0 },
     );
     if (r.verdict !== "pass") fails.push(`judge: "${criterion}" — ${r.analysis}`);
   }

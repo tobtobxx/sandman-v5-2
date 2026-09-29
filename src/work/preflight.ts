@@ -61,7 +61,7 @@ export const COMPARE_SPLIT_THRESHOLD = 3; // DESIGN §19 open question 1: compar
 
 export async function triageDecide(card: Card, session_id?: string): Promise<{ analysis: string; fits: string; missing_info: string | null; compare_count?: number }> {
   const r = await ask<Row>("triage", W.triage({
-    title: card.title, goal: card.goal, done_when: card.done_when, steps: maxSteps(card.role), tools: config.roles[card.role].tools,
+    title: card.title, goal: card.goal, done_when: card.done_when, steps: maxSteps(card.role), tools: config.worker_roles[card.role].tools,
     recipes: RECIPES.map((r) => r.title), owner: profileText(),
   }), card, session_id);
   const m = r.missing_info && String(r.missing_info).trim();

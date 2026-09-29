@@ -6,7 +6,7 @@
 // --min-pass exits with 1 when fewer than PCT % of case runs pass (CI; see docs/BENCH.md).
 
 import { DB, withCtx } from "../src/db.ts";
-import { config } from "../src/config.ts";
+import { config, modelFor, modelSlug } from "../src/config.ts";
 import { spend } from "../src/llm/gateway.ts";
 import { seedRecipes } from "../src/work/recipes.ts";
 import { installHooks } from "../src/work/dispatcher.ts";
@@ -117,7 +117,13 @@ function exportTraces(from: DB, to: DB, caseId: string, run: number) {
 
 export async function runBench(args: string[]) {
   config.web.backend = "corpus";
-  config.profiles.small.slots = 8;
+  try {
+    modelSlug("judge");
+  } catch {
+    console.error(`The benchmark needs a judge: set roles.judge in the config.`);
+    Deno.exit(1);
+  }
+  modelFor("main").slots = 8;
   const opt = (k: string, d: string) => {
     const i = args.indexOf(k);
     if (i < 0) return d;
@@ -138,7 +144,7 @@ export async function runBench(args: string[]) {
   let cases = full ? allCases : allCases.filter((c) => HARD.includes(c.id));
   if (filters.length) cases = cases.filter((c) => filters.some((f) => c.id.includes(f)));
   const set = full ? "full" : "hard";
-  console.log(`${cases.length} cases (${set} set) × ${repeat}  (model ${config.profiles.small.model}, judge ${config.profiles.judge.model})`);
+  console.log(`${cases.length} cases (${set} set) × ${repeat}  (model ${modelFor("main").model}, judge ${modelFor("judge").model})`);
 
   const traceDb = save ? new DB("data/bench.db") : null;
   if (traceDb) for (const t of TRACE_TABLES) traceDb.run(`DELETE FROM ${t}`);
@@ -212,7 +218,7 @@ export async function runBench(args: string[]) {
   const lines = [
     `# Bench ${label} — ${new Date().toISOString()}`,
     ``,
-    `Model: ${config.profiles.small.model} (reasoning ${config.profiles.small.reasoning_effort}). Judge: ${config.profiles.judge.model}. Set: ${set} (${cases.length} of ${allCases.length} cases). Repeats: ${repeat}.`,
+    `Model: ${modelFor("main").model} (reasoning ${modelFor("main").reasoning_effort}). Judge: ${modelFor("judge").model}. Set: ${set} (${cases.length} of ${allCases.length} cases). Repeats: ${repeat}.`,
     `**${total}/${results.length} passed (${((100 * total) / results.length).toFixed(1)}%)** — ${results.reduce((a, r) => a + r.calls, 0)} target calls, $${spend.usd.toFixed(4)} total incl. judge, ${((Date.now() - t0) / 1000).toFixed(0)}s`,
     ``,
     `| group | pass | rate | calls | cost $ |`,
@@ -235,7 +241,7 @@ export async function runBench(args: string[]) {
   if (save) {
     Deno.mkdirSync("bench/results", { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: config.profiles.small.model, set, repeat, spend, timing: times, results }, null, 1));
+    Deno.writeTextFileSync(`bench/results/${stamp}-${label}.json`, JSON.stringify({ label, model: modelFor("main").model, set, repeat, spend, timing: times, results }, null, 1));
     Deno.writeTextFileSync(`bench/results/latest.md`, lines.join("\n") + "\n");
   }
   const summary = Deno.env.get("GITHUB_STEP_SUMMARY");

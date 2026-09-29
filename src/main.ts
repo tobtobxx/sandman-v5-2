@@ -1,7 +1,7 @@
 // sandman <command> [--config path]   (default ./config.jsonc; written with defaults on first run)
 //   serve            run API, dispatcher and both web UIs
 //   bench [--full] [filter]   run the benchmark (see bench/README.md)
-//   probe [profile]  report engine quirks
+//   probe [slug|role]  report engine quirks (default: the "main" model)
 //   lint             check all prompt schemas (reasoning key first)
 
 import { DB, setDefaultDb } from "./db.ts";
@@ -39,7 +39,7 @@ switch (cmd) {
     const { probe } = await import("./llm/probe.ts");
     const { LLMFailure } = await import("./llm/gateway.ts");
     try {
-      console.log("quirks:", await probe(args[0] ?? "small"));
+      console.log("quirks:", await probe(args[0] ?? "main"));
     } catch (e) {
       if (!(e instanceof LLMFailure)) throw e;
       console.error(`probe failed: ${e.kind}: ${e.message}`);
@@ -55,5 +55,5 @@ switch (cmd) {
     break;
   }
   default:
-    console.log("usage: sandman serve | bench [--full] [filter] | probe [profile] | lint   [--config path]");
+    console.log("usage: sandman serve | bench [--full] [filter] | probe [slug|role] | lint   [--config path]");
 }

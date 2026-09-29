@@ -2,7 +2,8 @@
 // config.default.jsonc; the rest are tuning defaults below. Without a config.jsonc, `loadConfig`
 // writes the commented default and exits.
 
-export interface Profile {
+/** One model endpoint under "models" in config.jsonc, keyed by a slug the owner chooses. */
+export interface ModelConfig {
   base_url: string;
   model: string;
   api_key: string;
@@ -15,11 +16,27 @@ export interface Profile {
   temperature: number | null;
   idle_timeout_s: number;
   quirks: string[];
-  // embedding profile only
+  // embedding models only
   query_prefix?: string;
   document_prefix?: string;
   min_similarity?: number;
 }
+
+/** Values for the keys a model entry leaves out. `base_url` and `model` have none. */
+const MODEL_DEFAULTS = {
+  api_key: "", reasoning_effort: "none", reasoning_tokens: 0, slots: 1, temperature: null, idle_timeout_s: 60, quirks: [] as string[],
+};
+const MODEL_KEYS = ["base_url", "model", ...Object.keys(MODEL_DEFAULTS), "query_prefix", "document_prefix", "min_similarity"];
+
+/** What the code asks a model for. config.jsonc assigns each role a model slug, or null. */
+export type ModelRole = "main" | "interactive" | "embedding" | "judge";
+/** What a role set to null does: run on another role's model, stop at startup ("required"),
+ *  or fail only when something uses it ("on_use"). Documented in config.default.jsonc. */
+const WHEN_NULL: Record<ModelRole, ModelRole | "required" | "on_use"> = {
+  main: "required", interactive: "main", embedding: "required", judge: "on_use",
+};
+const MODEL_ROLES = Object.keys(WHEN_NULL) as ModelRole[];
+export const isRole = (v: string): v is ModelRole => v in WHEN_NULL;
 
 /** The commented default config.jsonc; also the source of the defaults. */
 export const DEFAULT_CONFIG_JSONC = Deno.readTextFileSync(new URL("./config.default.jsonc", import.meta.url));
@@ -66,7 +83,8 @@ interface Settings {
   web: { backend: "live" | "corpus"; searxng: string };
   budget_usd: number;
   api_key: string;
-  profiles: Record<string, Profile>;
+  roles: Record<ModelRole, string | null>;
+  models: Record<string, ModelConfig>;
 }
 
 export const config = {
@@ -76,7 +94,7 @@ export const config = {
   desk: { max_actions: 3, history_messages: 8 },
   needs_you: { max_question_words: 25, max_options: 4, max_option_words: 6 },
   board: { max_children: 5, max_attempts: 2, max_llm_calls_per_tree: 40, lease_seconds: 300 },
-  roles: {
+  worker_roles: {
     research: { steps: 10, tools: ["web_search", "web_fetch", "read_artifact"] },
     write: { steps: 6, tools: ["read_artifact", "write_artifact"] },
     synthesize: { steps: 6, tools: ["read_artifact", "write_artifact"] },
@@ -125,17 +143,65 @@ export function loadConfig(path = "config.jsonc") {
     console.error(`${path}: expected an object at the top level`);
     Deno.exit(1);
   }
+  if ("profiles" in user) {
+    console.error(`${path}: "profiles" is replaced by "models" (endpoints by slug) and "roles" (which slug does what); see config.default.jsonc`);
+    Deno.exit(1);
+  }
   const known = Object.keys(parseJsonc(DEFAULT_CONFIG_JSONC));
   const unknown = Object.keys(user).filter((k) => !known.includes(k));
   if (unknown.length) console.warn(`${path}: ignoring unknown keys: ${unknown.join(", ")}`);
   for (const k of unknown) delete user[k];
-  const profileKeys = Object.values(parseJsonc(DEFAULT_CONFIG_JSONC).profiles as Record<string, Profile>).flatMap((p) => Object.keys(p));
-  for (const [name, p] of Object.entries(isObj(user.profiles) ? user.profiles : {})) {
-    const extra = isObj(p) ? Object.keys(p).filter((k) => !profileKeys.includes(k)) : [];
-    if (extra.length) console.warn(`${path}: profile ${name}: ignoring unknown keys: ${extra.join(", ")}`);
+  if (isObj(user.roles)) {
+    const extra = Object.keys(user.roles).filter((k) => !isRole(k));
+    if (extra.length) console.warn(`${path}: roles: ignoring unknown roles: ${extra.join(", ")} (known: ${MODEL_ROLES.join(", ")})`);
+    for (const k of extra) delete user.roles[k];
+  }
+  for (const [slug, m] of Object.entries(isObj(user.models) ? user.models : {})) {
+    const extra = isObj(m) ? Object.keys(m).filter((k) => !MODEL_KEYS.includes(k)) : [];
+    if (extra.length) console.warn(`${path}: models.${slug}: ignoring unknown keys: ${extra.join(", ")}`);
+    for (const k of extra) delete (m as Record<string, unknown>)[k];
   }
   merge(config, user);
-  for (const p of Object.values(config.profiles)) p.api_key ||= config.api_key;
+  for (const m of Object.values(config.models)) {
+    for (const [k, v] of Object.entries(MODEL_DEFAULTS)) (m as Record<string, any>)[k] ??= structuredClone(v);
+    m.api_key ||= config.api_key;
+  }
+  const problems = checkRoles();
+  if (problems.length) {
+    for (const p of problems) console.error(`${path}: ${p}`);
+    Deno.exit(1);
+  }
 }
 
+/** Config errors in "roles" and the models they name. */
+function checkRoles(): string[] {
+  const out: string[] = [];
+  for (const role of MODEL_ROLES) {
+    const slug = config.roles[role];
+    if (slug == null) {
+      if (WHEN_NULL[role] === "required") out.push(`roles.${role} must name a model`);
+      continue;
+    }
+    const m = config.models[slug];
+    if (!isObj(m)) out.push(`roles.${role}: no model "${slug}" under "models"`);
+    else if (!m.base_url || !m.model) out.push(`models.${slug}: needs "base_url" and "model"`);
+  }
+  return out;
+}
+
+/** The model slug a role runs on, after fallback. Throws if the role (and its fallback) is not set up. */
+export function modelSlug(role: ModelRole): string {
+  for (let r: string = role; isRole(r); r = WHEN_NULL[r]) {
+    const slug = config.roles[r];
+    if (slug != null) return slug;
+  }
+  throw new Error(`no model for role "${role}": set roles.${role} in config.jsonc`);
+}
+
+/** The model a role runs on, after fallback. Throws if the role is not set up. */
+export function modelFor(role: ModelRole): ModelConfig {
+  return config.models[modelSlug(role)];
+}
+
+/** Worker roles (config.worker_roles), unrelated to model roles. */
 export type Role = "research" | "write" | "synthesize" | "code";

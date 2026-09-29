@@ -3,7 +3,7 @@
 //   /observer  observer UI (all internal state: cards, sessions, LLM calls, captures, raw tables)
 
 import { db, j, nowIso, Row } from "./db.ts";
-import { config } from "./config.ts";
+import { config, modelFor } from "./config.ts";
 import { eventsAfter, presence, subscribe } from "./events.ts";
 import { spend } from "./llm/gateway.ts";
 import { seedRecipes } from "./work/recipes.ts";
@@ -306,6 +306,6 @@ export async function serve() {
       bg(consolidate().then(() => tidy()));
     }
   }, 60_000);
-  console.log(`Sandman on http://localhost:${config.api.port}  (observer: /observer)  model: ${config.profiles.small.model}  web: ${config.web.backend}`);
+  console.log(`Sandman on http://localhost:${config.api.port}  (observer: /observer)  model: ${modelFor("main").model}${config.roles.interactive ? `, interactive: ${modelFor("interactive").model}` : ""}  web: ${config.web.backend}`);
   await Deno.serve({ port: config.api.port, onListen: () => {} }, handle).finished;
 }

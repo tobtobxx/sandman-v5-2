@@ -106,7 +106,7 @@ Memory details:
   `src/memory/retriever.ts`) and returns exactly what they would get for that text, best first, at most
   `memory.top_k` (6): active notes, plus candidate facts still waiting for the consolidator, grouped by
   subject, as `{ kind: "fact", status: "pending", claims: [{ pending: true, … }] }`. The ranking fuses an
-  exact title/alias match, FTS words and, when the `embedding` profile has a model, similarity of meaning
+  exact title/alias match, FTS words and, when the `embedding` role has a model, similarity of meaning
   (config.default.jsonc). Without `query` it lists every note (retracted and the profile too), newest
   first, then every pending fact.
 - `POST /memory/consolidate` starts a run in the background and returns at once with
