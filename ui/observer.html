@@ -84,7 +84,7 @@ async function list() {
   if (tab === "calls") {
     const cs = await api(`/inspect/calls?${filterType ? `type=${filterType}&` : ""}${failedOnly ? "failed=1" : ""}`);
     L.innerHTML = `<div style="margin-bottom:6px"><input id="ft" placeholder="call type" value="${esc(filterType)}"> <label class="small"><input type="checkbox" id="fo" ${failedOnly ? "checked" : ""}> failed only</label></div>
-      <table><tr><th>call</th><th>ok</th><th>tok</th><th>ms</th></tr>${cs.map((c) => `<tr class="row" data-call="${c.id}"><td>${c.call_type}${c.step ? ` #${c.step}` : ""}<div class="small muted">${t(c.at)} ${esc(J(c.eval_label)?.tags?.case ?? "")}${c.repaired ? " · repaired" : ""}${J(c.eval_label)?.label ? ` · labelled ${J(c.eval_label).label}` : ""}</div></td><td>${c.ok ? pill("ok") : pill("err", "bad")}${c.attempt > 1 ? pill("retry", "warn") : ""}</td><td>${c.tokens_in ?? ""}/${c.tokens_out ?? ""}</td><td>${c.ms}</td></tr>`).join("")}</table>`;
+      <table><tr><th>call</th><th>ok</th><th>tok</th><th>ms</th></tr>${cs.map((c) => `<tr class="row" data-call="${c.id}"><td>${c.call_type}${c.step ? ` #${c.step}` : ""}<div class="small muted">${t(c.at)} ${esc(J(c.eval_label)?.tags?.case ?? "")}${c.repaired ? " · repaired" : ""}${c.reasoning_chars ? " · reasoning" : ""}${J(c.eval_label)?.label ? ` · labelled ${J(c.eval_label).label}` : ""}</div></td><td>${c.ok ? pill("ok") : pill("err", "bad")}${c.attempt > 1 ? pill("retry", "warn") : ""}</td><td>${c.tokens_in ?? ""}/${c.tokens_out ?? ""}</td><td>${c.ms}</td></tr>`).join("")}</table>`;
     $("#ft").onchange = (e) => { filterType = e.target.value.trim(); list(); };
     $("#fo").onchange = (e) => { failedOnly = e.target.checked; list(); };
   }
@@ -144,6 +144,7 @@ function callBlock(c, open = false) {
   const parsed = J(c.parsed);
   return `<div class="step ${c.ok ? "" : "err"}"><div><b>${c.call_type}</b>${c.step ? ` step ${c.step}` : ""} ${c.ok ? "" : pill(c.error ?? "error", "bad")} ${c.attempt > 1 ? pill("retry " + c.attempt, "warn") : ""} ${c.repaired ? pill("repaired", "warn") : ""} <span class="small muted">${c.tokens_in ?? "?"}→${c.tokens_out ?? "?"} tok · ${c.ms} ms · ${esc(c.provider ?? "")}</span> <a class="small" data-gocall="${c.id}">open</a></div>
     <details ${open ? "open" : ""}><summary>prompt (${(c.input ?? "").length} chars)</summary><pre>${esc(c.input)}</pre></details>
+    ${c.reasoning ? `<details><summary>reasoning (${c.reasoning.length} chars)</summary><pre>${esc(c.reasoning)}</pre></details>` : ""}
     <pre>${esc(parsed ? JSON.stringify(parsed, null, 2) : c.raw_output)}</pre></div>`;
 }
 
@@ -160,7 +161,7 @@ async function showCall(id) {
   $("#detail").innerHTML = `<h2>${c.call_type} <span class="small muted">${c.id}</span></h2>
     <div class="kv"><div>model</div><div>${esc(c.model)} (${esc(c.provider)})</div><div>version</div><div>${esc(c.prompt_version)}</div><div>session</div><div>${c.session_id ? `<a data-gosession="${c.session_id}">${c.session_id}</a>` : ""}</div><div>card</div><div>${c.card_id ? `<a data-gocard="${c.card_id}">${c.card_id}</a>` : ""}</div><div>tokens</div><div>${c.tokens_in} in / ${c.tokens_out} out · $${c.cost ?? 0} · ${c.ms} ms</div><div>error</div><div>${esc(c.error ?? "")}</div><div>repairs</div><div>${esc(c.repaired ?? "")}</div><div>bench</div><div>${esc(JSON.stringify(lab.tags ?? {}))}</div>
     <div>label</div><div>${esc(lab.label ?? "")} <button class="btn" data-label="correct" data-id="${c.id}">correct</button> <button class="btn" data-label="incorrect" data-id="${c.id}">incorrect</button></div></div>
-    <h3>Prompt</h3><pre>${esc(c.input)}</pre><h3>Raw output</h3><pre>${esc(c.raw_output)}</pre>${c.parsed ? `<h3>Parsed</h3><pre>${esc(pretty(c.parsed))}</pre>` : ""}${c.schema ? `<details><summary>schema</summary><pre>${esc(pretty(c.schema))}</pre></details>` : ""}`;
+    <h3>Prompt</h3><pre>${esc(c.input)}</pre>${c.reasoning ? `<h3>Reasoning</h3><pre>${esc(c.reasoning)}</pre>` : ""}<h3>Raw output</h3><pre>${esc(c.raw_output)}</pre>${c.parsed ? `<h3>Parsed</h3><pre>${esc(pretty(c.parsed))}</pre>` : ""}${c.schema ? `<details><summary>schema</summary><pre>${esc(pretty(c.schema))}</pre></details>` : ""}`;
 }
 
 async function showCard(id) {
