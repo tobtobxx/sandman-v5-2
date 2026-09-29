@@ -457,12 +457,12 @@ function boardCard(c) {
   const sum = c.result?.summary || (c.goal && c.goal !== c.title ? c.goal : "");
   return `<div class="bcard s-${c.state}" data-card="${c.id}"><button class="t cardlink" data-card="${c.id}">${esc(c.title)}</button>
     ${sum ? `<div class="sum">${esc(sum)}</div>` : ""}
-    <div class="m"><span class="sp">${esc(c.state)}</span><span>${esc(c.role)}${c.depth ? " · part" : ""}${c.attempt > 1 ? ` · try ${c.attempt}` : ""}</span>${c.updated_at ? `<span class="ago">${ago(c.updated_at)}</span>` : ""}</div>
+    <div class="m"><span class="sp">${esc(c.state)}</span><span>${c.kind === "task" ? esc(c.role) : esc(c.kind)}${c.due_at ? ` · ${esc(when(c.due_at))}` : ""}${c.depth ? " · part" : ""}${c.attempt > 1 ? ` · try ${c.attempt}` : ""}</span>${c.updated_at ? `<span class="ago">${ago(c.updated_at)}</span>` : ""}</div>
     ${c.state === "blocked" && c.blocked_reason ? `<div class="why">${esc(c.blocked_reason)}</div>` : ""}
     ${topic || acts ? `<div class="foot"><span>${topic ? `<a href="#topic/${topic.id}">${esc(topic.title)}</a>` : ""}</span>${acts ? `<div class="acts">${acts}</div>` : ""}</div>` : ""}</div>`;
 }
 async function viewBoard() {
-  const cs = (await api("/cards")).filter((c) => c.kind === "task");
+  const cs = await api("/cards");
   const open = cs.filter((c) => !["done", "failed", "cancelled"].includes(c.state)).length;
   return `<div class="scroll"><div class="board-page"><div class="board-head"><h1>Board</h1><span class="meta">${open} open · ${cs.length} total</span></div>
     <div class="board">${LANES.map(([k, label, states]) => {
@@ -495,7 +495,7 @@ function cardView(d) {
     r.sources?.length ? `<div><b>Sources</b>${ul(r.sources, srcLink)}</div>` : "",
   ].join("") : "";
   return `<div class="cd">
-    <div class="cd-head"><div><div class="meta">${c.depth ? "Part of a task" : "Task"} · ${esc(c.role)}</div><h2 id="cardDlgTitle">${esc(c.title)}</h2></div>
+    <div class="cd-head"><div><div class="meta">${c.kind !== "task" ? esc(c.kind[0].toUpperCase() + c.kind.slice(1)) : `${c.depth ? "Part of a task" : "Task"} · ${esc(c.role)}`}</div><h2 id="cardDlgTitle">${esc(c.title)}</h2></div>
       <button class="icon-btn" data-close aria-label="Close">×</button></div>
     <div class="m s-${c.state}"><span class="sp">${esc(c.state)}</span>${d.children.length ? `<span>${done} of ${d.children.length} parts done</span>` : ""}${c.attempt > 1 ? `<span>try ${c.attempt}</span>` : ""}
       <span>created ${esc(ago(c.created_at))}</span>${c.updated_at && c.updated_at !== c.created_at ? `<span>updated ${esc(ago(c.updated_at))}</span>` : ""}${c.due_at ? `<span>due ${esc(when(c.due_at))}</span>` : ""}
