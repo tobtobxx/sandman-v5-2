@@ -1,4 +1,4 @@
-# Type check and prompt-schema lint on every PR. No model calls: the bench runs locally (docs/BENCH.md).
+# Type check, prompt-schema lint and unit tests on every PR. No model calls: the bench runs locally (docs/BENCH.md).
 name: check
 
 on:
@@ -19,5 +19,6 @@ jobs:
         with:
           deno-version: v2.x
       - run: deno task check
+      - run: deno task test
       - name: Prompt schemas (reasoning key sorts first)
         run: deno run -A src/main.ts lint
