@@ -254,6 +254,11 @@ async function handle(req: Request): Promise<Response> {
       headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" },
     });
   }
+  if (url.pathname === "/icon.svg") {
+    return new Response(await Deno.readFile(new URL("../ui/icon.svg", import.meta.url)), {
+      headers: { "content-type": "image/svg+xml", "cache-control": "public, max-age=86400" },
+    });
+  }
   const font = url.pathname.match(/^\/fonts\/([a-z0-9-]+\.(woff2|css))$/);
   if (font) {
     const type = font[2] === "css" ? "text/css; charset=utf-8" : "font/woff2";
