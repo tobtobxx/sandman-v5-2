@@ -756,9 +756,28 @@ es.onmessage = (m) => {
   const r = route();
   if (r.view === "topic" && ev.topic_id && ev.topic_id !== r.id && !/^topic\./.test(ev.type)) { if (/question\.|message\.created/.test(ev.type)) later(800); return; }
   later(r.view === "home" ? 800 : 250);
-  if (ev.notify === "push" && document.hidden && "Notification" in window && Notification.permission === "granted") new Notification("Sandman", { body: ev.payload?.body ?? ev.payload?.text ?? ev.type });
+  // With Web Push the service worker shows it; without (no HTTPS, no push service), the page does
+  if (!pushing && ev.notify === "push" && document.hidden && "Notification" in window && Notification.permission === "granted") new Notification("Sandman", { body: ev.payload?.body ?? ev.payload?.text ?? ev.type });
 };
-if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(() => {});
+// Web Push (src/push.ts): notifications for questions and reminders when no tab is open.
+// Needs HTTPS (or localhost) and a browser with a push service.
+let pushing = false;
+async function registerPush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || Notification.permission !== "granted") return;
+  const reg = await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+  const { vapid_public_key } = await api("/push-subscriptions/key");
+  const key = Uint8Array.from(atob(vapid_public_key.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+  let sub = await reg.pushManager.getSubscription();
+  // a subscription made for another server key can't be used: replace it
+  const same = (a, b) => a && a.byteLength === b.length && new Uint8Array(a).every((x, i) => x === b[i]);
+  if (sub && !same(sub.options?.applicationServerKey, key)) { await sub.unsubscribe(); sub = null; }
+  sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+  await api("/push-subscriptions", { ...sub.toJSON(), client_id: "web" });
+  pushing = true;
+}
+if ("Notification" in window && Notification.permission === "default") Notification.requestPermission().then(() => registerPush()).catch(() => {});
+else registerPush().catch((e) => console.warn("push:", e));
 render(true);
 </script>
 </body>

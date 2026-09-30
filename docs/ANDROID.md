@@ -23,7 +23,7 @@ deleted. When **Open** is empty, this file is a short list of the stack.
 | Background work | WorkManager sends the outbox. Each capture carries a `client_msg_id`; `/send` dedupes on it, so retries never file twice |
 | Auth | The existing bearer `api.token`, kept in app-private DataStore; backups and device transfer disabled |
 | Transport security | HTTPS trusts the phone's CA store, system and user-installed CAs, so a self-signed server certificate works once installed on the phone; nothing pinned or bundled. Cleartext HTTP also allowed, for a server on a private network (Tailscale/WireGuard encrypts the link) |
-| Push when closed | UnifiedPush (see below) |
+| Push when closed | UnifiedPush (see below); `org.unifiedpush.android:connector`, turned on in Settings |
 | SDK levels | `minSdk` 29, `targetSdk`/`compileSdk` 37. `minSdk` may rise to 31 or 33 with the speech choice (#88) |
 | Build | Gradle 9 (wrapper with checksum), AGP 9 with its built-in Kotlin, Kotlin DSL, version catalog (`gradle/libs.versions.toml`), KSP for Room, JDK 21 toolchain |
 | Lint, format | Android Lint, ktlint via Spotless |
@@ -46,7 +46,10 @@ the app's own mechanism): all three at once.
 
 Android side: the `org.unifiedpush.android:connector` library (handles registration, keys and
 decryption). If no distributor is installed, the app falls back to SSE while open and tells the
-user notifications need a distributor.
+user notifications need a distributor. The app registers with the server's VAPID key, sends the
+endpoint to `POST /push-subscriptions` through WorkManager, registers again at each start and
+after the server settings change, and shows nothing while it is on screen (SSE covers that).
+Notification channels: Questions, Reminders, Other.
 
 ## Open
 

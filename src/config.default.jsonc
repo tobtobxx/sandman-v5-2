@@ -24,6 +24,16 @@
     // SearXNG base URL (e.g. "https://searx.example.org") for live search. Empty: DuckDuckGo HTML, best effort.
     "searxng": ""
   },
+  // Web Push (browsers, and the Android app through UnifiedPush): "push"-level events go to every
+  // registered client, so questions and reminders reach you when no client is open.
+  // The server's VAPID key pair is made on first use and kept in the database.
+  "push": {
+    // Contact for push services (RFC 8292), a "mailto:" or "https:" URL. Some services reject
+    // placeholder domains, so put a real address here if pushes to a browser fail with HTTP 403.
+    "subject": "mailto:sandman@example.org",
+    // How long a push service keeps an undelivered message, in seconds.
+    "ttl_s": 86400
+  },
   // API key used by every model below that has no "api_key" of its own (an OpenRouter key by default).
   "api_key": "",
   // Which model the different roles use. Use the slugs from the "models" section.

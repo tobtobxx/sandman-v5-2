@@ -7,6 +7,8 @@ import net.tobtobxx.sandman.android.data.Outbox
 import net.tobtobxx.sandman.android.data.SettingsStore
 import net.tobtobxx.sandman.android.data.api.EventStream
 import net.tobtobxx.sandman.android.data.api.SandmanApi
+import net.tobtobxx.sandman.android.push.Push
+import net.tobtobxx.sandman.android.push.PushStore
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -31,4 +33,6 @@ class AppContainer(
     private val db = Room.databaseBuilder(context, AppDatabase::class.java, "sandman.db").build()
 
     val outbox = Outbox(context, db.outbox())
+
+    val push = Push(context, api, PushStore(context))
 }

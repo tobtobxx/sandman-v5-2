@@ -16,6 +16,7 @@ deno task serve                 # first run writes config.jsonc and exits: put y
 deno task serve                 # http://[::1]:8700  (client)  ·  /observer (all internal state)
 deno task bench                 # the hard cases; --full for all; filters: deno task bench desk/ --repeat 3
 deno task probe [slug|role]     # test calls: latency, tokens, speed, repairs (default: the "main" model)
+deno task test                  # unit tests (tests/): Web Push encryption, VAPID, delivery
 deno run -A src/main.ts lint    # every prompt schema: reasoning key sorts first
 ```
 
@@ -54,9 +55,11 @@ src/
                 briefing, pages, topics, review, tidy, when (reminder times)
   memory/       facts, consolidator, retriever
   tools/        web (SearXNG / DuckDuckGo), artifacts (paging)
+  push.ts       Web Push sender (RFC 8291 encryption, VAPID) for browsers and the Android app (UnifiedPush)
   server.ts     unified API + SSE + static UIs
 bench/          lib (fixtures, judge), run, corpus (offline web), cases/*.ts, corpus/*.md, results/
-ui/             client.html, observer.html (no build step)
+tests/          unit tests (deno task test)
+ui/             client.html, observer.html, sw.js (push notifications) (no build step)
 android/        the Android app (android/README.md)
 docs/           DESIGN.md, BENCH.md, DEVIATIONS.md, ANDROID.md (app stack decisions),
                 v4-research-prompt.md (the prompt style reference)
