@@ -286,7 +286,7 @@ Goal: ${c.goal}`,
 
 export function librarian(c: { goal: string; done_when: string[]; notes: string; answerable: string[] }): P {
   return {
-    version: "librarian/v1",
+    version: "librarian/v2",
     maxTokens: 250,
     schema: obj({
       analysis: str(300),
@@ -302,6 +302,7 @@ Verdicts:
 - proceed: the notes don't help much. Work starts as planned.
 
 Facts marked "may be outdated" can't answer the task; use narrow to check them again.
+An "earlier search that found nothing" answers a task that accepts "not available": use answered, don't search again.
 
 Task goal: ${c.goal}
 Done when:
