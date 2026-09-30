@@ -1,7 +1,7 @@
 # Android app
 
 A native Sandman client for Android with on-device speech-to-text and text-to-speech that can act
-as the phone's assistant. It lives in `android/` (not created yet) and talks to the unified API
+as the phone's assistant. It lives in `android/` ([build and layout](../android/README.md)) and talks to the unified API
 ([API.md](API.md)).
 
 This file is a decision log. **Decided** is the stack. **Open** lists the remaining choices with
@@ -12,7 +12,8 @@ deleted. When **Open** is empty, this file is a short list of the stack.
 
 | Layer | Choice |
 |---|---|
-| Language, UI | Kotlin, Jetpack Compose, Material 3 |
+| Language, UI | Kotlin, Jetpack Compose, Material 3 (dynamic color) |
+| Application ID | `io.github.tobtobxx.sandman` |
 | Repository | Monorepo: the app lives in `android/` next to the server |
 | Architecture | Single activity, Navigation Compose, ViewModel + `StateFlow`; manual DI (one `AppContainer`), no Hilt |
 | HTTP | OkHttp; a small hand-written client for the routes in API.md (no Retrofit) |
@@ -20,13 +21,14 @@ deleted. When **Open** is empty, this file is a short list of the stack.
 | JSON | kotlinx.serialization |
 | Local data | Room: the capture outbox and cached views. DataStore: settings, host, token |
 | Background work | WorkManager sends the outbox. Each capture carries a `client_msg_id`; `/send` dedupes on it, so retries never file twice |
-| Auth | The existing bearer `api.token`, kept in app-private DataStore, excluded from backups |
+| Auth | The existing bearer `api.token`, kept in app-private DataStore; backups and device transfer disabled |
+| Transport security | Cleartext HTTP allowed, for a server on a private network (Tailscale/WireGuard encrypts the link); `https://` works too |
 | Push when closed | UnifiedPush (see below) |
-| SDK levels | `minSdk` 29, `targetSdk`/`compileSdk` latest stable. May rise to 31 or 33 with the speech choice (#88) |
-| Build | Gradle Kotlin DSL, version catalog (`gradle/libs.versions.toml`), JDK 21 toolchain, Gradle wrapper checked in |
+| SDK levels | `minSdk` 29, `targetSdk`/`compileSdk` 37. `minSdk` may rise to 31 or 33 with the speech choice (#88) |
+| Build | Gradle 9 (wrapper with checksum), AGP 9 with its built-in Kotlin, Kotlin DSL, version catalog (`gradle/libs.versions.toml`), KSP for Room, JDK 21 toolchain |
 | Lint, format | Android Lint, ktlint via Spotless |
 | Tests | JUnit, kotlinx-coroutines-test, OkHttp MockWebServer for the API client |
-| CI | `.github/workflows/android.yml`: runs on changes to `android/**`; wrapper validation, Spotless, Lint, unit tests, debug APK as build artifact |
+| CI | `.github/workflows/android.yml`: runs on changes to `android/**`; wrapper validation, Spotless, Lint, unit tests, debug APK as build artifact. Lint ignores "newer version available" checks |
 
 ### Push: UnifiedPush over Web Push
 
