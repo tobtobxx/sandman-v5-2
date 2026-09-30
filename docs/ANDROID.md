@@ -13,7 +13,7 @@ deleted. When **Open** is empty, this file is a short list of the stack.
 | Layer | Choice |
 |---|---|
 | Language, UI | Kotlin, Jetpack Compose, Material 3 (dynamic color) |
-| Application ID | `io.github.tobtobxx.sandman` |
+| Application ID | `net.tobtobxx.sandman.android` |
 | Repository | Monorepo: the app lives in `android/` next to the server |
 | Architecture | Single activity, Navigation Compose, ViewModel + `StateFlow`; manual DI (one `AppContainer`), no Hilt |
 | HTTP | OkHttp; a small hand-written client for the routes in API.md (no Retrofit) |

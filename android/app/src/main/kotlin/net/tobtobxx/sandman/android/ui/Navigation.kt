@@ -1,16 +1,16 @@
-package io.github.tobtobxx.sandman.ui
+package net.tobtobxx.sandman.android.ui
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import io.github.tobtobxx.sandman.AppContainer
-import io.github.tobtobxx.sandman.ui.home.HomeScreen
-import io.github.tobtobxx.sandman.ui.home.HomeViewModel
-import io.github.tobtobxx.sandman.ui.settings.SettingsScreen
-import io.github.tobtobxx.sandman.ui.settings.SettingsViewModel
 import kotlinx.serialization.Serializable
+import net.tobtobxx.sandman.android.AppContainer
+import net.tobtobxx.sandman.android.ui.home.HomeScreen
+import net.tobtobxx.sandman.android.ui.home.HomeViewModel
+import net.tobtobxx.sandman.android.ui.settings.SettingsScreen
+import net.tobtobxx.sandman.android.ui.settings.SettingsViewModel
 
 @Serializable
 object HomeRoute

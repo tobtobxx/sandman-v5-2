@@ -1,12 +1,12 @@
-package io.github.tobtobxx.sandman
+package net.tobtobxx.sandman.android
 
 import android.content.Context
 import androidx.room.Room
-import io.github.tobtobxx.sandman.data.AppDatabase
-import io.github.tobtobxx.sandman.data.Outbox
-import io.github.tobtobxx.sandman.data.SettingsStore
-import io.github.tobtobxx.sandman.data.api.EventStream
-import io.github.tobtobxx.sandman.data.api.SandmanApi
+import net.tobtobxx.sandman.android.data.AppDatabase
+import net.tobtobxx.sandman.android.data.Outbox
+import net.tobtobxx.sandman.android.data.SettingsStore
+import net.tobtobxx.sandman.android.data.api.EventStream
+import net.tobtobxx.sandman.android.data.api.SandmanApi
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 

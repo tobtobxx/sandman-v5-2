@@ -1,4 +1,4 @@
-package io.github.tobtobxx.sandman.data
+package net.tobtobxx.sandman.android.data
 
 import android.content.Context
 import androidx.room.Dao

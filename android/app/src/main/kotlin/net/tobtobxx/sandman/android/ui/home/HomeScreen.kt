@@ -1,4 +1,4 @@
-package io.github.tobtobxx.sandman.ui.home
+package net.tobtobxx.sandman.android.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,7 +32,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import io.github.tobtobxx.sandman.data.OutboxCapture
+import net.tobtobxx.sandman.android.data.OutboxCapture
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

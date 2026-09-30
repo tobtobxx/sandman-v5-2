@@ -1,11 +1,7 @@
-package io.github.tobtobxx.sandman.ui.home
+package net.tobtobxx.sandman.android.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.tobtobxx.sandman.AppContainer
-import io.github.tobtobxx.sandman.data.OutboxCapture
-import io.github.tobtobxx.sandman.data.api.ApiException
-import io.github.tobtobxx.sandman.data.api.Home
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,6 +12,10 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import net.tobtobxx.sandman.android.AppContainer
+import net.tobtobxx.sandman.android.data.OutboxCapture
+import net.tobtobxx.sandman.android.data.api.ApiException
+import net.tobtobxx.sandman.android.data.api.Home
 import java.io.IOException
 
 data class HomeState(

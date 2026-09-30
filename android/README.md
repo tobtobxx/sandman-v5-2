@@ -26,7 +26,7 @@ encrypts the link; use `https://` for anything public.
 ## Layout
 
 ```
-app/src/main/kotlin/io/github/tobtobxx/sandman/
+app/src/main/kotlin/net/tobtobxx/sandman/android/
   SandmanApp.kt, AppContainer.kt   application and manual DI
   MainActivity.kt                  single activity, Compose
   data/SettingsStore.kt            server address and token (DataStore)

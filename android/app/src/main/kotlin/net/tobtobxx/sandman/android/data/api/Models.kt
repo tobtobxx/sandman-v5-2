@@ -1,4 +1,4 @@
-package io.github.tobtobxx.sandman.data.api
+package net.tobtobxx.sandman.android.data.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

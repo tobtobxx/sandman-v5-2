@@ -1,4 +1,4 @@
-package io.github.tobtobxx.sandman.ui
+package net.tobtobxx.sandman.android.ui
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme

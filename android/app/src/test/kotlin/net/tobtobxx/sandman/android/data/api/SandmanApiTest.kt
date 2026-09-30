@@ -1,12 +1,12 @@
-package io.github.tobtobxx.sandman.data.api
+package net.tobtobxx.sandman.android.data.api
 
-import io.github.tobtobxx.sandman.data.ServerSettings
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
+import net.tobtobxx.sandman.android.data.ServerSettings
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals

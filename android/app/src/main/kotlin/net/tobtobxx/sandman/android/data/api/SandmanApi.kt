@@ -1,9 +1,9 @@
-package io.github.tobtobxx.sandman.data.api
+package net.tobtobxx.sandman.android.data.api
 
-import io.github.tobtobxx.sandman.data.ServerSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import net.tobtobxx.sandman.android.data.ServerSettings
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request

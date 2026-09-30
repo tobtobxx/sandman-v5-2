@@ -1,14 +1,14 @@
-package io.github.tobtobxx.sandman.ui.settings
+package net.tobtobxx.sandman.android.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.tobtobxx.sandman.AppContainer
-import io.github.tobtobxx.sandman.data.ServerSettings
-import io.github.tobtobxx.sandman.data.api.ApiException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.tobtobxx.sandman.android.AppContainer
+import net.tobtobxx.sandman.android.data.ServerSettings
+import net.tobtobxx.sandman.android.data.api.ApiException
 import java.io.IOException
 
 class SettingsViewModel(

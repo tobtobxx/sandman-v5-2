@@ -1,4 +1,4 @@
-package io.github.tobtobxx.sandman
+package net.tobtobxx.sandman.android
 
 import android.app.Application
 

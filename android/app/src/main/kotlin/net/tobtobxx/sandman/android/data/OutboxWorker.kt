@@ -1,11 +1,11 @@
-package io.github.tobtobxx.sandman.data
+package net.tobtobxx.sandman.android.data
 
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import io.github.tobtobxx.sandman.SandmanApp
-import io.github.tobtobxx.sandman.data.api.ApiException
-import io.github.tobtobxx.sandman.data.api.NotConfiguredException
+import net.tobtobxx.sandman.android.SandmanApp
+import net.tobtobxx.sandman.android.data.api.ApiException
+import net.tobtobxx.sandman.android.data.api.NotConfiguredException
 import java.io.IOException
 
 /**

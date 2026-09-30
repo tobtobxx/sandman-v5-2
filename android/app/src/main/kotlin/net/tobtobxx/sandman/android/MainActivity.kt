@@ -1,11 +1,11 @@
-package io.github.tobtobxx.sandman
+package net.tobtobxx.sandman.android
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import io.github.tobtobxx.sandman.ui.SandmanNavHost
-import io.github.tobtobxx.sandman.ui.SandmanTheme
+import net.tobtobxx.sandman.android.ui.SandmanNavHost
+import net.tobtobxx.sandman.android.ui.SandmanTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

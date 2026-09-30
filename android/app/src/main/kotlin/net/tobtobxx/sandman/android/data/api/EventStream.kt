@@ -1,11 +1,11 @@
-package io.github.tobtobxx.sandman.data.api
+package net.tobtobxx.sandman.android.data.api
 
-import io.github.tobtobxx.sandman.data.ServerSettings
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.retryWhen
+import net.tobtobxx.sandman.android.data.ServerSettings
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response

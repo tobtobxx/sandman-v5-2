@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "io.github.tobtobxx.sandman"
+    namespace = "net.tobtobxx.sandman.android"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.tobtobxx.sandman"
+        applicationId = "net.tobtobxx.sandman.android"
         minSdk = 29
         targetSdk = 37
         versionCode = 1

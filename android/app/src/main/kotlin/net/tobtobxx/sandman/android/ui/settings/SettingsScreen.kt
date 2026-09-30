@@ -1,4 +1,4 @@
-package io.github.tobtobxx.sandman.ui.settings
+package net.tobtobxx.sandman.android.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,7 +22,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.tobtobxx.sandman.data.ServerSettings
+import net.tobtobxx.sandman.android.data.ServerSettings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
