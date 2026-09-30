@@ -23,6 +23,14 @@ The server binds `::1` by default. Make it reachable from the phone, e.g. over T
 Settings and enter `http://<host>:8700` and the token. Plain HTTP is allowed because the tailnet
 encrypts the link; use `https://` for anything public.
 
+### Notifications
+
+Questions and reminders arrive as notifications when the app is closed, over
+[UnifiedPush](https://unifiedpush.org). Install a distributor app, e.g. ntfy (F-Droid or Play; it uses
+ntfy.sh unless you point it at your own server), then Settings → Notifications → Turn on, and
+"Send a test". Sandman POSTs each notification to the push server, so it needs outbound access to it;
+the phone keeps its own connection to the push server, so Sandman doesn't have to be reachable.
+
 With HTTPS and a self-signed certificate, install the certificate on the phone as a CA certificate
 (Settings → Security → Encryption & credentials → Install a certificate → CA certificate). The app
 trusts the system CAs and user-installed ones. The certificate must name the address you enter in
@@ -37,6 +45,7 @@ app/src/main/kotlin/net/tobtobxx/sandman/android/
   data/SettingsStore.kt            server address and token (DataStore)
   data/Outbox.kt, OutboxWorker.kt  captures waiting to be sent (Room + WorkManager)
   data/api/                        API client (OkHttp), event stream (SSE), JSON models
+  push/                            UnifiedPush: registration, endpoint sync (WorkManager), notifications
   ui/                              theme, navigation, home and settings screens
 app/schemas/                       Room schema history (commit changes)
 ```

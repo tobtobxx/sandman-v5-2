@@ -22,6 +22,7 @@ import { reviewAction, tidy } from "./conversation/tidy.ts";
 import { consolidate, consolidationRunning, consolidationStatus, rerender } from "./memory/consolidator.ts";
 import { findNotes, listPendingFacts, NoteView, noteView, syncEmbeddings } from "./memory/retriever.ts";
 import { recordedFacts } from "./work/worker.ts";
+import { addSubscription, installPush, listSubscriptions, removeSubscription, sendTest, vapidKeys } from "./push.ts";
 
 type H = (req: Request, p: Record<string, string>, body: Row, url: URL) => Promise<unknown> | unknown;
 const routes: { method: string; re: RegExp; keys: string[]; h: H }[] = [];
@@ -107,6 +108,12 @@ route("POST", "/review/:id/:action", async (_r, p, b) => {
   return r;
 });
 route("POST", "/presence", (_r, _p, b) => (Object.assign(presence, { topic_id: b.topic_id ?? null }), presence));
+// Web Push (src/push.ts): browsers and the Android app (UnifiedPush) register the same way.
+route("GET", "/push-subscriptions/key", async () => ({ vapid_public_key: (await vapidKeys()).publicKey }));
+route("GET", "/push-subscriptions", () => listSubscriptions());
+route("POST", "/push-subscriptions", (_r, _p, b) => addSubscription(b));
+route("DELETE", "/push-subscriptions", (_r, _p, b) => removeSubscription(String(b.endpoint ?? "")));
+route("POST", "/push-subscriptions/test", async () => ({ results: await sendTest() }));
 route("POST", "/tidy", async () => (await tidy(), { ok: true }));
 
 // ---------------------------------------------------------------- board
@@ -191,9 +198,9 @@ route("GET", "/inspect/desk_turns/:id", (_r, p) => {
   const t = db().get(`SELECT * FROM desk_turns WHERE id=?`, p.id);
   return { turn: t, calls: t ? db().all(`SELECT * FROM llm_calls WHERE session_id=? ORDER BY at, rowid`, t.session_id) : [], receipts: db().all(`SELECT * FROM receipts WHERE desk_turn_id=?`, p.id) };
 });
-route("GET", "/inspect/tables", () => db().all(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '%fts%' AND name NOT LIKE 'sqlite_%' ORDER BY name`).map((r) => r.name));
+route("GET", "/inspect/tables", () => db().all(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '%fts%' AND name NOT LIKE 'sqlite_%' AND name != 'vapid_keys' ORDER BY name`).map((r) => r.name));
 route("GET", "/inspect/table/:name", (_r, p, _b, u) => {
-  const ok = db().get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, p.name);
+  const ok = p.name !== "vapid_keys" && db().get(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, p.name);
   if (!ok) throw new HttpError(404, "no table");
   // vectors are shown by their size, not their bytes
   const cols = p.name === "embeddings" ? "id, grp, model, text, length(vec) / 4 AS dims" : "*";
@@ -241,6 +248,11 @@ async function handle(req: Request): Promise<Response> {
   if (url.pathname === "/" || url.pathname === "/observer") {
     const f = url.pathname === "/" ? "client.html" : "observer.html";
     return new Response(await Deno.readTextFile(new URL(`../ui/${f}`, import.meta.url)), { headers: { "content-type": "text/html; charset=utf-8" } });
+  }
+  if (url.pathname === "/sw.js") {
+    return new Response(await Deno.readTextFile(new URL("../ui/sw.js", import.meta.url)), {
+      headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "no-cache" },
+    });
   }
   const font = url.pathname.match(/^\/fonts\/([a-z0-9-]+\.(woff2|css))$/);
   if (font) {
@@ -300,6 +312,7 @@ function sse(after: number): Response {
 export async function serve() {
   seedRecipes();
   installModelAlerts();
+  installPush();
   startDispatcher();
   bg(syncEmbeddings("background")); // memory written before this version, or with another embedding model
   // captures not yet handled (model was down, server restarted) are retried with backoff (§13)

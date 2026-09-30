@@ -80,6 +80,7 @@ interface Settings {
   workspace: string;
   api: { host: string; port: number; token: string };
   web: { searxng: string };
+  push: { subject: string; ttl_s: number };
   api_key: string;
   roles: Record<ModelRole, string | null>;
   models: Record<string, ModelConfig>;

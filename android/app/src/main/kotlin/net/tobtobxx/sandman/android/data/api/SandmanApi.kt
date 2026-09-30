@@ -3,6 +3,7 @@ package net.tobtobxx.sandman.android.data.api
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import net.tobtobxx.sandman.android.data.ServerSettings
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -36,6 +37,26 @@ class SandmanApi(
     ): SendResult = post("/send", SandmanJson.encodeToString(SendRequest(text, clientMsgId)))
 
     suspend fun home(): Home = get("/home")
+
+    suspend fun pushKey(): PushKey = get("/push-subscriptions/key")
+
+    suspend fun addPushSubscription(
+        endpoint: String,
+        p256dh: String,
+        auth: String,
+    ) {
+        post<JsonElement>(
+            "/push-subscriptions",
+            SandmanJson.encodeToString(PushSubscriptionRequest(endpoint, PushKeys(p256dh, auth))),
+        )
+    }
+
+    suspend fun removePushSubscription(endpoint: String) {
+        val json = SandmanJson.encodeToString(PushEndpointRequest(endpoint))
+        call<JsonElement>(request("/push-subscriptions").delete(json.toRequestBody(JSON)).build())
+    }
+
+    suspend fun testPush(): PushTestResults = post("/push-subscriptions/test", "{}")
 
     private suspend inline fun <reified T> get(path: String): T = call(request(path).get().build())
 

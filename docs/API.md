@@ -95,6 +95,27 @@ Returns `{ message_id }`; the desk's receipts and reply arrive as events.
 | `POST /briefings` · `/briefings/:id/reply {text}` | | Scripted briefing (kept for voice) |
 | `POST /presence` | `{ topic_id }` | The topic on screen (its events are not pushed) |
 
+## Push notifications
+
+Web Push (RFC 8030/8291/8292) for `push`-level events (questions, reminders; DESIGN §6.12). Browsers
+subscribe through the service worker at `/sw.js`; the Android app through UnifiedPush. Both send the
+same subscription shape.
+
+| Route | Body | Effect |
+|---|---|---|
+| `GET /push-subscriptions/key` | — | `{ vapid_public_key }`: the server's VAPID key (base64url, uncompressed P-256), the `applicationServerKey` / UnifiedPush `vapid` to subscribe with |
+| `POST /push-subscriptions` | `{ endpoint, keys: { p256dh, auth }, client_id }` | Register or refresh (one row per endpoint); returns `{ id }` |
+| `DELETE /push-subscriptions` | `{ endpoint }` | Unregister; returns `{ removed }` |
+| `GET /push-subscriptions` | — | Registered subscriptions with `failures`, `last_error`, `last_ok_at` |
+| `POST /push-subscriptions/test` | — | Send a test notification to all; returns `{ results: [{ id, ok, status, error, removed }] }` |
+
+The decrypted message is JSON:
+```json
+{ "id": 812, "type": "question.created" | "message.created" | "push.test", "kind": "question" | "reminder" | "test",
+  "topic_id": "top_…" | null, "ref_id": "qst_…" | null, "title": "<topic title or Sandman>", "body": "…", "at": "…" }
+```
+`id` is the event id (the same as on the event stream), so a client can drop what it already showed.
+
 ## Secondary views (unchanged)
 
 `GET /needs-you`, `GET /review` + `POST /review/:id/:action`, `GET /cards?state=`,

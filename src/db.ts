@@ -70,6 +70,9 @@ CREATE TABLE IF NOT EXISTS facts (id TEXT PRIMARY KEY, card_id TEXT, message_id 
   target_claim_id TEXT, decided_at TEXT, created_at TEXT);
 -- memory search vectors (retriever.ts): id is a note, claim or pending fact; grp the note or pending subject it
 -- counts for; model the embedding model and document prefix; text what was embedded; vec normalized float32
+CREATE TABLE IF NOT EXISTS push_subscriptions (id TEXT PRIMARY KEY, client_id TEXT, endpoint TEXT UNIQUE, p256dh TEXT,
+  auth TEXT, active INTEGER DEFAULT 1, failures INTEGER DEFAULT 0, last_error TEXT, last_ok_at TEXT, created_at TEXT);
+CREATE TABLE IF NOT EXISTS vapid_keys (id INTEGER PRIMARY KEY CHECK (id = 1), public_key TEXT, private_jwk TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS embeddings (id TEXT PRIMARY KEY, grp TEXT, model TEXT, text TEXT, vec BLOB);
 
 CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(id UNINDEXED, title, aliases, one_liner, body);

@@ -9,7 +9,7 @@ from the design, the reason is below. Bench-driven changes reference docs/BENCH.
 `node:sqlite` (WAL, FTS5), no dependencies, so `flake.nix` only needs `deno`.
 
 **Not implemented yet** (tracked as `enhancement` issues): speech-to-text (#41), text-to-speech
-(#42), Web Push (#43), per-client tokens (one shared `api.token`, #44), capture merging (#45),
+(#42), per-client tokens (one shared `api.token`, #44), capture merging (#45),
 typing debounce (#46), projects and briefs (#47), recipe promotion (#48), quiet hours (#49), a
 reserved interactive slot (priorities only, #50), message paging, unread counts and approval
 questions (#51), claim editing in the memory browser (#40), `report_mode: desk` (#58).
@@ -25,6 +25,15 @@ questions (#51), claim editing in the memory browser (#40), `report_mode: desk` 
 - No secret redaction in traces: secrets live only in `config.jsonc` and never enter prompts.
 - No client modes (`active | driving | dnd`, §6.12, #63). `POST /presence` only reports the
   topic on screen, whose events are badged instead of pushed; driving mode never started a briefing.
+
+**Web Push (§6.12, #43)** goes to every registered client for every `push`-level event, not only
+"when no client is open": each client drops what it already shows (the browser's service worker when
+a Sandman tab has focus, the Android app while it is on screen). The server can't tell an open tab
+on another device from one in front of the owner. `push_subscriptions` keeps the endpoint and its
+two keys as columns rather than one `endpoint JSON`, plus failure counts for the observer; a
+subscription the push service reports gone (404/410) is deleted. The VAPID key pair is made on first
+use and kept in the database (`vapid_keys`, not shown in the observer). Browsers need HTTPS (or
+localhost) for push; without it the client falls back to notifications while a tab is open.
 
 **Memory search by meaning (§7.6, §19 q3)** is on by default: `perplexity/pplx-embed-v1-0.6b` on
 OpenRouter (profile `embedding`; any OpenAI-compatible `/embeddings` server works, e.g. llama.cpp with
