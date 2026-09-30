@@ -22,7 +22,7 @@ deleted. When **Open** is empty, this file is a short list of the stack.
 | Local data | Room: the capture outbox and cached views. DataStore: settings, host, token |
 | Background work | WorkManager sends the outbox. Each capture carries a `client_msg_id`; `/send` dedupes on it, so retries never file twice |
 | Auth | The existing bearer `api.token`, kept in app-private DataStore; backups and device transfer disabled |
-| Transport security | Cleartext HTTP allowed, for a server on a private network (Tailscale/WireGuard encrypts the link); `https://` works too |
+| Transport security | HTTPS trusts the phone's CA store, system and user-installed CAs, so a self-signed server certificate works once installed on the phone; nothing pinned or bundled. Cleartext HTTP also allowed, for a server on a private network (Tailscale/WireGuard encrypts the link) |
 | Push when closed | UnifiedPush (see below) |
 | SDK levels | `minSdk` 29, `targetSdk`/`compileSdk` 37. `minSdk` may rise to 31 or 33 with the speech choice (#88) |
 | Build | Gradle 9 (wrapper with checksum), AGP 9 with its built-in Kotlin, Kotlin DSL, version catalog (`gradle/libs.versions.toml`), KSP for Room, JDK 21 toolchain |

@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Sandman is reached over a private network (Tailscale/WireGuard encrypts the link), usually by IP
-     or a tailnet name over plain HTTP, so cleartext is allowed. Use https:// for anything public. -->
+     or a tailnet name over plain HTTP, so cleartext is allowed.
+
+     For https://, the app trusts the phone's CA store: the built-in CAs and the ones the user
+     installed (Settings → Security → Encryption & credentials → Install a certificate → CA
+     certificate). Apps ignore user-installed CAs unless they opt in, as here; that is what lets a
+     self-signed server certificate work. Nothing is pinned or bundled in the app. -->
 <network-security-config xmlns:tools="http://schemas.android.com/tools">
     <base-config
         cleartextTrafficPermitted="true"
-        tools:ignore="InsecureBaseConfiguration" />
+        tools:ignore="InsecureBaseConfiguration,AcceptsUserCertificates">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
 </network-security-config>

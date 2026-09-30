@@ -23,6 +23,11 @@ The server binds `::1` by default. Make it reachable from the phone, e.g. over T
 Settings and enter `http://<host>:8700` and the token. Plain HTTP is allowed because the tailnet
 encrypts the link; use `https://` for anything public.
 
+With HTTPS and a self-signed certificate, install the certificate on the phone as a CA certificate
+(Settings → Security → Encryption & credentials → Install a certificate → CA certificate). The app
+trusts the system CAs and user-installed ones. The certificate must name the address you enter in
+Settings in its subjectAltName (a DNS name or IP address); the common name alone is not checked.
+
 ## Layout
 
 ```
