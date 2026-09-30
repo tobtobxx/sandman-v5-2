@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Android Companion Stack</title>
+<style>
+:root {
+  --bg: #fbfaf8; --surface: #ffffff; --text: #1d1d1b; --muted: #62605b; --line: #e3e0da;
+  --accent: #2f5fb3; --accent-soft: #e8eefa;
+  --good: #1f7a4d; --good-soft: #e3f3ea; --mid: #8a6100; --mid-soft: #fbf0d6; --bad: #a33a2c; --bad-soft: #f8e4e0;
+  --code: #f2f0ec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161615; --surface: #1f1f1d; --text: #ebe9e4; --muted: #a29f98; --line: #34332f;
+    --accent: #8fb0ee; --accent-soft: #22304a;
+    --good: #7fd0a4; --good-soft: #1c3328; --mid: #e6c16a; --mid-soft: #3a3020; --bad: #ee9a8c; --bad-soft: #3f2420;
+    --code: #2a2a27;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161615; --surface: #1f1f1d; --text: #ebe9e4; --muted: #a29f98; --line: #34332f;
+  --accent: #8fb0ee; --accent-soft: #22304a;
+  --good: #7fd0a4; --good-soft: #1c3328; --mid: #e6c16a; --mid-soft: #3a3020; --bad: #ee9a8c; --bad-soft: #3f2420;
+  --code: #2a2a27;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
+h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+h2 { font-size: 1.35rem; margin: 48px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.08rem; margin: 26px 0 8px; }
+p, li { max-width: 72ch; }
+a { color: var(--accent); }
+.sub { color: var(--muted); margin: 0 0 24px; }
+code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 16px 0; }
+.rec { border-left: 4px solid var(--accent); }
+.rec h3 { margin-top: 0; }
+.scroll { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; background: var(--bg); position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; min-width: 150px; }
+.g, .m, .b { display: inline-block; padding: 0 7px; border-radius: 999px; font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.g { background: var(--good-soft); color: var(--good); }
+.m { background: var(--mid-soft); color: var(--mid); }
+.b { background: var(--bad-soft); color: var(--bad); }
+.note { color: var(--muted); font-size: .9rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.grid .box { margin: 0; }
+.grid h3 { margin-top: 0; }
+svg { width: 100%; height: auto; display: block; }
+svg text { font-family: inherit; fill: var(--text); }
+svg .muted { fill: var(--muted); }
+svg .node { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+svg .node-a { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+svg .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+svg .arrowhead { fill: var(--muted); }
+svg .bar-bg { fill: var(--line); }
+svg .bar { fill: var(--accent); }
+ol.steps li { margin-bottom: 8px; }
+footer { margin-top: 56px; color: var(--muted); font-size: .88rem; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Android companion app for Sandman: stack options</h1>
+<p class="sub">On-device speech-to-text and text-to-speech, usable as the phone's assistant. Compared as of September 2026.</p>
+
+<div class="box rec">
+<h3>Recommendation, short</h3>
+<ul>
+  <li><b>App:</b> native Kotlin + Jetpack Compose. The assistant role, microphone foreground services and <code>RecognitionService</code> are Android-only APIs; every cross-platform option ends up writing them in Kotlin anyway.</li>
+  <li><b>Speech:</b> <a href="https://github.com/k2-fsa/sherpa-onnx">sherpa-onnx</a> as the engine layer (Silero VAD, a streaming Zipformer or Parakeet/Moonshine for STT, Piper or Kokoro for TTS). Put Android's own on-device <code>SpeechRecognizer</code> and <code>TextToSpeech</code> behind the same interface as the zero-download fallback.</li>
+  <li><b>Assistant entry:</b> start with an <code>ACTION_ASSIST</code> activity (qualifies for the assistant role, ~1 day of work), move to a <code>VoiceInteractionService</code> with an overlay session later. Skip always-on wake word in v1.</li>
+  <li><b>Server link:</b> Tailscale (or any WireGuard) to reach the host, the existing bearer <code>api.token</code>, <code>POST /send</code> with <code>client_msg_id</code> for offline-safe captures, SSE while open, UnifiedPush once Web Push (#43) exists server-side.</li>
+</ul>
+</div>
+
+<h2>1. What the app has to do</h2>
+<p>From <code>docs/DESIGN.md</code> and <code>docs/API.md</code>, the phone app is a Sandman client with a voice layer:</p>
+<ul>
+  <li><b>Capture without choosing</b> (G1): speak, get a transcript, <code>POST /send {text, client_msg_id}</code>. The design allows the client to transcribe on device and send text (§6.3), so no server STT is needed.</li>
+  <li><b>Speak back</b>: <code>capture.confirmed</code> and briefing replies already carry a <code>speech</code> form (<code>src/conversation/capture.ts</code>, <code>briefing.ts</code>). The design puts TTS on the client in v5.</li>
+  <li><b>Answer the needs-you list by voice</b> (G1b): briefings via <code>POST /briefings</code> and <code>/briefings/:id/reply</code>; questions are ≤25 words with 2–4 numbered options, so short-utterance STT is enough.</li>
+  <li><b>Driving use</b>: hands-free, headset button, speech-only confirmations.</li>
+  <li><b>Notifications</b> for <code>push</code>-level events when the app is closed.</li>
+</ul>
+<p class="note">Constraint that shapes everything: the server model is slow (seconds per desk turn). The app should acknowledge locally at once ("Got it") and speak the real confirmation when <code>capture.confirmed</code> arrives, instead of blocking the user.</p>
+
+<svg viewBox="0 0 940 300" role="img" aria-label="Voice loop architecture: phone does VAD, STT and TTS; server does filing and desk">
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
+  <text x="16" y="24" font-size="14" font-weight="600">Phone (on-device)</text>
+  <text x="660" y="24" font-size="14" font-weight="600">Sandman host</text>
+  <rect x="16" y="40" width="120" height="54" rx="8" class="node"/>
+  <text x="76" y="63" font-size="13" text-anchor="middle">Entry</text>
+  <text x="76" y="81" font-size="11" text-anchor="middle" class="muted">power · tile · widget</text>
+  <rect x="166" y="40" width="110" height="54" rx="8" class="node-a"/>
+  <text x="221" y="63" font-size="13" text-anchor="middle">Mic + VAD</text>
+  <text x="221" y="81" font-size="11" text-anchor="middle" class="muted">Silero, ~2 MB</text>
+  <rect x="306" y="40" width="120" height="54" rx="8" class="node-a"/>
+  <text x="366" y="63" font-size="13" text-anchor="middle">STT</text>
+  <text x="366" y="81" font-size="11" text-anchor="middle" class="muted">0.2–1 s</text>
+  <rect x="456" y="40" width="150" height="54" rx="8" class="node"/>
+  <text x="531" y="63" font-size="13" text-anchor="middle">Outbox</text>
+  <text x="531" y="81" font-size="11" text-anchor="middle" class="muted">text + client_msg_id</text>
+  <rect x="660" y="40" width="264" height="54" rx="8" class="node"/>
+  <text x="792" y="63" font-size="13" text-anchor="middle">POST /send → split → file → desk</text>
+  <text x="792" y="81" font-size="11" text-anchor="middle" class="muted">seconds, slow model</text>
+  <rect x="660" y="190" width="264" height="54" rx="8" class="node"/>
+  <text x="792" y="213" font-size="13" text-anchor="middle">SSE event capture.confirmed</text>
+  <text x="792" y="231" font-size="11" text-anchor="middle" class="muted">{ text, speech } · or push when closed</text>
+  <rect x="456" y="190" width="150" height="54" rx="8" class="node-a"/>
+  <text x="531" y="213" font-size="13" text-anchor="middle">TTS</text>
+  <text x="531" y="231" font-size="11" text-anchor="middle" class="muted">first audio &lt; 0.5 s</text>
+  <rect x="306" y="190" width="120" height="54" rx="8" class="node"/>
+  <text x="366" y="213" font-size="13" text-anchor="middle">Local ack</text>
+  <text x="366" y="231" font-size="11" text-anchor="middle" class="muted">"Got it" at once</text>
+  <path d="M136 67 H162" class="edge" marker-end="url(#ah)"/>
+  <path d="M276 67 H302" class="edge" marker-end="url(#ah)"/>
+  <path d="M426 67 H452" class="edge" marker-end="url(#ah)"/>
+  <path d="M606 67 H656" class="edge" marker-end="url(#ah)"/>
+  <path d="M792 94 V186" class="edge" marker-end="url(#ah)"/>
+  <path d="M660 217 H610" class="edge" marker-end="url(#ah)"/>
+  <path d="M366 94 V186" class="edge" marker-end="url(#ah)" stroke-dasharray="4 4"/>
+  <path d="M426 217 H452" class="edge" marker-end="url(#ah)" stroke-dasharray="4 4"/>
+  <text x="626" y="140" font-size="11" class="muted" text-anchor="middle">Tailscale</text>
+  <text x="626" y="155" font-size="11" class="muted" text-anchor="middle">Bearer token</text>
+  <line x1="636" y1="30" x2="636" y2="280" stroke="var(--line)" stroke-dasharray="3 5"/>
+  <text x="16" y="285" font-size="11" class="muted">Accent boxes run models on the phone. Dashed path: immediate local feedback while the server works.</text>
+</svg>
+
+<h2>2. App framework</h2>
+<p>Criteria: access to Android assistant/mic/service APIs, how well on-device speech libraries plug in, reuse of the existing no-build web client (<code>ui/client.html</code>), a path to iOS, and effort.</p>
+
+<div class="scroll"><table>
+<thead><tr><th>Option</th><th>Assistant + background mic</th><th>On-device speech libs</th><th>Reuses web client</th><th>iOS later</th><th>Effort / risk</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>A. Native Kotlin + Compose</td>
+  <td><span class="g">direct</span> VoiceInteractionService, RecognitionService, FGS type <code>microphone</code>, QS tile, Glance widget</td>
+  <td><span class="g">first-class</span> sherpa-onnx AAR, whisper.cpp JNI, ML Kit, platform APIs</td>
+  <td><span class="m">optional</span> via WebView screen</td>
+  <td><span class="b">rewrite</span> (or KMP, see A′)</td>
+  <td><span class="g">low</span> one language, best docs</td>
+  <td><span class="g">Recommended</span></td></tr>
+<tr><td>A′. Kotlin Multiplatform + Compose MP</td>
+  <td><span class="g">direct</span> (Android source set)</td>
+  <td><span class="g">good</span> on Android; iOS needs its own engine glue</td>
+  <td><span class="m">optional</span></td>
+  <td><span class="g">shares API client, state, UI</span></td>
+  <td><span class="m">medium</span> build setup, younger iOS tooling</td>
+  <td><span class="g">Pick if iOS is planned</span></td></tr>
+<tr><td>B. Flutter</td>
+  <td><span class="m">via platform channel</span> assistant service and FGS written in Kotlin anyway</td>
+  <td><span class="g">good</span> official <code>sherpa_onnx</code> pub package; ML Kit GenAI plugin</td>
+  <td><span class="b">no</span></td>
+  <td><span class="g">yes</span></td>
+  <td><span class="m">medium</span> two languages, audio session edge cases in plugins</td>
+  <td><span class="m">Viable</span></td></tr>
+<tr><td>C. React Native / Expo</td>
+  <td><span class="m">native module</span> in Kotlin; Expo needs config plugins / prebuild</td>
+  <td><span class="m">community bindings</span> for sherpa-onnx and whisper.rn; quality varies</td>
+  <td><span class="m">partial</span> TS logic, not the HTML</td>
+  <td><span class="g">yes</span></td>
+  <td><span class="m">medium-high</span> bridge for streaming PCM audio is the weak spot</td>
+  <td><span class="m">Only for a JS team</span></td></tr>
+<tr><td>D. Capacitor shell around <code>client.html</code></td>
+  <td><span class="m">native plugin</span> in Kotlin</td>
+  <td><span class="m">plugins</span> (Capawesome ML Kit GenAI STT; sherpa needs a custom plugin)</td>
+  <td><span class="g">yes, nearly as is</span></td>
+  <td><span class="g">yes</span></td>
+  <td><span class="m">medium</span> fast start, but voice lives in plugins anyway</td>
+  <td><span class="m">Viable as a stopgap</span></td></tr>
+<tr><td>E. PWA / Trusted Web Activity</td>
+  <td><span class="b">no</span> cannot hold the assistant role, no background mic</td>
+  <td><span class="b">no</span> Chrome's Web Speech API sends audio to Google; WASM whisper is slow and heavy</td>
+  <td><span class="g">yes</span></td>
+  <td><span class="g">yes</span></td>
+  <td><span class="g">low</span></td>
+  <td><span class="b">Fails the brief</span></td></tr>
+</tbody></table></div>
+
+<p><b>Why native wins here.</b> The hard parts of this app are not screens. They are: a bound <code>VoiceInteractionService</code>, a microphone foreground service that survives Android 14/15 restrictions, low-latency PCM streaming into a native inference library, audio focus and Bluetooth headset routing, and TTS ducking. All of that is Kotlin in every option. Flutter/RN add a bridge between the audio thread and the UI without removing any Kotlin. The screens themselves (home prompt, topic chat, needs-you list) are small.</p>
+<p><b>Hybrid worth considering:</b> native Kotlin app whose voice overlay, needs-you list and settings are Compose, and whose "open topic" screen is initially a WebView of the server's own <code>client.html</code> (token in the URL is already accepted, <code>src/server.ts:256</code>). That gets a full UI in week one and lets you replace screens one at a time.</p>
+
+<h2>3. Speech engines</h2>
+
+<h3>3.1 Speech-to-text</h3>
+<div class="scroll"><table>
+<thead><tr><th>Engine</th><th>Download</th><th>Streaming partials</th><th>German</th><th>Vocabulary biasing</th><th>Accuracy (short commands)</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Android <code>createOnDeviceSpeechRecognizer</code> (API 33+)</td>
+  <td><span class="g">0 MB</span> uses the OS language pack</td><td><span class="g">yes</span></td><td><span class="g">yes</span></td>
+  <td><span class="m">EXTRA_BIASING_STRINGS</span>, engine-dependent</td><td><span class="g">good</span> on Pixel/Samsung</td>
+  <td>Behaviour depends on the OEM engine; fails if none installed. Best fallback.</td></tr>
+<tr><td>ML Kit GenAI Speech Recognition</td>
+  <td>0 MB (AICore)</td><td><span class="g">yes</span></td><td><span class="m">advanced mode wider</span></td>
+  <td><span class="b">no</span></td><td><span class="g">good</span>; advanced better</td>
+  <td><span class="b">alpha</span>, API may break. Basic: API 31+. Advanced (Gemini Nano): Pixel 10 only.</td></tr>
+<tr><td>sherpa-onnx streaming Zipformer transducer</td>
+  <td>20–80 MB</td><td><span class="g">yes, true streaming</span></td><td><span class="m">few models</span></td>
+  <td><span class="g">hotwords</span> (contextual biasing)</td><td><span class="m">good</span></td>
+  <td>Lowest latency; hotwords fit the design's "vocabulary from topic titles" (§6.3). Apache-2.0.</td></tr>
+<tr><td>sherpa-onnx + Moonshine (tiny/base)</td>
+  <td>~30–65 MB int8</td><td><span class="m">VAD-chunked</span></td><td><span class="b">no</span> (EN + a few others)</td>
+  <td><span class="b">no</span></td><td><span class="g">good</span></td>
+  <td>Very fast on short utterances (tens of ms per segment reported). Ideal for English command-length input.</td></tr>
+<tr><td>sherpa-onnx + Parakeet TDT 0.6B (v2 EN / v3 25 EU langs)</td>
+  <td>~600 MB int8</td><td><span class="m">VAD-chunked</span></td><td><span class="g">yes (v3)</span></td>
+  <td><span class="m">limited</span></td><td><span class="g">best of the open set</span></td>
+  <td>Heavy; fine on flagships, slow on mid-range. Optional "high quality" download.</td></tr>
+<tr><td>whisper.cpp (tiny/base/small, JNI)</td>
+  <td>40–500 MB</td><td><span class="b">no</span> (chunked)</td><td><span class="g">yes</span></td>
+  <td><span class="g">initial prompt</span></td><td><span class="m">base</span> ok, <span class="g">small</span> good</td>
+  <td>Multilingual and prompt-biasable, but slower and hallucinates on silence without VAD. MIT.</td></tr>
+<tr><td>Vosk</td>
+  <td>50 MB</td><td><span class="g">yes</span></td><td><span class="g">yes</span></td>
+  <td><span class="g">grammar lists</span></td><td><span class="b">weaker</span></td>
+  <td>Older Kaldi models; maintenance slowed. Only if grammar-restricted input is enough.</td></tr>
+<tr><td>Picovoice Cheetah / Leopard</td>
+  <td>~20 MB</td><td><span class="g">yes (Cheetah)</span></td><td><span class="g">yes</span></td>
+  <td><span class="g">custom vocab</span></td><td><span class="g">good</span></td>
+  <td>Commercial, access key required; licence terms for personal use change, check first.</td></tr>
+</tbody></table></div>
+
+<h3>3.2 Text-to-speech</h3>
+<div class="scroll"><table>
+<thead><tr><th>Engine</th><th>Download</th><th>Quality</th><th>German</th><th>Speed on mid-range phone</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Android <code>TextToSpeech</code> (Google / Samsung engine, offline voice)</td>
+  <td><span class="g">0 MB</span></td><td><span class="m">decent</span></td><td><span class="g">yes</span></td><td><span class="g">instant</span></td>
+  <td>Must force an offline voice (<code>Voice.isNetworkConnectionRequired</code>). Varies by OEM.</td></tr>
+<tr><td>Piper (VITS) via sherpa-onnx</td>
+  <td>20–65 MB per voice</td><td><span class="m">good</span></td><td><span class="g">yes</span> (e.g. thorsten)</td><td><span class="g">faster than real time</span></td>
+  <td>Many languages, predictable, small. Good default.</td></tr>
+<tr><td>Kokoro-82M via sherpa-onnx</td>
+  <td>~100–330 MB</td><td><span class="g">very good</span></td><td><span class="b">no</span> (EN, ES, FR, IT, PT, HI, JA, ZH)</td><td><span class="m">around real time</span>; ~1 s cold start reported</td>
+  <td>Best open voice quality. Synthesize sentence by sentence to keep first audio short.</td></tr>
+<tr><td>Picovoice Orca</td>
+  <td>~10 MB</td><td><span class="m">good</span></td><td><span class="m">some</span></td><td><span class="g">streaming</span></td>
+  <td>Commercial.</td></tr>
+</tbody></table></div>
+
+<h3>3.3 Wake word and VAD</h3>
+<div class="grid">
+  <div class="box"><h3>VAD</h3><p>Silero VAD (bundled with sherpa-onnx, ~2 MB). Needed for end-of-speech detection and to stop Whisper-style models transcribing silence. Not optional.</p></div>
+  <div class="box"><h3>Wake word</h3><p>Options: sherpa-onnx keyword spotting (open vocabulary, define the phrase as text), openWakeWord (Apache-2.0, trainable), Porcupine (commercial, best battery). Third-party apps cannot use the DSP hotword path that preinstalled assistants use, so always-listening means a mic foreground service with a permanent notification and real battery cost.</p></div>
+  <div class="box"><h3>Verdict</h3><p>Leave wake word out of v1. Long-press power (assistant role), a Quick Settings tile, a widget and a headset button cover most of the "don't choose anything" use, including driving.</p></div>
+</div>
+
+<h3>3.4 Rough footprint of speech bundles</h3>
+<svg viewBox="0 0 900 250" role="img" aria-label="Download size per speech bundle">
+  <text x="0" y="16" font-size="13" font-weight="600">App download for speech models (MB, approximate, int8)</text>
+  <g font-size="12">
+    <text x="0" y="50">Platform only</text><rect x="260" y="38" width="600" height="16" rx="3" class="bar-bg"/><rect x="260" y="38" width="3" height="16" rx="1" class="bar"/><text x="270" y="51" class="muted">0</text>
+    <text x="0" y="82">VAD + Zipformer + Piper</text><rect x="260" y="70" width="600" height="16" rx="3" class="bar-bg"/><rect x="260" y="70" width="72" height="16" rx="3" class="bar"/><text x="340" y="83" class="muted">~110</text>
+    <text x="0" y="114">VAD + Moonshine base + Kokoro</text><rect x="260" y="102" width="600" height="16" rx="3" class="bar-bg"/><rect x="260" y="102" width="165" height="16" rx="3" class="bar"/><text x="433" y="115" class="muted">~250</text>
+    <text x="0" y="146">VAD + whisper small + Piper</text><rect x="260" y="134" width="600" height="16" rx="3" class="bar-bg"/><rect x="260" y="134" width="360" height="16" rx="3" class="bar"/><text x="628" y="147" class="muted">~540</text>
+    <text x="0" y="178">VAD + Parakeet v3 + Kokoro</text><rect x="260" y="166" width="600" height="16" rx="3" class="bar-bg"/><rect x="260" y="166" width="600" height="16" rx="3" class="bar"/><text x="790" y="179" style="fill:var(--bg)">~900</text>
+  </g>
+  <text x="0" y="220" font-size="11" class="muted">Download models on first run (not in the APK) and let the user pick per language. Sizes vary by quantization and voice.</text>
+</svg>
+
+<h3>3.5 Speech stacks compared</h3>
+<div class="scroll"><table>
+<thead><tr><th>Stack</th><th>Fully offline, guaranteed</th><th>Quality</th><th>Consistency across devices</th><th>Size</th><th>Verdict</th></tr></thead>
+<tbody>
+<tr><td>S1. Platform only (SpeechRecognizer on-device + TextToSpeech)</td><td><span class="m">if packs installed</span></td><td><span class="m">good / decent</span></td><td><span class="b">OEM-dependent</span></td><td><span class="g">0</span></td><td>Fallback, and a fine prototype</td></tr>
+<tr><td>S2. sherpa-onnx (VAD + Zipformer/Moonshine/Parakeet + Piper/Kokoro)</td><td><span class="g">yes</span></td><td><span class="g">good to very good</span></td><td><span class="g">same everywhere</span></td><td><span class="m">100–900 MB</span></td><td><span class="g">Recommended</span></td></tr>
+<tr><td>S3. whisper.cpp + Piper</td><td><span class="g">yes</span></td><td><span class="m">good, slower</span></td><td><span class="g">same everywhere</span></td><td><span class="m">100–550 MB</span></td><td>If you want Whisper prompt biasing; sherpa-onnx can also run Whisper</td></tr>
+<tr><td>S4. ML Kit GenAI + TextToSpeech</td><td><span class="g">yes</span></td><td><span class="g">good</span></td><td><span class="b">Pixel-first, alpha</span></td><td><span class="g">0</span></td><td>Watch; not yet</td></tr>
+<tr><td>S5. Picovoice suite</td><td><span class="g">yes</span></td><td><span class="g">good</span></td><td><span class="g">same everywhere</span></td><td><span class="g">small</span></td><td>Only if licence fits</td></tr>
+</tbody></table></div>
+<p>sherpa-onnx is the pick because it is one Apache-2.0 library with an official Android AAR and Kotlin API that covers VAD, streaming and offline STT, TTS and keyword spotting, and lets you swap models (Zipformer, Moonshine, Parakeet, Whisper, Piper, Kokoro) without changing code. It is actively released. Define a small <code>SpeechEngine</code> / <code>VoiceOut</code> interface in the app so S1 stays available when a model is not downloaded or a language is not covered.</p>
+
+<h2>4. Being the assistant</h2>
+<div class="scroll"><table>
+<thead><tr><th>Surface</th><th>What it gives</th><th>Cost</th><th>When</th></tr></thead>
+<tbody>
+<tr><td>Activity with <code>ACTION_ASSIST</code></td><td>App becomes selectable as "Digital assistant app"; long-press power / corner swipe opens it</td><td>Low</td><td>v1</td></tr>
+<tr><td><code>VoiceInteractionService</code> + <code>VoiceInteractionSessionService</code></td><td>Overlay session over the current app (no full activity), optional screen context if the user allows, service kept bound while the role is held. The XML must name a <code>recognitionService</code>: expose your on-device STT as a system <code>RecognitionService</code>, which also lets other apps use it</td><td>Medium</td><td>v2</td></tr>
+<tr><td>Quick Settings tile, home widget (Glance)</td><td>One-tap capture and needs-you count</td><td>Low</td><td>v1</td></tr>
+<tr><td>Share target</td><td>Links and text into <code>/send</code> (the design's <code>source: share</code>)</td><td>Low</td><td>v1</td></tr>
+<tr><td>Media-button / Bluetooth headset</td><td>Hands-free capture while driving</td><td>Medium (MediaSession)</td><td>v2</td></tr>
+<tr><td>Wake word service</td><td>"Hey Sandman"</td><td>High (battery, FGS rules)</td><td>Later, optional</td></tr>
+</tbody></table></div>
+<p class="note">The user chooses the assistant in system settings; apps can only deep-link there, not grant themselves the role. Known annoyance: reinstalling a debug APK can clear the assistant setting, so re-select it after <code>adb install</code> during development.</p>
+
+<h2>5. Talking to the Sandman host</h2>
+<div class="grid">
+  <div class="box"><h3>Reachability</h3><p>The server binds <code>::1:8700</code>. Put the host and phone on Tailscale (or plain WireGuard) and bind the API to the tailnet address. Avoid exposing it publicly: there is one shared <code>api.token</code> until per-client tokens (#44) land.</p></div>
+  <div class="box"><h3>Offline captures</h3><p>Store each transcript in a local Room outbox with a <code>client_msg_id</code> and send with WorkManager. <code>/send</code> already dedupes by <code>client_msg_id</code>, so retries after network loss never file twice.</p></div>
+  <div class="box"><h3>Live updates</h3><p>OkHttp SSE on <code>/events/stream?after=</code> while the app or voice session is in the foreground. Don't hold SSE in the background; Android will kill it and it costs battery.</p></div>
+  <div class="box"><h3>Push when closed</h3><p>Options: FCM (needs Firebase and Google Play Services, server holds a Google key), UnifiedPush with a self-hosted ntfy (no Google), or polling. UnifiedPush 2.x speaks Web Push, so implementing Web Push (#43) once on the server serves both the browser client and the app. Recommended.</p></div>
+</div>
+
+<h2>6. Recommended stack in one table</h2>
+<div class="scroll"><table>
+<thead><tr><th>Layer</th><th>Choice</th><th>Alternative</th></tr></thead>
+<tbody>
+<tr><td>Language / UI</td><td>Kotlin, Jetpack Compose, Material 3</td><td>KMP + Compose MP if iOS is planned</td></tr>
+<tr><td>Min SDK</td><td>API 29; on-device platform STT fallback needs 33+</td><td>API 33 if you only target recent phones</td></tr>
+<tr><td>Architecture</td><td>Single activity, ViewModel + StateFlow, Hilt or manual DI</td><td>—</td></tr>
+<tr><td>HTTP / SSE / JSON</td><td>OkHttp (+ okhttp-sse), kotlinx.serialization</td><td>Ktor client (better for KMP)</td></tr>
+<tr><td>Local store</td><td>Room (outbox, cached topics), DataStore (settings, token)</td><td>SQLDelight for KMP</td></tr>
+<tr><td>Background</td><td>WorkManager (outbox), FGS type <code>microphone</code> only during an active voice session</td><td>—</td></tr>
+<tr><td>Audio I/O</td><td><code>AudioRecord</code> 16 kHz mono PCM, <code>AudioTrack</code>, audio focus + ducking</td><td>Oboe (C++) only if latency proves a problem</td></tr>
+<tr><td>VAD</td><td>Silero via sherpa-onnx</td><td>WebRTC VAD</td></tr>
+<tr><td>STT</td><td>sherpa-onnx: streaming Zipformer (EN, hotwords) or Parakeet v3 (DE/EU); Moonshine for fast EN</td><td>Platform on-device recognizer; whisper.cpp</td></tr>
+<tr><td>TTS</td><td>sherpa-onnx: Piper (DE) / Kokoro (EN)</td><td>Platform <code>TextToSpeech</code> offline voice</td></tr>
+<tr><td>Assistant</td><td><code>ACTION_ASSIST</code> → <code>VoiceInteractionService</code></td><td>—</td></tr>
+<tr><td>Network</td><td>Tailscale + bearer token</td><td>Reverse proxy with TLS + auth</td></tr>
+<tr><td>Push</td><td>UnifiedPush (ntfy) on top of server Web Push</td><td>FCM</td></tr>
+<tr><td>Build / CI</td><td>Gradle KTS, version catalog, GitHub Actions (<code>./gradlew lint test assembleDebug</code>)</td><td>—</td></tr>
+</tbody></table></div>
+
+<h2>7. Suggested order of work</h2>
+<ol class="steps">
+  <li><b>Skeleton:</b> settings (host, token), home prompt → <code>/send</code>, Room outbox, SSE, needs-you list. Topic screen as a WebView of <code>client.html</code>.</li>
+  <li><b>Voice v0 with S1:</b> platform on-device STT and TTS behind the engine interface; speak <code>capture.confirmed.speech</code>. This proves the loop and the latency budget before downloading any models.</li>
+  <li><b>Assistant entry:</b> <code>ACTION_ASSIST</code> activity, QS tile, share target.</li>
+  <li><b>sherpa-onnx engines:</b> model download manager, VAD, STT + TTS per language, hotwords from <code>GET /topics</code> titles.</li>
+  <li><b>Briefing mode:</b> voice loop over <code>/briefings</code>; "skip/repeat/stop" are already handled server-side.</li>
+  <li><b>Push:</b> after server Web Push (#43), add UnifiedPush.</li>
+  <li><b>v2:</b> <code>VoiceInteractionService</code> overlay, headset button, driving mode (needs client modes, #63), native topic screens.</li>
+</ol>
+
+<h2>8. Risks and open questions</h2>
+<ul>
+  <li><b>Language.</b> Which languages will you speak to it? English-only makes Moonshine + Kokoro attractive; German pushes toward Parakeet v3 or Whisper for STT and Piper for TTS. Mixed-language use favors Whisper/Parakeet v3.</li>
+  <li><b>Device class.</b> Parakeet 0.6B and Kokoro want a recent phone (8 GB RAM, recent SoC). On a mid-range phone, Zipformer + Piper is the safe pair. Measure real-time factor on the actual device before choosing.</li>
+  <li><b>Android background rules.</b> Microphone FGS cannot be started from the background on Android 14+; start voice sessions only from user-visible entry points (assistant gesture, tile, notification action).</li>
+  <li><b>Server gaps.</b> Web Push (#43), per-client tokens (#44) and client modes (#63) are not implemented; the app works without them but push and driving mode depend on them.</li>
+  <li><b>On-device LLM.</b> Gemini Nano via ML Kit Prompt API (beta) could handle offline intent parsing, but Sandman's harness does routing on the host; adding a second brain on the phone would duplicate that. Not recommended for now.</li>
+</ul>
+
+<h2>Sources</h2>
+<ul class="note">
+  <li><a href="https://github.com/k2-fsa/sherpa-onnx">k2-fsa/sherpa-onnx</a> · <a href="https://k2-fsa.github.io/sherpa/onnx/">docs</a> · <a href="https://github.com/k2-fsa/sherpa-onnx/releases">releases</a> · <a href="https://pub.dev/packages/sherpa_onnx/changelog">Flutter package changelog</a></li>
+  <li><a href="https://github.com/kaineone/kaine/pull/260">Kokoro + Moonshine via sherpa-onnx, latency notes</a> · <a href="https://github.com/k2-fsa/sherpa-onnx/discussions/3383">VoxSherpa TTS (offline Android app on sherpa-onnx)</a></li>
+  <li><a href="https://developers.google.com/ml-kit/genai/speech-recognition/android">ML Kit GenAI Speech Recognition</a> · <a href="https://android-developers.googleblog.com/2026/07/android-on-device-inference.html">Android Developers Blog, July 2026</a></li>
+  <li><a href="https://picovoice.ai/blog/android-speech-recognition/">Picovoice: Android speech recognition in 2026</a></li>
+  <li><a href="https://developer.android.com/reference/android/app/role/RoleManager">RoleManager</a> · <a href="https://source.android.com/docs/automotive/voice/voice_interaction_guide">Voice interaction guide (AOSP)</a> · <a href="https://github.com/anthropics/claude-code/issues/41696">assistant role cleared on reinstall</a></li>
+  <li>Repository: <code>docs/DESIGN.md</code> §6.3, §6.10, §6.12; <code>docs/API.md</code>; <code>docs/DEVIATIONS.md</code>.</li>
+</ul>
+
+<footer>Sizes and speeds are approximate and from public reports; benchmark on the target phone before committing to a model.</footer>
+</main>
+</body>
+</html>
