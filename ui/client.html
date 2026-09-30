@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sandman</title>
+<link rel="icon" href="/icon.png" type="image/png">
 <link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 :root {
@@ -37,6 +38,8 @@ button { cursor: pointer; }
 /* sidebar */
 aside { width: 260px; flex-shrink: 0; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; padding: 18px 14px; overflow-y: auto; }
 .brand { padding: 0 8px; font-size: 19px; font-weight: 700; letter-spacing: -0.01em; display: flex; justify-content: space-between; align-items: center; }
+.brand span { display: flex; align-items: center; gap: 8px; }
+.brand img { width: 24px; height: 24px; border-radius: 6px; }
 .brand a { font: 500 12px var(--sans); color: var(--muted); }
 .home-btn { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 10px; color: var(--accent-ink); font-weight: 600; font-size: 14px; border: 1px solid var(--accent-soft); }
 .home-btn.on { background: var(--accent-soft); }
@@ -235,7 +238,7 @@ button.chip { border: 0; font: inherit; cursor: pointer; } button.chip:hover { f
 <button class="menu-btn" id="menuBtn" aria-label="Open topics">☰</button>
 <div class="app">
   <aside id="side">
-    <div class="brand"><span>Sandman</span><a href="/observer">observer</a></div>
+    <div class="brand"><span><img src="/icon.png" alt="">Sandman</span><a href="/observer">observer</a></div>
     <a class="home-btn" href="#home" id="homeBtn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
       Home · new message
