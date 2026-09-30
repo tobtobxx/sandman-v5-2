@@ -48,7 +48,9 @@ export const cases: Case[] = [
   lib("partial-knowledge", () => note("Velostation Nord", [{ text: "Velostation Nord at the main station repairs e-bikes.", days_ago: 5, volatility: "slow" }]),
     "E-bike service price", "Find what an e-bike service at Velostation Nord costs and how long it takes.", ["Names the price", "Names the duration"], "narrow|proceed"),
   lib("unrelated", velo(3), "Heat pump noise", "Find how loud a heat pump may be at night at the neighbour's property line.", ["Names the limit in dB(A)"], "proceed"),
-  lib("negative-note", () => note("Rainmaster drip kit", [{ text: "Searched for the Rainmaster drip kit on 20 Sep 2026 and found no shop or manufacturer page.", days_ago: 9, volatility: "slow" }], "negative"),
+  // Source as addNegativeFact records it (the card that searched), not note()'s default URL: an unrelated URL made
+  // careful models distrust the note.
+  lib("negative-note", () => note("Rainmaster drip kit", [{ text: "Searched for the Rainmaster drip kit on 20 Sep 2026 and found no shop or manufacturer page.", days_ago: 9, volatility: "slow", source: { type: "card", ref: "crd_rainmaster", negative: true } }], "negative"),
     "Rainmaster kit price", "Find the price of the Rainmaster drip kit.", ["Names the price, or states that it is not available"], "answered"),
   // Stage of episode/memory-reuse: the second card, phrased differently, against the note the first run left.
   lib("answered-rephrased", () => note("Velostation Nord", [
