@@ -39,6 +39,7 @@ const HARD = [
   "segment/find-then-book-it", // 1
   "segment/no-cross-talk-memo", // 1; also episode/capture-no-cross-talk
   "segment/one-long-subject", // 2
+  "segment/remind-with-aside", // observer trace: aside split into a conversation, not yet measured
   "triage/compare-three-named", // episode/compare-card (triage asked the owner)
   "triage/simple-lookup", // 1
   "triage/write-enough-info", // 1

@@ -69,4 +69,8 @@ export const cases: Case[] = [
   seg("no-cross-talk-memo",
     "garden: the drip kit also needs to reach the two balcony pots. remind me Friday to file the tax extension, and find out if Velostation Nord repairs e-bikes and what a service costs",
     [["balcony"], ["tax"], ["e-bike", "cost"]]),
+  // Observer trace: the aside "Just to test the system." was filed as a conversation of its own.
+  seg("remind-with-aside",
+    "Remind me in 10min. Just to test the system.",
+    [["remind"]]),
 ];
