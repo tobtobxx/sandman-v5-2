@@ -57,7 +57,9 @@ src/
   server.ts     unified API + SSE + static UIs
 bench/          lib (fixtures, judge), run, corpus (offline web), cases/*.ts, corpus/*.md, results/
 ui/             client.html, observer.html (no build step)
-docs/           DESIGN.md, BENCH.md, DEVIATIONS.md, v4-research-prompt.md (the prompt style reference)
+android/        the Android app (android/README.md)
+docs/           DESIGN.md, BENCH.md, DEVIATIONS.md, ANDROID.md (app stack decisions),
+                v4-research-prompt.md (the prompt style reference)
 ```
 
 ## Prompt style

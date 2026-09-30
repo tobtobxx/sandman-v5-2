@@ -1,0 +1,14 @@
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# The root .gitignore ignores data/ (the server's database dir); here it is a Kotlin package.
+!data/
